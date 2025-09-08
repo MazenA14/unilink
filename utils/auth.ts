@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export class AuthManager {
   private static SESSION_COOKIE_KEY = 'sessionCookie';
+  private static USERNAME_KEY = 'gucUsername';
+  private static PASSWORD_KEY = 'gucPassword';
 
   /**
    * Store session cookie from login response
@@ -34,6 +36,46 @@ export class AuthManager {
       await AsyncStorage.removeItem(this.SESSION_COOKIE_KEY);
     } catch (error) {
       console.error('Failed to clear session cookie:', error);
+    }
+  }
+
+  /**
+   * Store user credentials (for NTLM-proxied requests)
+   */
+  static async storeCredentials(username: string, password: string): Promise<void> {
+    try {
+      await AsyncStorage.setItem(this.USERNAME_KEY, username);
+      await AsyncStorage.setItem(this.PASSWORD_KEY, password);
+    } catch (error) {
+      console.error('Failed to store credentials:', error);
+    }
+  }
+
+  /**
+   * Retrieve stored credentials
+   */
+  static async getCredentials(): Promise<{ username: string | null; password: string | null }> {
+    try {
+      const [username, password] = await Promise.all([
+        AsyncStorage.getItem(this.USERNAME_KEY),
+        AsyncStorage.getItem(this.PASSWORD_KEY),
+      ]);
+      return { username, password };
+    } catch (error) {
+      console.error('Failed to retrieve credentials:', error);
+      return { username: null, password: null };
+    }
+  }
+
+  /**
+   * Clear stored credentials
+   */
+  static async clearCredentials(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(this.USERNAME_KEY);
+      await AsyncStorage.removeItem(this.PASSWORD_KEY);
+    } catch (error) {
+      console.error('Failed to clear credentials:', error);
     }
   }
 

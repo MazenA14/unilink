@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Platform } from 'react-native';
 
 import { AuthGuard } from '@/components/AuthGuard';
@@ -11,13 +11,22 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
+  // Memoize icon components to prevent re-creation and improve performance
+  const tabIcons = useMemo(() => ({
+    dashboard: (color: string) => <IconSymbol size={28} name="house.fill" color={color} />,
+    courses: (color: string) => <IconSymbol size={28} name="book.closed.fill" color={color} />,
+    calendar: (color: string) => <IconSymbol size={28} name="calendar" color={color} />,
+    profile: (color: string) => <IconSymbol size={28} name="person.fill" color={color} />,
+  }), []);
 
   return (
     <AuthGuard>
       <Tabs
         initialRouteName="dashboard"
         screenOptions={{
-          tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+          tabBarActiveTintColor: colors.tint,
           headerShown: false,
           tabBarButton: HapticTab,
           tabBarBackground: TabBarBackground,
@@ -33,28 +42,28 @@ export default function TabLayout() {
           name="dashboard"
           options={{
             title: 'Dashboard',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+            tabBarIcon: ({ color }) => tabIcons.dashboard(color),
           }}
         />
         <Tabs.Screen
           name="courses"
           options={{
-            title: 'Courses',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="book.fill" color={color} />,
+            title: 'Grades',
+            tabBarIcon: ({ color }) => tabIcons.courses(color),
           }}
         />
         <Tabs.Screen
           name="calendar"
           options={{
             title: 'Calendar',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="calendar" color={color} />,
+            tabBarIcon: ({ color }) => tabIcons.calendar(color),
           }}
         />
         <Tabs.Screen
           name="profile"
           options={{
             title: 'Profile',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
+            tabBarIcon: ({ color }) => tabIcons.profile(color),
           }}
         />
       </Tabs>

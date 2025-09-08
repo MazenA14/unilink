@@ -48,22 +48,74 @@ const LoginScreen = () => {
         }),
       });
 
-      const data = await response.json();
+      // Safely parse response (may be JSON or text)
+      const contentType = response.headers.get('content-type') || '';
+      let data: any = null;
+      let rawText = '';
+      if (contentType.includes('application/json')) {
+        try {
+          data = await response.json();
+        } catch {
+          // fallback to text if json parsing fails
+          rawText = await response.text();
+        }
+      } else {
+        rawText = await response.text();
+        try {
+          data = JSON.parse(rawText);
+        } catch {
+          // keep data as null
+        }
+      }
 
-      if (data.status === 200) {
-        // Extract session cookie from response
-        const cookies = data.headers['set-cookie'];
-        if (cookies && cookies.length > 0) {
-          // Store the session cookie for future API calls
-          await AuthManager.storeSessionCookie(cookies[0]);
+      const status = data?.status ?? response.status;
+
+      console.log('=== LOGIN DEBUG ===');
+      console.log('Response status:', response.status);
+      console.log('Content-Type:', contentType);
+      console.log('Data status:', data?.status);
+      console.log('Final status:', status);
+      console.log('Raw text (first 200 chars):', rawText.substring(0, 200));
+      console.log('Data object:', JSON.stringify(data, null, 2));
+      console.log('==================');
+
+      // Check if this is a successful login (either explicit status 200 or HTTP 200 with no errors)
+      const isSuccessful = status === 200 || (response.status === 200 && !data?.error);
+
+      if (isSuccessful) {
+        // Try to extract cookies from multiple possible shapes
+        let cookieString: string | null = null;
+        const cookiesFromJson = data?.cookies || data?.headers?.['set-cookie'] || data?.headers?.['Set-Cookie'];
+
+        if (Array.isArray(cookiesFromJson) && cookiesFromJson.length > 0) {
+          cookieString = cookiesFromJson[0];
+        } else if (typeof cookiesFromJson === 'string') {
+          cookieString = cookiesFromJson;
+        } else {
+          const hdrSetCookie = response.headers.get('set-cookie');
+          if (hdrSetCookie) cookieString = hdrSetCookie;
         }
 
-        // Navigate immediately without showing success alert
+        if (cookieString) {
+          await AuthManager.storeSessionCookie(cookieString);
+          // also store creds for NTLM mode in proxy requests
+          await AuthManager.storeCredentials(username.trim(), password);
+          console.log('Login successful, credentials stored');
+        } else {
+          console.warn('Login succeeded but no Set-Cookie was returned by the server');
+          // Still proceed if we got HTTP 200, assuming login worked
+          await AuthManager.storeCredentials(username.trim(), password);
+        }
+
         router.replace('/(tabs)/dashboard');
       } else {
+        const msg =
+          data?.error ||
+          (rawText ? rawText.slice(0, 200) : `HTTP ${response.status}`) ||
+          'Invalid username or password. Please try again.';
         showAlert({
           title: 'Login Failed',
-          message: 'Invalid username or password. Please try again.',
+          message: msg,
           type: 'error',
         });
       }
@@ -71,7 +123,7 @@ const LoginScreen = () => {
       console.error('Login error:', error);
       showAlert({
         title: 'Login Failed',
-        message: 'Network error occurred. Please check your connection and try again.',
+        message: 'Network or server error. Please try again shortly.',
         type: 'error',
       });
     } finally {
