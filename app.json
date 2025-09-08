@@ -1,22 +1,27 @@
 {
   "expo": {
-    "name": "guc-connect",
-    "slug": "guc-connect",
+    "name": "UniLink",
+    "slug": "unilink",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "gucconnect",
+    "scheme": "unilink",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "icon": {
+        "light": "./assets/images/icon.png",
+        "dark": "./assets/images/icon.png"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.unilink"
     },
     "web": {
       "bundler": "metro",
@@ -28,15 +33,23 @@
       [
         "expo-splash-screen",
         {
+          "backgroundColor": "#232323",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "dark": {
+            "image": "./assets/images/splash-icon.png",
+            "backgroundColor": "#000000"
+          }
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b55d50f1-a6f1-4e96-90d8-c59a5eb8e733"
+      }
     }
   }
 }

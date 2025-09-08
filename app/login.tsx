@@ -141,7 +141,7 @@ const LoginScreen = () => {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.headerContainer}>
-          <Text style={[styles.title, { color: colors.mainFont }]}>GUC Connect</Text>
+          <Text style={[styles.title, { color: colors.mainFont }]}>UniLink</Text>
           <Text style={[styles.subtitle, { color: colors.secondaryFont }]}>Sign in to your account</Text>
         </View>
 
