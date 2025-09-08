@@ -101,13 +101,22 @@ const LoginScreen = () => {
           // also store creds for NTLM mode in proxy requests
           await AuthManager.storeCredentials(username.trim(), password);
           console.log('Login successful, credentials stored');
-        } else {
-          console.warn('Login succeeded but no Set-Cookie was returned by the server');
-          // Still proceed if we got HTTP 200, assuming login worked
-          await AuthManager.storeCredentials(username.trim(), password);
+          router.replace('/(tabs)/dashboard');
+        } 
+        // else {
+        //   console.warn('Login succeeded but no Set-Cookie was returned by the server');
+        //   // Still proceed if we got HTTP 200, assuming login worked
+        //   await AuthManager.storeCredentials(username.trim(), password);
+        // }
+        else {
+          showAlert({
+            title: 'Login Failed',
+            message: 'Invalid username or password.\n Please try again.',
+            type: 'error',
+          });
         }
 
-        router.replace('/(tabs)/dashboard');
+        
       } else {
         const msg =
           data?.error ||
