@@ -474,10 +474,47 @@ export default function GradesScreen() {
     return colors.gradeFailing;
   };
 
-  // Extract course code letters for the bubble (e.g., "CSEN" from "CSEN102" or "PHYSt" from "PHYSt301")
-  const getCourseCode = (courseText: string) => {
-    const match = courseText.match(/([A-Z]{2,4}[a-z]?\d{3,4})/);
-    return match ? match[1].replace(/\d+/g, '') : (courseText.split(' ')[0] || 'C').substring(0, 4).toUpperCase();
+  // Extract course code and number for the bubble (e.g., "CSEN" and "601" from "CSEN601")
+  const getCourseCodeParts = (courseText: string) => {
+    const match = courseText.match(/([A-Z]{2,4}[a-z]?)(\d{3,4})/);
+    if (match) {
+      return { code: match[1], number: match[2] };
+    }
+    // Fallback: try to extract from the course name after the dash
+    const parts = courseText.split(' - ');
+    if (parts.length > 1) {
+      const afterDash = parts[1].trim();
+      const courseCodeMatch = afterDash.match(/^([A-Z]+)(\d+)\s+(.+)$/);
+      if (courseCodeMatch) {
+        return { code: courseCodeMatch[1], number: courseCodeMatch[2] };
+      }
+    }
+    return { code: (courseText.split(' ')[0] || 'C').substring(0, 4).toUpperCase(), number: '000' };
+  };
+
+  // Format course name to show only the relevant part after the dash, removing course code and semester number
+  const formatCourseName = (courseText: string) => {
+    // Replace &amp; with & in the course text
+    const cleanText = courseText.replace(/&amp;/g, '&');
+    
+    // Split by dash and get the part after it
+    const parts = cleanText.split(' - ');
+    if (parts.length > 1) {
+      const afterDash = parts[1].trim();
+      
+      // Remove course code and number from the title (e.g., "CSEN601" from "CSEN601 Network Media lab")
+      const courseCodeMatch = afterDash.match(/^([A-Z]+\d+)\s+(.+)$/);
+      if (courseCodeMatch) {
+        const courseTitle = courseCodeMatch[2];
+        return courseTitle;
+      }
+      
+      // Return the part after the dash without semester number
+      return afterDash;
+    }
+    
+    // Fallback to original text if no dash found
+    return cleanText;
   };
 
 
@@ -626,37 +663,71 @@ export default function GradesScreen() {
                   {
                     backgroundColor: colors.background,
                     borderColor: colors.border,
-                    borderRadius: 12,
+                    borderRadius: 16,
                   },
                 ]}>
                   <View style={styles.expandableCourseContent}>
-                    <View style={styles.expandableCourseLeft}>
-                      <View style={[
-                        styles.expandableCourseIcon,
-                        { backgroundColor: colors.tint + '15' }
-                      ]}>
-                        <Text style={[
-                          styles.expandableCourseIconText,
-                          { color: colors.tint }
+                     {/* Course Code Badge */}
+                     <View style={[
+                       styles.expandableCourseIcon,
+                       { 
+                         backgroundColor: colors.tint + '20',
+                         borderColor: colors.tint + '40'
+                       }
+                     ]}>
+                       {(() => {
+                         const { code, number } = getCourseCodeParts(grade.course);
+                         return (
+                           <>
+                             <Text style={[
+                               styles.expandableCourseIconText,
+                               { color: colors.tint }
+                             ]}>
+                               {code}
+                             </Text>
+                             <Text style={[
+                               styles.expandableCourseIconNumber,
+                               { color: colors.tint }
+                             ]}>
+                               {number}
+                             </Text>
+                           </>
+                         );
+                       })()}
+                     </View>
+
+                    {/* Course Info Section */}
+                    <View style={styles.expandableCourseInfo}>
+                      <Text
+                        style={[styles.expandableCourseTitle, { color: colors.text }]}
+                        numberOfLines={2}
+                      >
+                        {formatCourseName(grade.course)}
+                      </Text>
+                      <View style={styles.expandableCourseMeta}>
+                        <View style={[
+                          styles.statusBadge,
+                          { 
+                            backgroundColor: colors.tint + '15',
+                            borderColor: colors.tint + '30'
+                          }
                         ]}>
-                          {getCourseCode(grade.course)}
-                        </Text>
-                      </View>
-                      <View style={styles.expandableCourseTitleContainer}>
-                        <Text
-                          style={[styles.expandableCourseTitle, { color: colors.text }]}
-                          numberOfLines={0}
-                        >
-                          {grade.course}
-                        </Text>
-                        <Text style={[styles.expandableCourseSubtitle, { color: colors.tabIconDefault }]}>
-                          Current Grade
-                        </Text>
+                          <Text style={[
+                            styles.statusBadgeText,
+                            { color: colors.tint }
+                          ]}>
+                            Current Grade
+                          </Text>
+                        </View>
                       </View>
                     </View>
                     
+                    {/* Grade Section */}
                     <View style={styles.expandableCourseRight}>
-                      <View style={styles.expandableCourseGradeContainer}>
+                      <View style={[
+                        styles.gradeBadge,
+                        { backgroundColor: getGradeColor(grade.percentage) + '15' }
+                      ]}>
                         <Text
                           style={[
                             styles.expandableCourseGrade,
@@ -745,43 +816,77 @@ export default function GradesScreen() {
                             {
                               backgroundColor: colors.background,
                               borderColor: colors.border,
-                              borderTopLeftRadius: 12,
-                              borderTopRightRadius: 12,
-                              borderBottomLeftRadius: course.isExpanded ? 0 : 12,
-                              borderBottomRightRadius: course.isExpanded ? 0 : 12,
+                              borderTopLeftRadius: 16,
+                              borderTopRightRadius: 16,
+                              borderBottomLeftRadius: course.isExpanded ? 0 : 16,
+                              borderBottomRightRadius: course.isExpanded ? 0 : 16,
                             },
                           ]}
                           onPress={() => handleCourseToggle(index)}
                         >
                           <View style={styles.expandableCourseContent}>
-                            <View style={styles.expandableCourseLeft}>
-                              <View style={[
-                                styles.expandableCourseIcon,
-                                { backgroundColor: course.midtermGrade ? colors.tint + '15' : colors.border + '30' }
-                              ]}>
-                                <Text style={[
-                                  styles.expandableCourseIconText,
-                                  { color: course.midtermGrade ? colors.tint : colors.tabIconDefault }
+                             {/* Course Code Badge */}
+                             <View style={[
+                               styles.expandableCourseIcon,
+                               { 
+                                 backgroundColor: course.midtermGrade ? colors.tint + '20' : colors.border + '40',
+                                 borderColor: course.midtermGrade ? colors.tint + '40' : colors.border + '60'
+                               }
+                             ]}>
+                               {(() => {
+                                 const { code, number } = getCourseCodeParts(course.text);
+                                 return (
+                                   <>
+                                     <Text style={[
+                                       styles.expandableCourseIconText,
+                                       { color: course.midtermGrade ? colors.tint : colors.tabIconDefault }
+                                     ]}>
+                                       {code}
+                                     </Text>
+                                     <Text style={[
+                                       styles.expandableCourseIconNumber,
+                                       { color: course.midtermGrade ? colors.tint : colors.tabIconDefault }
+                                     ]}>
+                                       {number}
+                                     </Text>
+                                   </>
+                                 );
+                               })()}
+                             </View>
+
+                            {/* Course Info Section */}
+                            <View style={styles.expandableCourseInfo}>
+                              <Text
+                                style={[styles.expandableCourseTitle, { color: colors.text }]}
+                                numberOfLines={2}
+                              >
+                                {formatCourseName(course.text)}
+                              </Text>
+                              <View style={styles.expandableCourseMeta}>
+                                <View style={[
+                                  styles.statusBadge,
+                                  { 
+                                    backgroundColor: course.midtermGrade ? colors.tint + '15' : colors.border + '30',
+                                    borderColor: course.midtermGrade ? colors.tint + '30' : colors.border + '50'
+                                  }
                                 ]}>
-                                  {getCourseCode(course.text)}
-                                </Text>
-                              </View>
-                              <View style={styles.expandableCourseTitleContainer}>
-                                <Text
-                                  style={[styles.expandableCourseTitle, { color: colors.text }]}
-                                  numberOfLines={0}
-                                >
-                                  {course.text}
-                                </Text>
-                                <Text style={[styles.expandableCourseSubtitle, { color: colors.tabIconDefault }]}>
-                                  {course.midtermGrade ? 'Midterm Result' : 'No Midterm Grade'}
-                                </Text>
+                                  <Text style={[
+                                    styles.statusBadgeText,
+                                    { color: course.midtermGrade ? colors.tint : colors.tabIconDefault }
+                                  ]}>
+                                    {course.midtermGrade ? 'Midterm Result' : 'No Midterm Grade'}
+                                  </Text>
+                                </View>
                               </View>
                             </View>
                             
+                            {/* Grade and Action Section */}
                             <View style={styles.expandableCourseRight}>
                               {course.midtermGrade && (
-                                <View style={styles.expandableCourseGradeContainer}>
+                                <View style={[
+                                  styles.gradeBadge,
+                                  { backgroundColor: getGradeColor(course.midtermGrade.percentage) + '15' }
+                                ]}>
                                   <Text
                                     style={[
                                       styles.expandableCourseGrade,
@@ -793,12 +898,19 @@ export default function GradesScreen() {
                                 </View>
                               )}
                               
-                              <Ionicons 
-                                name={course.isExpanded ? "caret-up" : "caret-down"} 
-                                size={16} 
-                                color={colors.secondaryFont}
-                                style={styles.expandIcon}
-                              />
+                              <View style={[
+                                styles.expandButton,
+                                { 
+                                  backgroundColor: colors.border + '20',
+                                  borderColor: colors.border + '40'
+                                }
+                              ]}>
+                                <Ionicons 
+                                  name={course.isExpanded ? "caret-up" : "caret-down"} 
+                                  size={14} 
+                                  color={colors.secondaryFont}
+                                />
+                              </View>
                             </View>
                           </View>
                         </TouchableOpacity>
@@ -822,16 +934,13 @@ export default function GradesScreen() {
                               <>
                                 <View style={styles.expandedHeader}>
                                   <Text style={[styles.expandedTitle, { color: colors.text }]}>
-                                    {course.midtermGrade 
-                                      ? `Midterm Grade: ${course.midtermGrade.percentage.toFixed(1)}%`
-                                      : 'All Grades'
-                                    }
+                                    {course.text.replace(/&amp;/g, '&')}
                                   </Text>
                                 </View>
                                 {course.detailedGrades.map((grade, gradeIndex) => (
                                   <View key={gradeIndex} style={[styles.detailedGradeItem, { borderColor: colors.border }]}>
                                     <Text style={[styles.detailedGradeName, { color: colors.text }]} numberOfLines={0}>
-                                      {grade.course}
+                                      {grade.course.replace(/&amp;/g, '&')}
                                     </Text>
                                     <View style={styles.detailedGradeRight}>
                                       <Text
@@ -1160,74 +1269,102 @@ const styles = StyleSheet.create({
   },
   // New expandable course card styles
   expandableCourseContainer: {
-    marginBottom: 4,
+    marginBottom: 8,
   },
   expandableCourseCard: {
-    borderWidth: 2,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   expandableCourseContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-  },
-  expandableCourseLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 12,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    gap: 16,
   },
   expandableCourseIcon: {
-    width: 60,
-    height: 32,
-    borderRadius: 16,
+    width: 56,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    flexShrink: 0,
   },
   expandableCourseIconText: {
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+    lineHeight: 12,
   },
-  expandableCourseTitleContainer: {
+  expandableCourseIconNumber: {
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    textAlign: 'center',
+    lineHeight: 10,
+    marginTop: 1,
+  },
+  expandableCourseInfo: {
     flex: 1,
+    justifyContent: 'center',
   },
   expandableCourseTitle: {
     fontSize: 16,
-    fontWeight: '500',
-    lineHeight: 22,
-    marginBottom: 2,
+    fontWeight: '600',
+    lineHeight: 20,
+    marginBottom: 6,
   },
-  expandableCourseSubtitle: {
-    fontSize: 12,
-    fontWeight: '400',
+  expandableCourseMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: '500',
+    letterSpacing: 0.3,
   },
   expandableCourseRight: {
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
+    flexShrink: 0,
   },
-  expandableCourseGradeContainer: {
-    alignItems: 'flex-end',
-    marginBottom: 4,
+  gradeBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   expandableCourseGrade: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 2,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  expandButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   loadingDetailContainer: {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 40,
-  },
-  expandIcon: {
-    opacity: 0.7,
   },
   expandedContent: {
     borderWidth: 2,
