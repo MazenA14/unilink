@@ -1,10 +1,11 @@
+import { Ionicons } from '@expo/vector-icons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Tabs } from 'expo-router';
 import React, { useMemo } from 'react';
 import { Platform } from 'react-native';
 
 import { AuthGuard } from '@/components/AuthGuard';
 import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -15,11 +16,11 @@ export default function TabLayout() {
 
   // Memoize icon components to prevent re-creation and improve performance
   const tabIcons = useMemo(() => ({
-    dashboard: (color: string) => <IconSymbol size={28} name="house.fill" color={color} />,
-    courses: (color: string) => <IconSymbol size={28} name="book.closed.fill" color={color} />,
-    schedule: (color: string) => <IconSymbol size={28} name="calendar" color={color} />,
-    transcript: (color: string) => <IconSymbol size={28} name="doc.text" color={color} />,
-    settings: (color: string) => <IconSymbol size={28} name="gearshape.fill" color={color} />,
+    dashboard: (color: string) => <MaterialIcons name="dashboard" size={28} color={color} />,
+    courses: (color: string) => <Ionicons name="book" size={28} color={color} />,
+    schedule: (color: string) => <Ionicons name="calendar" size={28} color={color} />,
+    transcript: (color: string) => <Ionicons name="document-text" size={28} color={color} />,
+    settings: (color: string) => <Ionicons name="settings" size={28} color={color} />,
   }), []);
 
   return (

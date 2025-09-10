@@ -33,7 +33,7 @@
 
 ## Database Schema
 ### Table 1
-- Username, GUC-ID, Date Joined App, Last Opened Date, Number of Times Opened App
+- Username, GUC-ID, Date Joined App, Last Opened Date, Number of Times Opened App, GPA, Joined Season (58)
 
 -------------------------- -------------------------- -------------------------- --------------------------
 

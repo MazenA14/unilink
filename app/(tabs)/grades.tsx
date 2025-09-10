@@ -2,6 +2,7 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { GradeCache } from '@/utils/gradeCache';
 import { GUCAPIProxy as GUCAPI, GradeData } from '@/utils/gucApiProxy';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -792,15 +793,12 @@ export default function GradesScreen() {
                                 </View>
                               )}
                               
-                              <Text style={[
-                                styles.expandIcon,
-                                { 
-                                  color: colors.tint,
-                                  transform: [{ rotate: course.isExpanded ? '180deg' : '0deg' }]
-                                }
-                              ]}>
-                                ▼
-                              </Text>
+                              <Ionicons 
+                                name={course.isExpanded ? "caret-up" : "caret-down"} 
+                                size={16} 
+                                color={colors.secondaryFont}
+                                style={styles.expandIcon}
+                              />
                             </View>
                           </View>
                         </TouchableOpacity>
@@ -1229,8 +1227,7 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   expandIcon: {
-    fontSize: 12,
-    fontWeight: 'bold',
+    opacity: 0.7,
   },
   expandedContent: {
     borderWidth: 2,
