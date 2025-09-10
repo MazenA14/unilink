@@ -1,9 +1,7 @@
 import { Link, Stack } from 'expo-router';
 import React from 'react';
-import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -15,22 +13,22 @@ export default function NotFoundScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Oops!', headerShown: false }} />
-      <ThemedView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.iconWrap, { backgroundColor: Platform.select({ ios: 'rgba(255,255,255,0.08)', default: colors.fileBackground }) }]}>
           <IconSymbol name="exclamationmark.triangle.fill" size={48} color={colors.tabColor} />
         </View>
 
-        <ThemedText type="title" style={[styles.title, { color: colors.mainFont }]}>Page not found</ThemedText>
-        <ThemedText style={[styles.subtitle, { color: colors.secondaryFont }]}>The page you’re looking for doesn’t exist or has moved.</ThemedText>
+        <Text style={[styles.title, { color: colors.mainFont }]}>Page not found</Text>
+        <Text style={[styles.subtitle, { color: colors.secondaryFont }]}>The page you&apos;re looking for doesn&apos;t exist or has moved.</Text>
 
         <View style={styles.actions}>
           <Link href="/(tabs)/dashboard" asChild>
             <TouchableOpacity style={[styles.secondaryBtn, { borderColor: colors.border }]}> 
-              <ThemedText style={[styles.secondaryBtnText, { color: colors.mainFont }]}>Back</ThemedText>
+              <Text style={[styles.secondaryBtnText, { color: colors.mainFont }]}>Back</Text>
             </TouchableOpacity>
           </Link>
         </View>
-      </ThemedView>
+      </View>
     </>
   );
 }
@@ -51,10 +49,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    lineHeight: 32,
     textAlign: 'center',
     marginTop: 8,
   },
   subtitle: {
+    fontSize: 16,
+    lineHeight: 24,
     textAlign: 'center',
     marginTop: 8,
     marginBottom: 24,
