@@ -3,12 +3,13 @@
  * 
  * Replace the placeholder URLs below with your actual 4 proxy server URLs
  */
-export const PROXY_SERVERS = [
-  'https://guc-connect-login.vercel.app/api',        // Primary proxy server
-  'https://uni-link-proxy-server-1.vercel.app/api',  // Secondary proxy server
-  'https://uni-link-proxy-server-2.vercel.app/api',  // Tertiary proxy server  
-  'https://uni-link-proxy-server-3.vercel.app/api'   // Quaternary proxy server
-];
+export const PROXY_SERVER = 'https://guc-connect-login.vercel.app/api';
+// export const PROXY_SERVERS = [
+//   'https://guc-connect-login.vercel.app/api',        // Primary proxy server
+//   'https://uni-link-proxy-server-1.vercel.app/api',  // Secondary proxy server
+//   'https://uni-link-proxy-server-2.vercel.app/api',  // Tertiary proxy server  
+//   'https://uni-link-proxy-server-3.vercel.app/api'   // Quaternary proxy server
+// ];
 
 /**
  * Proxy rotation settings

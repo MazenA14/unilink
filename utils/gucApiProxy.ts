@@ -1,7 +1,7 @@
 import { AuthManager } from './auth';
 import { extractCourseGradeData, extractCourses, extractGradeData, extractViewState } from './extractors/gradeExtractor';
 import { getOutstandingPayments, payOutstanding } from './handlers/paymentHandler';
-import { getAvailableStudyYears, getAvailableStudyYearsWithReset, getTranscriptData, getTranscriptDataWithReset, resetSession } from './handlers/transcriptHandler';
+import { getAvailableStudyYears, getTranscriptData, resetSession } from './handlers/transcriptHandler';
 import { GradeData } from './types/gucTypes';
 
 export { GradeData, PaymentItem, ViewStateData } from './types/gucTypes';
@@ -328,7 +328,7 @@ export class GUCAPIProxy {
   static payOutstanding = payOutstanding;
   
   // New session reset methods
-  static getAvailableStudyYearsWithReset = getAvailableStudyYearsWithReset;
-  static getTranscriptDataWithReset = getTranscriptDataWithReset;
+  static getAvailableStudyYearsWithReset = getAvailableStudyYears;
+  static getTranscriptDataWithReset = getTranscriptData;
   static resetSession = resetSession;
 }
