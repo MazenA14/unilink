@@ -1,15 +1,10 @@
 import { AuthManager } from './auth';
+import { extractCourseGradeData, extractCourses, extractGradeData, extractViewState } from './extractors/gradeExtractor';
+import { getOutstandingPayments, payOutstanding } from './handlers/paymentHandler';
+import { getAvailableStudyYears, getAvailableStudyYearsWithReset, getTranscriptData, getTranscriptDataWithReset, resetSession } from './handlers/transcriptHandler';
+import { GradeData } from './types/gucTypes';
 
-export interface ViewStateData {
-  __VIEWSTATE: string;
-  __VIEWSTATEGENERATOR: string;
-  __EVENTVALIDATION: string;
-}
-
-export interface GradeData {
-  course: string;
-  percentage: number;
-}
+export { GradeData, PaymentItem, ViewStateData } from './types/gucTypes';
 
 export class GUCAPIProxy {
   private static PROXY_BASE_URL = 'https://guc-connect-login.vercel.app/api';
@@ -17,7 +12,7 @@ export class GUCAPIProxy {
   /**
    * Make authenticated request through proxy server
    */
-  private static async makeProxyRequest(url: string, method: string = 'GET', body?: any): Promise<any> {
+  private static async makeProxyRequest(url: string, method: string = 'GET', body?: any, options?: { allowNon200?: boolean }): Promise<any> {
     const sessionCookie = await AuthManager.getSessionCookie();
     const { username, password } = await AuthManager.getCredentials();
 
@@ -55,198 +50,13 @@ export class GUCAPIProxy {
     }
 
     if (data.status !== 200) {
+      if (options?.allowNon200 && (data.status === 302 || data.status === 303)) {
+        return data;
+      }
       throw new Error(`Request failed: ${data.status}`);
     }
 
     return data;
-  }
-
-  /**
-   * Extract ASP.NET WebForms hidden field values from HTML response
-   */
-  static extractViewState(html: string): ViewStateData {
-    try {
-      const patterns = {
-        __VIEWSTATE: /<input[^>]*name="__VIEWSTATE"[^>]*value="([^"]*)"[^>]*>/i,
-        __VIEWSTATEGENERATOR: /<input[^>]*name="__VIEWSTATEGENERATOR"[^>]*value="([^"]*)"[^>]*>/i,
-        __EVENTVALIDATION: /<input[^>]*name="__EVENTVALIDATION"[^>]*value="([^"]*)"[^>]*>/i
-      };
-      
-      const result: ViewStateData = {
-        __VIEWSTATE: '',
-        __VIEWSTATEGENERATOR: '',
-        __EVENTVALIDATION: ''
-      };
-      
-      for (const [key, pattern] of Object.entries(patterns)) {
-        const match = html.match(pattern);
-        const value = match ? match[1] : '';
-        result[key as keyof ViewStateData] = value;
-        
-        if (!value) {
-          console.warn(`Failed to extract ${key} from HTML`);
-        }
-      }
-      
-      return result;
-    } catch (error) {
-      console.error('Error extracting view state:', error);
-      return {
-        __VIEWSTATE: '',
-        __VIEWSTATEGENERATOR: '',
-        __EVENTVALIDATION: ''
-      };
-    }
-  }
-
-  /**
-   * Extract grade data from HTML response
-   */
-  static extractGradeData(html: string): GradeData[] {
-    try {
-      const grades: GradeData[] = [];
-      
-      console.log('=== GRADE EXTRACTION DEBUG ===');
-      console.log('HTML length:', html.length);
-      console.log('Contains "Mid-Term Results":', html.includes('Mid-Term Results'));
-      console.log('Contains "midDg":', html.includes('midDg'));
-      
-      // Look for the actual table structure
-      const midTableMatch = html.match(/<table[^>]*id="[^"]*midDg[^"]*"[^>]*>([\s\S]*?)<\/table>/i);
-      if (midTableMatch) {
-        console.log('Found midDg table, first 500 chars:', midTableMatch[1].substring(0, 500));
-        
-        // Try to extract directly from the table content only
-        const tableContent = midTableMatch[1];
-        
-        // More precise extraction from just the table content
-        const tableRowPattern = /<tr[^>]*>\s*<td[^>]*>([^<]+)<\/td>\s*<td[^>]*style="font-weight:bold;"[^>]*>([0-9.]+)<\/td>\s*<\/tr>/gi;
-        
-        let tableMatch;
-        const tableGrades: GradeData[] = [];
-        
-        while ((tableMatch = tableRowPattern.exec(tableContent)) !== null) {
-          const course = tableMatch[1].trim();
-          const percentageStr = tableMatch[2].trim();
-          
-          console.log(`Table extraction found:`, { course: course.substring(0, 50), percentage: percentageStr });
-          
-          // Filter out header rows
-          if (course.toLowerCase() !== 'course' && (!course.toLowerCase().includes('course') || course.length > 20)) {
-            const percentage = parseFloat(percentageStr);
-            if (!isNaN(percentage) && percentage >= 0 && percentage <= 100) {
-              tableGrades.push({ course, percentage });
-              console.log(`Added table grade: ${course.substring(0, 30)}... -> ${percentage}%`);
-            }
-          }
-        }
-        
-        if (tableGrades.length > 0) {
-          console.log(`Table extraction succeeded with ${tableGrades.length} grades`);
-          console.log(`Final: ${tableGrades.length} grades extracted`);
-          console.log('=============================');
-          return tableGrades;
-        }
-      }
-      
-      // Multiple patterns to try
-      const patterns = [
-        // More precise pattern that looks for the exact structure we see in logs
-        /<tr[^>]*>\s*<td[^>]*>([^<]+)<\/td><td[^>]*style="font-weight:bold;"[^>]*>([0-9.]+)<\/td>\s*<\/tr>/gi,
-        
-        // Alternative pattern with more flexible spacing
-        /<tr[^>]*>[\s]*<td[^>]*>([^<]+)<\/td>[\s]*<td[^>]*style="font-weight:bold;"[^>]*>([0-9.]+)<\/td>[\s]*<\/tr>/gi,
-        
-        // Font-based pattern (likely for ASP.NET)
-        /<tr[^>]*>[\s\S]*?<td[^>]*><font[^>]*>([^<]+)<\/font><\/td>[\s\S]*?<td[^>]*><font[^>]*><b>([^<]+)<\/b><\/font><\/td>[\s\S]*?<\/tr>/gi,
-        
-        // Original pattern
-        /<tr[^>]*>[\s\S]*?<td[^>]*>([^<]+)<\/td>[\s\S]*?<td[^>]*><[^>]*><b>([^<]+)<\/b><\/[^>]*><\/td>[\s\S]*?<\/tr>/gi,
-        
-        // Simpler fallback pattern
-        /<tr[^>]*>[\s\S]*?<td[^>]*>([^<]+)<\/td>[\s\S]*?<td[^>]*>([0-9.]+)<\/td>[\s\S]*?<\/tr>/gi
-      ];
-      
-      for (let i = 0; i < patterns.length; i++) {
-        const pattern = patterns[i];
-        pattern.lastIndex = 0;
-        
-        let match;
-        let tempGrades: GradeData[] = [];
-        
-        while ((match = pattern.exec(html)) !== null) {
-          const course = match[1].trim();
-          const percentageStr = match[2].trim();
-          
-          console.log(`Pattern ${i + 1} found:`, { course: course.substring(0, 50), percentage: percentageStr });
-          
-          // Filter out header rows and invalid entries
-          const isHeaderRow = course.toLowerCase() === 'course' || 
-                             percentageStr.toLowerCase() === 'percentage' ||
-                             course.toLowerCase().includes('course') && course.length < 20;
-          
-          if (!isHeaderRow) {
-            const percentage = parseFloat(percentageStr);
-            if (!isNaN(percentage) && percentage >= 0 && percentage <= 100) {
-              tempGrades.push({ course, percentage });
-              console.log(`Added grade: ${course.substring(0, 30)}... -> ${percentage}%`);
-            }
-          } else {
-            console.log(`Skipped header/invalid row: ${course} -> ${percentageStr}`);
-          }
-        }
-        
-        if (tempGrades.length > 0) {
-          grades.push(...tempGrades);
-          console.log(`Pattern ${i + 1} succeeded with ${tempGrades.length} grades`);
-          break;
-        }
-      }
-      
-      console.log(`Final: ${grades.length} grades extracted`);
-      console.log('=============================');
-      
-      return grades;
-    } catch (error) {
-      console.error('Error extracting grade data:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Extract course-specific grade items (Quiz/Assignment table) and map to GradeData
-   */
-  static extractCourseGradeData(html: string): GradeData[] {
-    try {
-      const items: GradeData[] = [];
-
-      console.log('=== COURSE-GRADE EXTRACTION DEBUG ===');
-      console.log('Contains "Quiz/Assignment":', /Quiz\/?Assignment/i.test(html));
-
-      // Match rows belonging to the rptrNtt repeater (course items)
-      const rowPattern = /<tr[^>]*id="[^"]*rptrNtt[^"]*"[^>]*>[\s\S]*?<span[^>]*id="[^"]*rptrNtt_evalMethLbl_[^"]+"[^>]*>([^<]+)<\/span>[\s\S]*?<td>\s*([^<]+?)\s*<\/td>[\s\S]*?<td>\s*([0-9.]+)\s*\/\s*([0-9.]+)\s*<\/td>[\s\S]*?<td>\s*([^<]+?)\s*<\/td>[\s\S]*?<\/tr>/gi;
-
-      let match: RegExpExecArray | null;
-      while ((match = rowPattern.exec(html)) !== null) {
-        const title = match[1].trim();
-        const elementName = match[2].trim();
-        const obtained = parseFloat(match[3]);
-        const total = parseFloat(match[4]);
-        // const instructor = match[5].trim(); // currently unused in UI
-
-        if (!isNaN(obtained) && !isNaN(total) && total > 0) {
-          const percentage = (obtained / total) * 100;
-          items.push({ course: `${title} - ${elementName}`, percentage });
-        }
-      }
-
-      console.log(`Extracted ${items.length} course grade items`);
-      console.log('====================================');
-      return items;
-    } catch (error) {
-      console.error('Error extracting course grade data:', error);
-      return [];
-    }
   }
 
   /**
@@ -304,7 +114,7 @@ export class GUCAPIProxy {
       const initialHtml = initialData.html || initialData.body;
       console.log('Initial HTML length:', initialHtml.length);
       
-      const viewStateData = this.extractViewState(initialHtml);
+      const viewStateData = extractViewState(initialHtml);
 
       if (!viewStateData.__VIEWSTATE || !viewStateData.__VIEWSTATEGENERATOR || !viewStateData.__EVENTVALIDATION) {
         throw new Error('Failed to extract required view state data');
@@ -329,12 +139,12 @@ export class GUCAPIProxy {
       console.log('Response HTML length:', html.length);
       
       // Try to extract courses
-      const courses = this.extractCourses(html);
+      const courses = extractCourses(html);
       
       // Fallback: If no course dropdown found, extract course names from grade data
       if (courses.length === 0) {
         console.log('No courses found in dropdown, trying to extract from grade data...');
-        const grades = this.extractGradeData(html);
+        const grades = extractGradeData(html);
         const courseMap = new Map<string, string>();
         
         grades.forEach((grade, index) => {
@@ -375,7 +185,7 @@ export class GUCAPIProxy {
       );
 
       const initialHtml = initialData.html || initialData.body;
-      const viewStateData = this.extractViewState(initialHtml);
+      const viewStateData = extractViewState(initialHtml);
 
       if (!viewStateData.__VIEWSTATE || !viewStateData.__VIEWSTATEGENERATOR || !viewStateData.__EVENTVALIDATION) {
         throw new Error('Failed to extract required view state data');
@@ -404,7 +214,7 @@ export class GUCAPIProxy {
         console.log('Season HTML length:', seasonHtml.length);
         console.log('Contains "Mid-Term":', seasonHtml.includes('Mid-Term'));
         console.log('Contains "midDg":', seasonHtml.includes('midDg'));
-        const seasonGrades = this.extractGradeData(seasonHtml);
+        const seasonGrades = extractGradeData(seasonHtml);
         console.log(`Found ${seasonGrades.length} grades for season ${seasonId}`);
         if (seasonGrades.length > 0) {
           console.log('Sample grades:', seasonGrades.slice(0, 3));
@@ -414,7 +224,7 @@ export class GUCAPIProxy {
       }
 
       // Step 3: Select the specific course using the correct parameter name (smCrsLst)
-      const updatedVS = this.extractViewState(seasonHtml);
+      const updatedVS = extractViewState(seasonHtml);
 
       const courseFormBody = new URLSearchParams();
       courseFormBody.append('ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$Dropdownlistseason', seasonId);
@@ -433,7 +243,7 @@ export class GUCAPIProxy {
 
       const courseHtml = coursePost.html || coursePost.body;
       // Only extract course-specific items (Quiz/Assignment table). Don't fallback to mid-term table.
-      const courseSpecific = this.extractCourseGradeData(courseHtml);
+      const courseSpecific = extractCourseGradeData(courseHtml);
       console.log(`Found ${courseSpecific.length} course-specific grades for course ${courseId} in season ${seasonId}`);
       
       // If no course-specific grades found, return empty array instead of falling back to midterm grades
@@ -470,7 +280,7 @@ export class GUCAPIProxy {
       console.log('Contains "Mid-Term Results":', html.includes('Mid-Term Results'));
       console.log('Contains "midDg":', html.includes('midDg'));
       
-      const grades = this.extractGradeData(html);
+      const grades = extractGradeData(html);
       console.log(`Found ${grades.length} current grades`);
       if (grades.length > 0) {
         console.log('Sample grades:', grades.slice(0, 3));
@@ -485,76 +295,40 @@ export class GUCAPIProxy {
   }
 
   /**
-   * Extract courses from HTML dropdown
+   * Fetch the profile page and extract the Uniq-App-No value
    */
-  static extractCourses(html: string): {value: string, text: string}[] {
+  static async getUserId(): Promise<string | null> {
     try {
-      const courses: {value: string, text: string}[] = [];
-      
-      console.log('=== COURSE EXTRACTION DEBUG ===');
-      console.log('HTML length:', html.length);
-      console.log('Contains "course":', html.includes('course'));
-      console.log('Contains "Course":', html.includes('Course'));
-      
-      // Try patterns targeting the correct course dropdown (smCrsLst)
-      const patterns = [
-        /<select[^>]*id="[^"]*smCrsLst[^"]*"[^>]*>([\s\S]*?)<\/select>/i,
-        /<select[^>]*name="[^"]*smCrsLst[^"]*"[^>]*>([\s\S]*?)<\/select>/i,
-        // Fallback: any select (last resort)
-        /<select[^>]*>([\s\S]*?)<\/select>/gi
-      ];
-      
-      let courseDropdownMatch = null;
-      
-      for (let i = 0; i < patterns.length; i++) {
-        courseDropdownMatch = html.match(patterns[i]);
-        if (courseDropdownMatch) {
-          console.log(`Found dropdown using pattern ${i + 1}`);
-          break;
-        }
+      const data = await this.makeProxyRequest('https://apps.guc.edu.eg/student_ext/index.aspx');
+      const html = data.html || data.body || '';
+
+      // Look for the span with the specific id
+      const idMatch = html.match(/<span[^>]*id="ContentPlaceHolderright_ContentPlaceHoldercontent_LabelUniqAppNo"[^>]*>([^<]+)<\/span>/i);
+      if (idMatch && idMatch[1]) {
+        return idMatch[1].trim();
       }
-      
-      if (courseDropdownMatch) {
-        const optionsHtml = courseDropdownMatch[1];
-        console.log('Options HTML (first 500 chars):', optionsHtml.substring(0, 500));
-        
-        const optionPattern = /<option[^>]*value="([^"]*)"[^>]*>([^<]*)<\/option>/gi;
-        
-        let match;
-        let totalOptions = 0;
-        while ((match = optionPattern.exec(optionsHtml)) !== null) {
-          totalOptions++;
-          const value = match[1].trim();
-          const text = match[2].trim();
-          
-          console.log(`Option ${totalOptions}: value="${value}", text="${text}"`);
-          
-          // Skip empty or placeholder options (e.g., "Choose a Course")
-          if (value && text && value !== '' && !/choose/i.test(text)) {
-            courses.push({ value, text });
-          }
-        }
-        
-        console.log(`Found ${totalOptions} total options, ${courses.length} valid courses`);
-      } else {
-        console.warn('Course dropdown not found in HTML');
-        // Let's see what select elements exist
-        const allSelects = html.match(/<select[^>]*>/gi);
-        console.log('All select elements found:', allSelects?.length || 0);
-        if (allSelects) {
-          allSelects.forEach((select, index) => {
-            console.log(`Select ${index + 1}:`, select);
-          });
-        }
+
+      // Fallback: search by label text nearby
+      const liBlockMatch = html.match(/<li[^>]*class="list-group-item"[\s\S]*?Uniq-App-No[\s\S]*?<span[^>]*>([^<]+)<\/span>[\s\S]*?<\/li>/i);
+      if (liBlockMatch && liBlockMatch[1]) {
+        return liBlockMatch[1].trim();
       }
-      
-      console.log(`Final result: ${courses.length} courses extracted`);
-      console.log('=============================');
-      
-      return courses;
-    } catch (error) {
-      console.error('Error extracting courses:', error);
-      return [];
+
+      return null;
+    } catch (e) {
+      console.error('Error fetching user id:', e);
+      return null;
     }
   }
+
+  // Re-export methods from other modules for backward compatibility
+  static getAvailableStudyYears = getAvailableStudyYears;
+  static getTranscriptData = getTranscriptData;
+  static getOutstandingPayments = getOutstandingPayments;
+  static payOutstanding = payOutstanding;
+  
+  // New session reset methods
+  static getAvailableStudyYearsWithReset = getAvailableStudyYearsWithReset;
+  static getTranscriptDataWithReset = getTranscriptDataWithReset;
+  static resetSession = resetSession;
 }

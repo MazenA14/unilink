@@ -20,7 +20,9 @@ const MAPPING = {
   'chevron.right': 'chevron-right',
   'book.closed.fill': 'book',
   'calendar': 'event',
+  'doc.text': 'description',
   'person.fill': 'person',
+  'gearshape.fill': 'settings',
 } as IconMapping;
 
 /**

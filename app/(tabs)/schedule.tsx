@@ -3,15 +3,15 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-export default function CalendarScreen() {
+export default function ScheduleScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.mainFont }]}>Calendar</Text>
+      <Text style={[styles.title, { color: colors.mainFont }]}>Schedule</Text>
       <Text style={[styles.subtitle, { color: colors.secondaryFont }]}>
-        Your academic calendar will appear here
+        Your academic schedule will appear here
       </Text>
     </View>
   );

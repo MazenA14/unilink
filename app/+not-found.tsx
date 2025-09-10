@@ -25,14 +25,8 @@ export default function NotFoundScreen() {
 
         <View style={styles.actions}>
           <Link href="/(tabs)/dashboard" asChild>
-            <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: colors.tabColor }]}> 
-              <ThemedText style={[styles.primaryBtnText, { color: colors.background }]}>Go to Dashboard</ThemedText>
-            </TouchableOpacity>
-          </Link>
-
-          <Link href="/login" asChild>
             <TouchableOpacity style={[styles.secondaryBtn, { borderColor: colors.border }]}> 
-              <ThemedText style={[styles.secondaryBtnText, { color: colors.mainFont }]}>Back to Login</ThemedText>
+              <ThemedText style={[styles.secondaryBtnText, { color: colors.mainFont }]}>Back</ThemedText>
             </TouchableOpacity>
           </Link>
         </View>
@@ -69,12 +63,14 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 360,
     gap: 12,
+    alignItems: 'center',
   },
   primaryBtn: {
     height: 50,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    width: '100%',
   },
   primaryBtnText: {
     fontSize: 16,
@@ -86,6 +82,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
+    alignSelf: 'center',
+    paddingHorizontal: 20,
+    width: 'auto',
   },
   secondaryBtnText: {
     fontSize: 16,

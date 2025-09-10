@@ -15,12 +15,27 @@
 - Staff Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
 - Course Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
 - General Group Schedule https://apps.guc.edu.eg/student_ext/Scheduling/GeneralGroupSchedule.aspx
-- Reset Password # See Outlook
++ Settings page (Profile, Financials, Dark mode, Contact)
 
 ## To-Do List (Optional)
 - Evaluate Course
 - Evaluate Staff
 - Calendar
 - Force Reset Password
+- Reset Password # See Outlook
 - Reminder for Password Reset
 - Game
+
+## Dashboard should contain:
+- Notifications
+- Today's Schedule
+- Your Instructors this semester (List of view profiles separated by course)
+
+## Database Schema
+### Table 1
+- Username, GUC-ID, Date Joined App, Last Opened Date, Number of Times Opened App
+
+-------------------------- -------------------------- -------------------------- --------------------------
+
+## Build APK
+- eas build -p android --profile preview

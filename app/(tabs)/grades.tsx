@@ -888,6 +888,7 @@ const styles = StyleSheet.create({
   header: {
     padding: 20,
     paddingBottom: 10,
+    paddingTop: 60,
   },
   title: {
     fontSize: 28,

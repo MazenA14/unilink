@@ -17,8 +17,9 @@ export default function TabLayout() {
   const tabIcons = useMemo(() => ({
     dashboard: (color: string) => <IconSymbol size={28} name="house.fill" color={color} />,
     courses: (color: string) => <IconSymbol size={28} name="book.closed.fill" color={color} />,
-    calendar: (color: string) => <IconSymbol size={28} name="calendar" color={color} />,
-    profile: (color: string) => <IconSymbol size={28} name="person.fill" color={color} />,
+    schedule: (color: string) => <IconSymbol size={28} name="calendar" color={color} />,
+    transcript: (color: string) => <IconSymbol size={28} name="doc.text" color={color} />,
+    settings: (color: string) => <IconSymbol size={28} name="gearshape.fill" color={color} />,
   }), []);
 
   return (
@@ -46,24 +47,31 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="courses"
+          name="grades"
           options={{
             title: 'Grades',
             tabBarIcon: ({ color }) => tabIcons.courses(color),
           }}
         />
         <Tabs.Screen
-          name="calendar"
+          name="schedule"
           options={{
-            title: 'Calendar',
-            tabBarIcon: ({ color }) => tabIcons.calendar(color),
+            title: 'Schedule',
+            tabBarIcon: ({ color }) => tabIcons.schedule(color),
           }}
         />
         <Tabs.Screen
-          name="profile"
+          name="transcript"
           options={{
-            title: 'Profile',
-            tabBarIcon: ({ color }) => tabIcons.profile(color),
+            title: 'Transcript',
+            tabBarIcon: ({ color }) => tabIcons.transcript(color),
+          }}
+        />
+        <Tabs.Screen
+          name="settings"
+          options={{
+            title: 'Settings',
+            tabBarIcon: ({ color }) => tabIcons.settings(color),
           }}
         />
       </Tabs>
