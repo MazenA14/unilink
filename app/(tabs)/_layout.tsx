@@ -6,6 +6,7 @@ import { Platform } from 'react-native';
 
 import { AuthGuard } from '@/components/AuthGuard';
 import { HapticTab } from '@/components/HapticTab';
+import { ScheduleTabButton } from '@/components/ScheduleTabButton';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -59,6 +60,7 @@ export default function TabLayout() {
           options={{
             title: 'Schedule',
             tabBarIcon: ({ color }) => tabIcons.schedule(color),
+            tabBarButton: ScheduleTabButton,
           }}
         />
         <Tabs.Screen

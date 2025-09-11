@@ -142,7 +142,7 @@ export default function SettingsScreen() {
                       Due {p.dueDate}
                     </Text>
                   </View>
-                  <Text style={[styles.paymentAmount, { color: colors.highGrade }]}>
+                  <Text style={[styles.paymentAmount, { color: colors.financials }]}>
                     {p.currency} {p.amount.toLocaleString()}
                   </Text>
                   <TouchableOpacity

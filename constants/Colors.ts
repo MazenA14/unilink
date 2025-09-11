@@ -16,9 +16,7 @@ export const Colors = {
     tabColor: '#ff4136',
     fileBackground: '#ffde59',
     border: '#e0e0e0',
-    highGrade: '#2ecc71',
-    mediumGrade: '#f1c40f',
-    lowGrade: '#e74c3c',
+    financials: '#2ecc71',
     // Grade colors
     gradeExcellent: '#2E7D32',
     gradeGood: '#66BB6A',
@@ -42,9 +40,7 @@ export const Colors = {
     tabColor: '#ff6b5a',
     fileBackground: '#b8a142',
     border: '#404040',
-    highGrade: '#27ae60',
-    mediumGrade: '#d4ac0d',
-    lowGrade: '#c0392b',
+    financials: '#27ae60',
     // Grade colors (dark theme variants)
     gradeExcellent: '#2E7D32',
     gradeGood: '#66BB6A',
@@ -55,4 +51,12 @@ export const Colors = {
     error: '#F44336',
     cardBackground: '#2a2a2a',
   },
+};
+
+// Schedule type colors
+export const ScheduleTypeColors = {
+  personal: '#ff4136', // Current tint
+  staff: '#34C759',    // Green
+  course: '#FF9500',   // Orange
+  group: '#AF52DE',    // Purple
 };

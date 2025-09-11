@@ -1,14 +1,49 @@
-import { EmptyState, LoadingIndicator, ScheduleTable } from '@/components/schedule';
+import { EmptyState, LoadingIndicator, ScheduleSelector, ScheduleTable } from '@/components/schedule';
+import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
+import { useScheduleContext } from '@/contexts/ScheduleContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { useSchedule } from '@/hooks/useSchedule';
-import React from 'react';
-import { Alert, Dimensions, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useScheduleTypes } from '@/hooks/useScheduleTypes';
+import { useLocalSearchParams } from 'expo-router';
+import React, { useEffect } from 'react';
+import { Alert, Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function ScheduleScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { scheduleData, loading, error, refetch } = useSchedule();
+  const { scheduleType: paramScheduleType } = useLocalSearchParams<{ scheduleType?: string }>();
+  const { selectedScheduleType, setSelectedScheduleType } = useScheduleContext();
+  const {
+    scheduleType,
+    selectedOption,
+    scheduleData,
+    loading,
+    error,
+    options,
+    handleScheduleTypeChange,
+    handleOptionSelection,
+    refetch,
+  } = useScheduleTypes();
+
+  // Handle schedule type from menu navigation (context)
+  useEffect(() => {
+    console.log('Schedule screen - selectedScheduleType from context:', selectedScheduleType, 'current scheduleType:', scheduleType);
+    if (selectedScheduleType && selectedScheduleType !== scheduleType) {
+      console.log('Changing schedule type to:', selectedScheduleType);
+      handleScheduleTypeChange(selectedScheduleType);
+      // Clear the context after using it
+      setSelectedScheduleType(null);
+    }
+  }, [selectedScheduleType, scheduleType, handleScheduleTypeChange, setSelectedScheduleType]);
+
+  // Handle schedule type from URL parameters (fallback)
+  useEffect(() => {
+    console.log('Schedule screen - paramScheduleType:', paramScheduleType, 'current scheduleType:', scheduleType);
+    if (paramScheduleType && paramScheduleType !== scheduleType) {
+      console.log('Changing schedule type to:', paramScheduleType);
+      handleScheduleTypeChange(paramScheduleType as any);
+    }
+  }, [paramScheduleType, scheduleType, handleScheduleTypeChange]);
   
   // Calculate dynamic padding based on screen width
   const screenWidth = Dimensions.get('window').width;
@@ -23,17 +58,13 @@ export default function ScheduleScreen() {
   };
 
   const renderContent = () => {
-    if (loading) {
+    if (loading && (!scheduleData || scheduleData.days.length === 0)) {
       return <LoadingIndicator />;
     }
 
     if (error) {
       return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-          {/* Header */}
-          <View style={[styles.header, { paddingHorizontal: dynamicPadding }]}>
-            <Text style={[styles.title, { color: colors.text }]}>Schedule</Text>
-          </View>
           <View style={{ paddingHorizontal: dynamicPadding }}>
             <Text style={[styles.errorText, { color: colors.error }]}>
               {error}
@@ -49,37 +80,45 @@ export default function ScheduleScreen() {
     if (!scheduleData || scheduleData.days.length === 0) {
       return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-          {/* Header */}
-          <View style={[styles.header, { paddingHorizontal: dynamicPadding }]}>
-            <Text style={[styles.title, { color: colors.text }]}>Schedule</Text>
-          </View>
           <EmptyState />
         </View>
       );
     }
 
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header */}
-        <View style={[styles.header, { paddingHorizontal: dynamicPadding }]}>
-          <Text style={[styles.title, { color: colors.text }]}>Schedule</Text>
+    if(!loading && scheduleData && scheduleData.days.length > 0) {
+      return (
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+          <ScheduleTable scheduleData={scheduleData.days} scheduleType={scheduleType} />
         </View>
-        <ScheduleTable scheduleData={scheduleData.days} />
-      </View>
-    );
+      );
+    }
   };
 
   return (
     <ScrollView
       style={[styles.scrollContainer, { backgroundColor: colors.background }]}
-      refreshControl={
-        <RefreshControl
-          refreshing={loading}
-          onRefresh={handleRefresh}
-          tintColor={colors.tint}
-        />
-      }
+      refreshControl={<AppRefreshControl refreshing={loading} onRefresh={handleRefresh} />}
     >
+      {/* Header */}
+      <View style={[styles.header, { paddingHorizontal: dynamicPadding }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Schedule</Text>
+      </View>
+      
+      {/* Schedule Type Selector removed: selection now comes from the tab menu */}
+
+      {/* Schedule Selector (for non-personal schedules) */}
+      {scheduleType !== 'personal' && (
+        <ScheduleSelector
+          type={scheduleType}
+          options={options}
+          selectedValue={selectedOption}
+          onSelectionChange={handleOptionSelection}
+          placeholder={`Select ${scheduleType === 'staff' ? 'Staff Member' : scheduleType === 'course' ? 'Course' : 'Group'}`}
+          loading={loading}
+        />
+      )}
+
+      {/* Schedule Content */}
       {renderContent()}
     </ScrollView>
   );

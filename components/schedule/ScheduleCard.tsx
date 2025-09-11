@@ -1,26 +1,75 @@
-import { Colors } from '@/constants/Colors';
+import { Colors, ScheduleTypeColors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { ScheduleClass } from './types';
+import { ScheduleClass, ScheduleType } from './types';
 
 interface ScheduleCardProps {
   classData: ScheduleClass;
   periodName: string;
+  scheduleType?: ScheduleType;
 }
 
-export function ScheduleCard({ classData, periodName }: ScheduleCardProps) {
+export function ScheduleCard({ classData, periodName, scheduleType = 'personal' }: ScheduleCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const typeColor = ScheduleTypeColors[scheduleType];
+
+  const renderTypeSpecificInfo = () => {
+    switch (scheduleType) {
+      case 'staff':
+        return (
+          <>
+            {classData.officeHours && (
+              <Text style={[styles.additionalInfo, { color: colors.secondaryFont }]} numberOfLines={1}>
+                🏢 Office: {classData.officeHours}
+              </Text>
+            )}
+          </>
+        );
+      case 'course':
+        return (
+          <>
+            {classData.enrollmentCount && (
+              <Text style={[styles.additionalInfo, { color: colors.secondaryFont }]} numberOfLines={1}>
+                👥 Students: {classData.enrollmentCount}
+              </Text>
+            )}
+            {classData.credits && (
+              <Text style={[styles.additionalInfo, { color: colors.secondaryFont }]} numberOfLines={1}>
+                📊 Credits: {classData.credits}
+              </Text>
+            )}
+          </>
+        );
+      case 'group':
+        return (
+          <>
+            {classData.groupSize && (
+              <Text style={[styles.additionalInfo, { color: colors.secondaryFont }]} numberOfLines={1}>
+                👥 Group Size: {classData.groupSize}
+              </Text>
+            )}
+            {classData.department && (
+              <Text style={[styles.additionalInfo, { color: colors.secondaryFont }]} numberOfLines={1}>
+                🏛️ {classData.department}
+              </Text>
+            )}
+          </>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <View style={[styles.container, { 
       backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3',
-      borderColor: colors.border,
+      borderColor: typeColor,
       borderTopRightRadius: 16,
       borderBottomRightRadius: 16,
     }]}>
-      <Text style={[styles.periodName, { color: colors.tint }]}>{periodName}</Text>
+      <Text style={[styles.periodName, { color: typeColor }]}>{periodName}</Text>
       <Text style={[styles.courseName, { color: colors.text }]} numberOfLines={2}>
         {classData.courseName}
       </Text>
@@ -39,6 +88,7 @@ export function ScheduleCard({ classData, periodName }: ScheduleCardProps) {
           🕐 {classData.time}
         </Text>
       )}
+      {renderTypeSpecificInfo()}
     </View>
   );
 }
@@ -71,5 +121,9 @@ const styles = StyleSheet.create({
   },
   time: {
     fontSize: 12,
+  },
+  additionalInfo: {
+    fontSize: 12,
+    marginTop: 2,
   },
 });

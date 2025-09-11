@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
+import { ScheduleProvider } from '@/contexts/ScheduleContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
@@ -34,7 +35,9 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider>
-      <AppContent />
+      <ScheduleProvider>
+        <AppContent />
+      </ScheduleProvider>
     </ThemeProvider>
   );
 }

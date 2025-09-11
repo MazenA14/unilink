@@ -1,18 +1,20 @@
-import { Colors } from '@/constants/Colors';
+import { Colors, ScheduleTypeColors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import React from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { ScheduleCard } from './ScheduleCard';
-import { ScheduleDay } from './types';
+import { ScheduleDay, ScheduleType } from './types';
 
 interface ScheduleDayViewProps {
   day: ScheduleDay;
+  scheduleType?: ScheduleType;
 }
 
-export function ScheduleDayView({ day }: ScheduleDayViewProps) {
+export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayViewProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const screenWidth = Dimensions.get('window').width;
+  const typeColor = ScheduleTypeColors[scheduleType];
   
   
   // Calculate dynamic padding based on screen width
@@ -37,7 +39,7 @@ export function ScheduleDayView({ day }: ScheduleDayViewProps) {
     ]}>
       {/* Day Header */}
       <View style={styles.dayHeader}>
-        <View style={[styles.dayTitlePill, { backgroundColor: colors.tint }]}>
+        <View style={[styles.dayTitlePill, { backgroundColor: typeColor }]}>
           <Text style={[styles.dayTitle, { color: colors.background }]}>{day.dayName}</Text>
         </View>
       </View>
@@ -53,24 +55,24 @@ export function ScheduleDayView({ day }: ScheduleDayViewProps) {
               borderRadius: 16,
             }]}>
               <View style={[styles.periodLabel, { 
-                backgroundColor: colors.tint + '20', 
-                borderColor: colors.tint + '40',
+                backgroundColor: typeColor + '20', 
+                borderColor: typeColor + '40',
                 borderTopLeftRadius: 16,
                 borderBottomLeftRadius: 16,
               }]}>
-                <Text style={[styles.periodLabelText, { color: colors.tint }]}>{period.name}</Text>
+                <Text style={[styles.periodLabelText, { color: typeColor }]}>{period.name}</Text>
               </View>
               <View style={styles.periodContent}>
                 {classData ? (
-                  <ScheduleCard classData={classData} periodName={period.name} />
+                  <ScheduleCard classData={classData} periodName={period.name} scheduleType={scheduleType} />
                 ) : (
                   <View style={[styles.emptyPeriod, { 
-                    backgroundColor: colors.tint + '15', 
-                    borderColor: colors.tint + '30',
+                    backgroundColor: typeColor + '15', 
+                    borderColor: typeColor + '30',
                     borderTopRightRadius: 16,
                     borderBottomRightRadius: 16,
                   }]}>
-                    <Text style={[styles.emptyText, { color: colors.tint }]}>Free</Text>
+                    <Text style={[styles.emptyText, { color: typeColor }]}>Free</Text>
                   </View>
                 )}
               </View>
