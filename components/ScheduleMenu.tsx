@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   },
   menuWrapper: {
     paddingHorizontal: 20,
-    paddingBottom: 90, // Space above tab bar
+    paddingBottom: 30, // Reduced space to position menu lower
   },
   menu: {
     borderRadius: 12,

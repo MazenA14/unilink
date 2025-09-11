@@ -4,11 +4,12 @@ import {
   SemesterTable,
   YearSelector,
 } from '@/components/transcript';
+import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTranscript } from '@/hooks/useTranscript';
 import React from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 // Utility function to format year text to "23/24" format
 const formatYearToShort = (yearText: string): string => {
@@ -54,7 +55,7 @@ export default function TranscriptScreen() {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       {/* Header */}
       <View style={styles.header}>

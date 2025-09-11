@@ -1,25 +1,19 @@
 import {
-  CourseWithGrades,
-  CurrentGradesSection,
-  GradeType,
-  GradeTypeSelector,
-  PreviousGradesSection,
-  Season,
-  YearGroup,
+    CourseWithGrades,
+    CurrentGradesSection,
+    GradeType,
+    GradeTypeSelector,
+    PreviousGradesSection,
+    Season,
+    YearGroup,
 } from '@/components/grades';
+import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { GradeCache } from '@/utils/gradeCache';
 import { GUCAPIProxy as GUCAPI, GradeData } from '@/utils/gucApiProxy';
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Alert,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 
 export default function GradesScreen() {
@@ -508,7 +502,7 @@ export default function GradesScreen() {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       {/* Header */}
       <View style={styles.header}>
