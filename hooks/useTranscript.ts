@@ -1,4 +1,5 @@
 import { StudyYear, TranscriptData } from '@/components/transcript/types';
+import { GradeCache } from '@/utils/gradeCache';
 import { GUCAPIProxy as GUCAPI } from '@/utils/gucApiProxy';
 import { parseTranscriptHTML } from '@/utils/parsers/transcriptParser';
 import { useCallback, useEffect, useState } from 'react';
@@ -24,11 +25,25 @@ export function useTranscript() {
     try {
       setLoadingYears(true);
       
-      console.log('Loading study years from API with server overload bypass...');
+      // Try to get cached study years first (unless force refresh)
+      if (!forceRefresh) {
+        const cachedYears = await GradeCache.getCachedStudyYears();
+        if (cachedYears && cachedYears.length > 0) {
+          console.log(`Loaded ${cachedYears.length} study years from cache`);
+          setStudyYears(cachedYears);
+          setLoadingYears(false);
+          return;
+        }
+      }
+      
+      console.log('Loading study years from API...');
       const fetchedYears = await GUCAPI.getAvailableStudyYears();
       
+      // Cache the fetched years
+      await GradeCache.setCachedStudyYears(fetchedYears);
+      
       setStudyYears(fetchedYears);
-      console.log(`Loaded ${fetchedYears.length} study years`);
+      console.log(`Loaded ${fetchedYears.length} study years from API and cached`);
       
     } catch (error: any) {
       console.error('Failed to load study years:', error);
@@ -54,6 +69,20 @@ export function useTranscript() {
     try {
       setLoadingTranscript(true);
       console.log('=== LOADING TRANSCRIPT DATA ===');
+      
+      // Try to get cached transcript data first
+      console.log(`Checking cache for study year: "${year.value}"`);
+      const cachedTranscript = await GradeCache.getCachedTranscriptData(year.value);
+      if (cachedTranscript) {
+        console.log('=== LOADED TRANSCRIPT FROM CACHE ===');
+        console.log('Cached transcript data:', cachedTranscript);
+        setParsedTranscript(cachedTranscript);
+        setLoadingTranscript(false);
+        return;
+      } else {
+        console.log('=== NO CACHED TRANSCRIPT FOUND, FETCHING FROM API ===');
+      }
+      
       console.log(`Calling GUCAPI.getTranscriptData with year value: "${year.value}"`);
       
       // Call the existing getTranscriptData function
@@ -80,8 +109,14 @@ export function useTranscript() {
       const htmlContent = transcriptData.html || transcriptData.body;
       if (htmlContent) {
         const parsed = parseTranscriptHTML(htmlContent);
+        
+        // Cache the parsed transcript data
+        console.log(`Caching transcript data for year: "${year.value}"`);
+        await GradeCache.setCachedTranscriptData(year.value, parsed);
+        console.log('=== TRANSCRIPT DATA CACHED SUCCESSFULLY ===');
+        
         setParsedTranscript(parsed);
-        console.log('=== PARSED TRANSCRIPT DATA ===');
+        console.log('=== PARSED TRANSCRIPT DATA AND CACHED ===');
         console.log('Parsed transcript:', parsed);
       }
       
@@ -134,6 +169,10 @@ export function useTranscript() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    
+    // Clear transcript cache on refresh to ensure fresh data
+    await GradeCache.clearAllTranscriptCache();
+    
     await loadStudyYears(true);
     setRefreshing(false);
   }, []);
