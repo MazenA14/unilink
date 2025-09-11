@@ -80,13 +80,13 @@ export default function SemesterTable({ semester, index }: SemesterTableProps) {
   );
 
   return (
-    <View style={[styles.semesterTable, { backgroundColor: colors.background, borderColor: colors.border }]}>
+    <View style={[styles.semesterTable, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}>
       <View style={[styles.semesterHeader, { backgroundColor: colors.tabColor }]}>
         <Text style={[styles.semesterTitle, { color: '#FFFFFF' }]}>{semester.name}</Text>
       </View>
       
       {/* Table Header */}
-      <View style={[styles.tableHeader, { backgroundColor: colors.background }]}>
+      <View style={[styles.tableHeader, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3' }]}>
         <View style={styles.courseSemester}>
           <Text style={[styles.headerText, { color: colors.secondaryFont }]}>Semester</Text>
         </View>
@@ -108,7 +108,7 @@ export default function SemesterTable({ semester, index }: SemesterTableProps) {
       {semester.courses.map((course, courseIndex) => renderCourseRow(course, courseIndex))}
       
       {/* Semester Summary */}
-      <View style={[styles.semesterSummary, { backgroundColor: colors.background }]}>
+      <View style={[styles.semesterSummary, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3' }]}>
         <View style={styles.courseSemester}></View>
         <View style={styles.courseName}>
           <Text style={[styles.summaryText, { color: colors.mainFont }]}>Semester GPA</Text>

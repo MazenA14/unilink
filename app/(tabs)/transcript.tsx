@@ -84,7 +84,7 @@ export default function TranscriptScreen() {
       {selectedYear && (
         <View style={styles.transcriptSection}>
           {/* Header with Season Title and GPAs */}
-          <View style={[styles.seasonHeader, { backgroundColor: colors.background, borderColor: colors.border }]}>
+          <View style={[styles.seasonHeader, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}>
             <View style={styles.seasonTitleContainer}>
               <Text style={[styles.seasonLabel, { color: colors.secondaryFont }]}>Academic Year</Text>
               <Text style={[styles.selectedYearTitle, { color: colors.mainFont }]}>
@@ -97,10 +97,6 @@ export default function TranscriptScreen() {
               )}
             </View>
             <View style={styles.gpaContainer}>
-              <View style={[styles.gpaCard, { backgroundColor: colors.tabColor }]}>
-                <Text style={[styles.gpaLabel, { color: '#FFFFFF' }]}>Semester GPA</Text>
-                <Text style={[styles.gpaValue, { color: '#FFFFFF' }]}>3.75</Text>
-              </View>
               <View style={[styles.gpaCard, { backgroundColor: colors.tabColor }]}>
                 <Text style={[styles.gpaLabel, { color: '#FFFFFF' }]}>Cumulative GPA</Text>
                 <Text style={[styles.gpaValue, { color: '#FFFFFF' }]}>
@@ -198,8 +194,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     borderRadius: 12,
     borderWidth: 1,
     shadowColor: '#000',

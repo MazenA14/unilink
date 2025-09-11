@@ -2,6 +2,7 @@ import { useCustomAlert } from '@/components/CustomAlert';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthManager } from '@/utils/auth';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -20,6 +21,7 @@ const LoginScreen = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { showAlert, AlertComponent } = useCustomAlert();
@@ -141,76 +143,107 @@ const LoginScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled"
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          alwaysBounceVertical={false}
+          scrollEventThrottle={16}
+        >
         <View style={styles.headerContainer}>
           <Text style={[styles.title, { color: colors.mainFont }]}>UniLink</Text>
           <Text style={[styles.subtitle, { color: colors.secondaryFont }]}>Sign in to your account</Text>
         </View>
 
-        <View style={styles.formContainer}>
-          <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: colors.mainFont }]}>Username</Text>
-            <TextInput
-              style={[styles.input, { 
-                borderColor: colors.secondaryFont, 
-                backgroundColor: colors.background,
-                color: colors.mainFont 
-              }]}
-              value={username}
-              onChangeText={setUsername}
-              placeholder="Enter your username"
-              placeholderTextColor={colors.secondaryFont}
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!isLoading}
-            />
-          </View>
+        <View style={[styles.card, { 
+          backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3',
+          borderColor: colors.border 
+        }]}>
+          <View style={styles.formContainer}>
+            <View style={styles.inputContainer}>
+              <Text style={[styles.inputLabel, { color: colors.mainFont }]}>Username</Text>
+              <View style={[styles.inputWrapper, { borderColor: colors.border }]}>
+                <Ionicons name="person-outline" size={20} color={colors.secondaryFont} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, { 
+                    color: colors.mainFont 
+                  }]}
+                  value={username}
+                  onChangeText={setUsername}
+                  placeholder="Username"
+                  placeholderTextColor={colors.secondaryFont}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                />
+              </View>
+            </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: colors.mainFont }]}>Password</Text>
-            <TextInput
-              style={[styles.input, { 
-                borderColor: colors.secondaryFont, 
-                backgroundColor: colors.background,
-                color: colors.mainFont 
-              }]}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Enter your password"
-              placeholderTextColor={colors.secondaryFont}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!isLoading}
-            />
-          </View>
+            <View style={styles.inputContainer}>
+              <Text style={[styles.inputLabel, { color: colors.mainFont }]}>Password</Text>
+              <View style={[styles.inputWrapper, { borderColor: colors.border }]}>
+                <Ionicons name="lock-closed-outline" size={20} color={colors.secondaryFont} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, styles.passwordInput, { 
+                    color: colors.mainFont 
+                  }]}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Password"
+                  placeholderTextColor={colors.secondaryFont}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off" : "eye"}
+                    size={20}
+                    color={colors.secondaryFont}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
 
-          <TouchableOpacity
-            style={[
-              styles.loginButton, 
-              { backgroundColor: colors.tabColor },
-              isLoading && { backgroundColor: colors.secondaryFont }
-            ]}
-            onPress={handleLogin}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color={colors.background} />
-            ) : (
-              <Text style={[styles.loginButtonText, { color: colors.background }]}>Sign In</Text>
-            )}
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.loginButton, 
+                { backgroundColor: colors.tabColor },
+                isLoading && { backgroundColor: colors.secondaryFont, opacity: 0.7 }
+              ]}
+              onPress={handleLogin}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator color={colors.background} size="small" />
+                  <Text style={[styles.loadingText, { color: colors.background }]}>Signing In...</Text>
+                </View>
+              ) : (
+                <View style={styles.buttonContent}>
+                  <Text style={[styles.loginButtonText, { color: colors.background }]}>Sign In</Text>
+                  <Ionicons name="arrow-forward" size={20} color={colors.background} />
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
       <AlertComponent />
-    </KeyboardAvoidingView>
+    </View>
   );
 };
 
@@ -218,15 +251,40 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingVertical: 40,
+    paddingBottom: 20,
   },
   headerContainer: {
     alignItems: 'center',
     marginBottom: 48,
+  },
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  logoText: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#ffffff',
   },
   title: {
     fontSize: 32,
@@ -236,35 +294,94 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
+    opacity: 0.8,
+  },
+  card: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 32,
+    marginHorizontal: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
   },
   formContainer: {
     width: '100%',
-    maxWidth: 400,
-    alignSelf: 'center',
   },
   inputContainer: {
-    marginBottom: 24,
+    marginBottom: 28,
   },
   inputLabel: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 56,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    backgroundColor: 'transparent',
+  },
+  inputIcon: {
+    marginRight: 12,
   },
   input: {
-    height: 50,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 16,
+    flex: 1,
+    height: '100%',
     fontSize: 16,
+    paddingVertical: 0,
   },
-  loginButton: {
-    height: 50,
-    borderRadius: 8,
+  passwordInput: {
+    paddingRight: 60,
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 18,
+    top: 0,
+    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
+    padding: 4,
+  },
+  loginButton: {
+    height: 56,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   loginButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  loadingText: {
     fontSize: 16,
     fontWeight: '600',
   },

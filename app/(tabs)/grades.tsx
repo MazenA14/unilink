@@ -530,8 +530,8 @@ export default function GradesScreen() {
       style={[
         styles.seasonCard,
         {
-          backgroundColor: selectedSeason?.value === item.value ? colors.tint : colors.background,
-          borderColor: colors.border,
+          backgroundColor: selectedSeason?.value === item.value ? colors.tint : (colorScheme === 'dark' ? '#232323' : '#f3f3f3'),
+          borderColor: selectedSeason?.value === item.value ? colors.tabColor : colors.border,
         },
       ]}
       onPress={() => handleSeasonSelect(item)}
@@ -540,7 +540,7 @@ export default function GradesScreen() {
         style={[
           styles.seasonText,
           {
-            color: selectedSeason?.value === item.value ? colors.background : colors.text,
+            color: selectedSeason?.value === item.value ? (colorScheme === 'dark' ? '#000000' : '#FFFFFF') : colors.mainFont,
           },
         ]}
       >
@@ -580,8 +580,8 @@ export default function GradesScreen() {
             style={[
               styles.gradeTypeButton,
               {
-                backgroundColor: gradeType === 'current' ? colors.tint : 'transparent',
-                borderColor: colors.tint,
+                backgroundColor: gradeType === 'current' ? colors.tint : (colorScheme === 'dark' ? '#232323' : '#f3f3f3'),
+                borderColor: gradeType === 'current' ? colors.tabColor : colors.border,
               },
             ]}
             onPress={() => setGradeType('current')}
@@ -590,7 +590,7 @@ export default function GradesScreen() {
               style={[
                 styles.gradeTypeButtonText,
                 {
-                  color: gradeType === 'current' ? colors.background : colors.tint,
+                  color: gradeType === 'current' ? (colorScheme === 'dark' ? '#000000' : '#FFFFFF') : colors.mainFont,
                 },
               ]}
             >
@@ -602,8 +602,8 @@ export default function GradesScreen() {
             style={[
               styles.gradeTypeButton,
               {
-                backgroundColor: gradeType === 'previous' ? colors.tint : 'transparent',
-                borderColor: colors.tint,
+                backgroundColor: gradeType === 'previous' ? colors.tint : (colorScheme === 'dark' ? '#232323' : '#f3f3f3'),
+                borderColor: gradeType === 'previous' ? colors.tabColor : colors.border,
               },
             ]}
             onPress={() => setGradeType('previous')}
@@ -612,7 +612,7 @@ export default function GradesScreen() {
               style={[
                 styles.gradeTypeButtonText,
                 {
-                  color: gradeType === 'previous' ? colors.background : colors.tint,
+                  color: gradeType === 'previous' ? (colorScheme === 'dark' ? '#000000' : '#FFFFFF') : colors.mainFont,
                 },
               ]}
             >
@@ -661,7 +661,7 @@ export default function GradesScreen() {
                 <View key={index} style={[
                   styles.expandableCourseCard,
                   {
-                    backgroundColor: colors.background,
+                    backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3',
                     borderColor: colors.border,
                     borderRadius: 16,
                   },
@@ -814,7 +814,7 @@ export default function GradesScreen() {
                           style={[
                             styles.expandableCourseCard,
                             {
-                              backgroundColor: colors.background,
+                              backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3',
                               borderColor: colors.border,
                               borderTopLeftRadius: 16,
                               borderTopRightRadius: 16,
@@ -901,8 +901,8 @@ export default function GradesScreen() {
                               <View style={[
                                 styles.expandButton,
                                 { 
-                                  backgroundColor: colors.border + '20',
-                                  borderColor: colors.border + '40'
+                                  backgroundColor: colors.border + '60',
+                                  borderColor: colors.border + '70'
                                 }
                               ]}>
                                 <Ionicons 
@@ -919,7 +919,7 @@ export default function GradesScreen() {
                           <View style={[
                             styles.expandedContent,
                             {
-                              backgroundColor: colors.background,
+                              backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3',
                               borderColor: colors.border,
                             }
                           ]}>
