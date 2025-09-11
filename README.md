@@ -16,6 +16,7 @@
 - Course Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
 - General Group Schedule https://apps.guc.edu.eg/student_ext/Scheduling/GeneralGroupSchedule.aspx
 + Settings page (Profile, Financials, Dark mode, Contact)
+- Calculate Semester GPA
 
 ## To-Do List (Optional)
 - Evaluate Course

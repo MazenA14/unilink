@@ -271,9 +271,9 @@ export async function getTranscriptData(studyYearId: string): Promise<any> {
       return finalData;
       
     } catch (error: any) {
-      console.error(`=== ATTEMPT ${attempt} FAILED ===`);
-      console.error(`Error: ${error.message}`);
-      console.error(`Redirects attempted: ${redirectCount}`);
+      // console.error(`=== ATTEMPT ${attempt} FAILED ===`);
+      // console.error(`Error: ${error.message}`);
+      // console.error(`Redirects attempted: ${redirectCount}`);
       
       if (attempt < maxAttempts) {
         console.log('Resetting session and retrying...');

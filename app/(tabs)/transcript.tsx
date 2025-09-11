@@ -5,11 +5,16 @@ import {
   SemesterTable,
   YearSelector,
 } from '@/components/transcript';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTranscript } from '@/hooks/useTranscript';
 import React from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function TranscriptScreen() {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  
   const {
     studyYears,
     selectedYear,
@@ -24,17 +29,17 @@ export default function TranscriptScreen() {
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: '#F2F2F7' }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.title, { color: '#1C1C1E' }]}>Transcript</Text>
+        <Text style={[styles.title, { color: colors.mainFont }]}>Transcript</Text>
       </View>
 
       {/* Study Years Section */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: '#1C1C1E' }]}>Select Study Year</Text>
+        <Text style={[styles.sectionTitle, { color: colors.mainFont }]}>Select Study Year</Text>
         {loadingYears ? (
           <LoadingIndicator message={refreshing ? 'Refreshing...' : 'Loading study years...'} />
         ) : studyYears.length > 0 ? (
@@ -54,8 +59,12 @@ export default function TranscriptScreen() {
       {/* Selected Year Display */}
       {selectedYear && (
         <View style={styles.section}>
-          <View style={styles.selectedYearContainer}>
-            <Text style={[styles.selectedYearTitle, { color: '#1C1C1E' }]}>
+          <View style={[styles.selectedYearContainer, { 
+            backgroundColor: colors.background, 
+            borderColor: colors.border,
+            shadowColor: colors.mainFont 
+          }]}>
+            <Text style={[styles.selectedYearTitle, { color: colors.mainFont }]}>
               {selectedYear.text}
             </Text>
             
@@ -74,7 +83,7 @@ export default function TranscriptScreen() {
                 <CumulativeGPACard transcriptData={parsedTranscript} />
               </View>
             ) : (
-              <Text style={[styles.selectedYearSubtitle, { color: '#8E8E93' }]}>
+              <Text style={[styles.selectedYearSubtitle, { color: colors.secondaryFont }]}>
                 Select a study year to view transcript
               </Text>
             )}
@@ -85,10 +94,10 @@ export default function TranscriptScreen() {
       {/* Coming Soon Section for when no year is selected */}
       {!selectedYear && (
         <View style={styles.comingSoonContainer}>
-          <Text style={[styles.comingSoonTitle, { color: '#1C1C1E' }]}>
+          <Text style={[styles.comingSoonTitle, { color: colors.mainFont }]}>
             Select a Study Year
           </Text>
-          <Text style={[styles.comingSoonText, { color: '#8E8E93' }]}>
+          <Text style={[styles.comingSoonText, { color: colors.secondaryFont }]}>
             Choose a study year from above to view your detailed academic transcript
           </Text>
         </View>
@@ -127,11 +136,8 @@ const styles = StyleSheet.create({
   selectedYearContainer: {
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
-    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,

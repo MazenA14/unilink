@@ -1,3 +1,5 @@
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { TranscriptData } from './types';
@@ -7,8 +9,14 @@ interface CumulativeGPACardProps {
 }
 
 export default function CumulativeGPACard({ transcriptData }: CumulativeGPACardProps) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  
   return (
-    <View style={[styles.cumulativeGPACard, { backgroundColor: '#007AFF' }]}>
+    <View style={[styles.cumulativeGPACard, { 
+      backgroundColor: colors.tabColor,
+      shadowColor: colors.mainFont 
+    }]}>
       <View style={styles.gpaHeader}>
         <Text style={[styles.cumulativeGPATitle, { color: '#FFFFFF' }]}>
           Cumulative GPA
@@ -34,7 +42,6 @@ const styles = StyleSheet.create({
     padding: 24,
     borderRadius: 16,
     alignItems: 'center',
-    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 4,

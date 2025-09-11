@@ -1,3 +1,5 @@
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
@@ -6,10 +8,13 @@ interface LoadingIndicatorProps {
 }
 
 export default function LoadingIndicator({ message }: LoadingIndicatorProps) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  
   return (
     <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color="#007AFF" />
-      <Text style={[styles.loadingText, { color: '#8E8E93' }]}>
+      <ActivityIndicator size="large" color={colors.tabColor} />
+      <Text style={[styles.loadingText, { color: colors.secondaryFont }]}>
         {message}
       </Text>
     </View>

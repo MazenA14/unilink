@@ -1,3 +1,5 @@
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import React from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { StudyYear } from './types';
@@ -9,13 +11,17 @@ interface YearSelectorProps {
 }
 
 export default function YearSelector({ studyYears, selectedYear, onYearSelect }: YearSelectorProps) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  
   const renderYearItem = ({ item }: { item: StudyYear }) => (
     <TouchableOpacity
       style={[
         styles.yearCard,
         {
-          backgroundColor: selectedYear?.value === item.value ? '#007AFF' : '#F2F2F7',
-          borderColor: selectedYear?.value === item.value ? '#007AFF' : '#E5E5EA',
+          backgroundColor: selectedYear?.value === item.value ? colors.tabColor : colors.background,
+          borderColor: selectedYear?.value === item.value ? colors.tabColor : colors.border,
+          shadowColor: colors.mainFont,
         },
       ]}
       onPress={() => onYearSelect(item)}
@@ -24,7 +30,7 @@ export default function YearSelector({ studyYears, selectedYear, onYearSelect }:
         style={[
           styles.yearText,
           {
-            color: selectedYear?.value === item.value ? '#FFFFFF' : '#1C1C1E',
+            color: selectedYear?.value === item.value ? '#FFFFFF' : colors.mainFont,
           },
         ]}
       >
@@ -61,7 +67,6 @@ const styles = StyleSheet.create({
     marginRight: 12,
     minWidth: 140,
     alignItems: 'center',
-    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,

@@ -25,6 +25,12 @@ export const Colors = {
     gradeAverage: '#FF9800', // Orange - 65-74%
     gradeBelowAverage: '#FF5722', // Red Orange - 40-64%
     gradeFailing: '#F44336', // Red - Below 40%
+    // Letter grade colors (A, B, C, D, F)
+    gradeA: '#2E7D32', // Dark Green - A grade
+    gradeB: '#388E3C', // Green - B grade  
+    gradeC: '#F57C00', // Orange - C grade
+    gradeD: '#E65100', // Dark Orange - D grade
+    gradeF: '#D32F2F', // Red - F grade
   },
   dark: {
     text: '#ffffff',
@@ -48,5 +54,11 @@ export const Colors = {
     gradeAverage: '#FF9800', // Orange - 65-74%
     gradeBelowAverage: '#FF5722', // Red Orange - 40-64%
     gradeFailing: '#F44336', // Red - Below 40%
+    // Letter grade colors (A, B, C, D, F) - dark theme variants
+    gradeA: '#4CAF50', // Green - A grade (brighter for dark theme)
+    gradeB: '#66BB6A', // Light Green - B grade (brighter for dark theme)
+    gradeC: '#FFB74D', // Light Orange - C grade (brighter for dark theme)
+    gradeD: '#FF8A65', // Light Red Orange - D grade (brighter for dark theme)
+    gradeF: '#EF5350', // Light Red - F grade (brighter for dark theme)
   },
 };

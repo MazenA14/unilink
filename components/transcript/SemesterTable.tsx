@@ -1,3 +1,5 @@
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Course, Semester } from './types';
@@ -8,58 +10,79 @@ interface SemesterTableProps {
 }
 
 export default function SemesterTable({ semester, index }: SemesterTableProps) {
-  const getGradeColor = (grade: string): string => {
-    const numericGrade = parseFloat(grade);
-    if (numericGrade >= 3.7) return '#34C759'; // Green for A grades
-    if (numericGrade >= 3.0) return '#30D158'; // Light green for B grades
-    if (numericGrade >= 2.0) return '#FF9500'; // Orange for C grades
-    return '#FF3B30'; // Red for D/F grades
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  
+  const getGradeColor = (letterGrade: string): string => {
+    const grade = letterGrade.toUpperCase().trim();
+    
+    switch (grade) {
+      case 'A':
+      case 'A+':
+      case 'A-':
+        return colors.gradeA; // Dark Green for A grades
+      case 'B':
+      case 'B+':
+      case 'B-':
+        return colors.gradeB; // Green for B grades
+      case 'C':
+      case 'C+':
+      case 'C-':
+        return colors.gradeC; // Orange for C grades
+      case 'D':
+      case 'D+':
+        return colors.gradeD; // Dark Orange for D grades
+      case 'F':
+        return colors.gradeF; // Red for F grades
+      default:
+        return colors.secondaryFont; // Default color for unknown grades
+    }
   };
 
   const renderCourseRow = (course: Course, courseIndex: number) => (
-    <View key={courseIndex} style={[styles.courseRow, { borderBottomColor: '#E5E5EA' }]}>
+    <View key={courseIndex} style={[styles.courseRow, { borderBottomColor: colors.border }]}>
       <View style={styles.courseSemester}>
-        <Text style={[styles.courseText, { color: '#8E8E93' }]}>{course.semester}</Text>
+        <Text style={[styles.courseText, { color: colors.secondaryFont }]}>{course.semester}</Text>
       </View>
       <View style={styles.courseName}>
-        <Text style={[styles.courseText, { color: '#1C1C1E' }]}>{course.courseName}</Text>
+        <Text style={[styles.courseText, { color: colors.mainFont }]}>{course.courseName}</Text>
       </View>
       <View style={styles.courseNumeric}>
-        <Text style={[styles.courseText, { color: getGradeColor(course.numericGrade) }]}>{course.numericGrade}</Text>
+        <Text style={[styles.courseText, { color: getGradeColor(course.letterGrade) }]}>{course.numericGrade}</Text>
       </View>
       <View style={styles.courseGrade}>
-        <View style={[styles.gradeBadge, { backgroundColor: getGradeColor(course.numericGrade) }]}>
+        <View style={[styles.gradeBadge, { backgroundColor: getGradeColor(course.letterGrade) }]}>
           <Text style={[styles.gradeText, { color: '#FFFFFF' }]}>{course.letterGrade}</Text>
         </View>
       </View>
       <View style={styles.courseHours}>
-        <Text style={[styles.courseText, { color: '#8E8E93' }]}>{course.creditHours}</Text>
+        <Text style={[styles.courseText, { color: colors.secondaryFont }]}>{course.creditHours}</Text>
       </View>
     </View>
   );
 
   return (
-    <View style={[styles.semesterTable, { backgroundColor: '#FFFFFF', borderColor: '#E5E5EA' }]}>
-      <View style={[styles.semesterHeader, { backgroundColor: '#007AFF' }]}>
+    <View style={[styles.semesterTable, { backgroundColor: colors.background, borderColor: colors.border }]}>
+      <View style={[styles.semesterHeader, { backgroundColor: colors.tabColor }]}>
         <Text style={[styles.semesterTitle, { color: '#FFFFFF' }]}>{semester.name}</Text>
       </View>
       
       {/* Table Header */}
-      <View style={[styles.tableHeader, { backgroundColor: '#F2F2F7' }]}>
+      <View style={[styles.tableHeader, { backgroundColor: colors.background }]}>
         <View style={styles.courseSemester}>
-          <Text style={[styles.headerText, { color: '#8E8E93' }]}>Code</Text>
+          <Text style={[styles.headerText, { color: colors.secondaryFont }]}>Semester</Text>
         </View>
         <View style={styles.courseName}>
-          <Text style={[styles.headerText, { color: '#8E8E93' }]}>Course</Text>
+          <Text style={[styles.headerText, { color: colors.secondaryFont }]}>Course</Text>
         </View>
         <View style={styles.courseNumeric}>
-          <Text style={[styles.headerText, { color: '#8E8E93' }]}>Grade</Text>
+          <Text style={[styles.headerText, { color: colors.secondaryFont }]}>Grade</Text>
         </View>
         <View style={styles.courseGrade}>
-          <Text style={[styles.headerText, { color: '#8E8E93' }]}>Letter</Text>
+          <Text style={[styles.headerText, { color: colors.secondaryFont }]}>Letter</Text>
         </View>
         <View style={styles.courseHours}>
-          <Text style={[styles.headerText, { color: '#8E8E93' }]}>Hours</Text>
+          <Text style={[styles.headerText, { color: colors.secondaryFont }]}>Hours</Text>
         </View>
       </View>
       
@@ -67,17 +90,17 @@ export default function SemesterTable({ semester, index }: SemesterTableProps) {
       {semester.courses.map((course, courseIndex) => renderCourseRow(course, courseIndex))}
       
       {/* Semester Summary */}
-      <View style={[styles.semesterSummary, { backgroundColor: '#F2F2F7' }]}>
+      <View style={[styles.semesterSummary, { backgroundColor: colors.background }]}>
         <View style={styles.courseSemester}></View>
         <View style={styles.courseName}>
-          <Text style={[styles.summaryText, { color: '#1C1C1E' }]}>Semester GPA</Text>
+          <Text style={[styles.summaryText, { color: colors.mainFont }]}>Semester GPA</Text>
         </View>
         <View style={styles.courseNumeric}>
-          <Text style={[styles.summaryText, styles.boldText, { color: '#007AFF' }]}>{semester.semesterGPA}</Text>
+          <Text style={[styles.summaryText, styles.boldText, { color: colors.tabColor }]}>{semester.semesterGPA}</Text>
         </View>
         <View style={styles.courseGrade}></View>
         <View style={styles.courseHours}>
-          <Text style={[styles.summaryText, { color: '#8E8E93' }]}>{semester.totalHours}h</Text>
+          <Text style={[styles.summaryText, { color: colors.secondaryFont }]}>{semester.totalHours}h</Text>
         </View>
       </View>
     </View>

@@ -1,3 +1,5 @@
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -7,10 +9,13 @@ interface EmptyStateProps {
 }
 
 export default function EmptyState({ title, message }: EmptyStateProps) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  
   return (
     <View style={styles.emptyContainer}>
-      <Text style={[styles.emptyTitle, { color: '#1C1C1E' }]}>{title}</Text>
-      <Text style={[styles.emptyText, { color: '#8E8E93' }]}>{message}</Text>
+      <Text style={[styles.emptyTitle, { color: colors.mainFont }]}>{title}</Text>
+      <Text style={[styles.emptyText, { color: colors.secondaryFont }]}>{message}</Text>
     </View>
   );
 }
