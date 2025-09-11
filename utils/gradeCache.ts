@@ -1,6 +1,6 @@
 import { StudyYear, TranscriptData } from '@/components/transcript/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GradeData } from './gucApiProxy';
+import { GradeData, ScheduleData } from './gucApiProxy';
 
 // Cache configuration
 const CACHE_EXPIRY_DAYS = 30;
@@ -9,6 +9,10 @@ const CACHE_EXPIRY_MS = CACHE_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
 // Transcript cache configuration (shorter expiry since transcript data changes less frequently)
 const TRANSCRIPT_CACHE_EXPIRY_DAYS = 7; // 1 week for transcript data
 const TRANSCRIPT_CACHE_EXPIRY_MS = TRANSCRIPT_CACHE_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+
+// Schedule cache configuration (2 months since schedule data changes infrequently)
+const SCHEDULE_CACHE_EXPIRY_DAYS = 60; // 2 months for schedule data
+const SCHEDULE_CACHE_EXPIRY_MS = SCHEDULE_CACHE_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
 
 // Cache keys
 const CACHE_KEYS = {
@@ -21,6 +25,8 @@ const CACHE_KEYS = {
   // Transcript cache keys
   STUDY_YEARS: 'guc_cache_study_years',
   TRANSCRIPT_DATA: 'guc_cache_transcript_data',
+  // Schedule cache keys
+  SCHEDULE_DATA: 'guc_cache_schedule_data',
 } as const;
 
 // Interface definitions
@@ -104,6 +110,15 @@ export class GradeCache {
     const now = Date.now();
     const cacheAge = now - timestamp;
     return cacheAge < TRANSCRIPT_CACHE_EXPIRY_MS;
+  }
+
+  /**
+   * Check if schedule cached data is still valid
+   */
+  private static isScheduleCacheValid(timestamp: number): boolean {
+    const now = Date.now();
+    const cacheAge = now - timestamp;
+    return cacheAge < SCHEDULE_CACHE_EXPIRY_MS;
   }
 
   /**
@@ -592,13 +607,71 @@ export class GradeCache {
   }
 
   /**
-   * Update clearAllCache to include transcript cache
+   * Get cached schedule data
+   */
+  static async getCachedScheduleData(): Promise<ScheduleData | null> {
+    try {
+      console.log(`[CACHE] Getting cached schedule data for key: ${CACHE_KEYS.SCHEDULE_DATA}`);
+      const cachedData = await AsyncStorage.getItem(CACHE_KEYS.SCHEDULE_DATA);
+      if (!cachedData) {
+        console.log(`[CACHE] No cached schedule data found for key: ${CACHE_KEYS.SCHEDULE_DATA}`);
+        return null;
+      }
+
+      const parsed: CachedData<ScheduleData> = JSON.parse(cachedData);
+      console.log(`[CACHE] Found cached schedule data, timestamp: ${parsed.timestamp}`);
+      
+      if (!this.isScheduleCacheValid(parsed.timestamp)) {
+        console.log(`[CACHE] Schedule cache expired, removing...`);
+        await AsyncStorage.removeItem(CACHE_KEYS.SCHEDULE_DATA);
+        return null;
+      }
+
+      console.log(`[CACHE] Schedule cache hit`);
+      return parsed.data;
+    } catch (error) {
+      console.error(`[CACHE] Error reading schedule cache:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Set cached schedule data
+   */
+  static async setCachedScheduleData(data: ScheduleData): Promise<void> {
+    try {
+      const cachedData: CachedData<ScheduleData> = {
+        data,
+        timestamp: Date.now(),
+      };
+      
+      await AsyncStorage.setItem(CACHE_KEYS.SCHEDULE_DATA, JSON.stringify(cachedData));
+      console.log(`[CACHE] Schedule data cached successfully`);
+    } catch (error) {
+      console.error(`[CACHE] Error caching schedule data:`, error);
+    }
+  }
+
+  /**
+   * Clear schedule cache
+   */
+  static async clearScheduleCache(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(CACHE_KEYS.SCHEDULE_DATA);
+      console.log('Cleared schedule cache');
+    } catch (error) {
+      console.error('Error clearing schedule cache:', error);
+    }
+  }
+
+  /**
+   * Update clearAllCache to include transcript and schedule cache
    */
   static async clearAllCache(): Promise<void> {
     try {
       const keys = Object.values(CACHE_KEYS);
       await Promise.all(keys.map(key => AsyncStorage.removeItem(key)));
-      console.log('Cleared all cache (including transcript cache)');
+      console.log('Cleared all cache (including transcript and schedule cache)');
     } catch (error) {
       console.error('Error clearing cache:', error);
     }

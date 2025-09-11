@@ -25,6 +25,9 @@ export const Colors = {
     gradeAverage: '#FF9800',
     gradeBelowAverage: '#FF5722',
     gradeFailing: '#F44336',
+    // Error colors
+    error: '#F44336',
+    cardBackground: '#ffffff',
   },
   dark: {
     text: '#ffffff',
@@ -48,5 +51,8 @@ export const Colors = {
     gradeAverage: '#FF9800',
     gradeBelowAverage: '#FF5722',
     gradeFailing: '#F44336',
+    // Error colors (dark theme variants)
+    error: '#F44336',
+    cardBackground: '#2a2a2a',
   },
 };

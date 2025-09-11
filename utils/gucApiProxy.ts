@@ -1,10 +1,12 @@
 import { AuthManager } from './auth';
 import { extractCourseGradeData, extractCourses, extractGradeData, extractViewState } from './extractors/gradeExtractor';
+import { GradeCache } from './gradeCache';
 import { getOutstandingPayments, payOutstanding } from './handlers/paymentHandler';
+import { getScheduleData } from './handlers/scheduleHandler';
 import { getAvailableStudyYears, getTranscriptData, resetSession } from './handlers/transcriptHandler';
-import { GradeData } from './types/gucTypes';
+import { GradeData, ScheduleData } from './types/gucTypes';
 
-export { GradeData, PaymentItem, ViewStateData } from './types/gucTypes';
+export { GradeData, PaymentItem, ScheduleClass, ScheduleData, ScheduleDay, ViewStateData } from './types/gucTypes';
 
 export class GUCAPIProxy {
   private static PROXY_BASE_URL = 'https://guc-connect-login.vercel.app/api';
@@ -319,6 +321,26 @@ export class GUCAPIProxy {
       console.error('Error fetching user id:', e);
       return null;
     }
+  }
+
+  /**
+   * Get schedule data
+   */
+  static async getScheduleData(): Promise<ScheduleData> {
+    // Try to get cached data first
+    const cachedData = await GradeCache.getCachedScheduleData();
+    if (cachedData) {
+      console.log('[CACHE] Using cached schedule data');
+      return cachedData;
+    }
+
+    console.log('[CACHE] No valid cached schedule data, fetching from server...');
+    const freshData = await getScheduleData();
+    
+    // Cache the fresh data
+    await GradeCache.setCachedScheduleData(freshData);
+    
+    return freshData;
   }
 
   // Re-export methods from other modules for backward compatibility
