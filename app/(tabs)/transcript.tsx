@@ -1,5 +1,4 @@
 import {
-  CumulativeGPACard,
   EmptyState,
   LoadingIndicator,
   SemesterTable,
@@ -10,6 +9,31 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTranscript } from '@/hooks/useTranscript';
 import React from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+// Utility function to format year text to "23/24" format
+const formatYearToShort = (yearText: string): string => {
+  // Extract years from various formats like "2023/2024", "2023-2024", "Fall 2023", etc.
+  const yearMatch = yearText.match(/(\d{4})/g);
+  
+  if (yearMatch && yearMatch.length >= 1) {
+    const firstYear = yearMatch[0];
+    const firstYearShort = firstYear.slice(-2); // Get last 2 digits
+    
+    if (yearMatch.length >= 2) {
+      // Two years found (e.g., "2023/2024")
+      const secondYear = yearMatch[1];
+      const secondYearShort = secondYear.slice(-2);
+      return `${firstYearShort}/${secondYearShort}`;
+    } else {
+      // Single year found, assume next year
+      const nextYear = (parseInt(firstYear) + 1).toString().slice(-2);
+      return `${firstYearShort}/${nextYear}`;
+    }
+  }
+  
+  // Fallback: return original text if no year pattern found
+  return yearText;
+};
 
 export default function TranscriptScreen() {
   const colorScheme = useColorScheme();
@@ -58,36 +82,50 @@ export default function TranscriptScreen() {
 
       {/* Selected Year Display */}
       {selectedYear && (
-        <View style={styles.section}>
-          <View style={[styles.selectedYearContainer, { 
-            backgroundColor: colors.background, 
-            borderColor: colors.border,
-            shadowColor: colors.mainFont 
-          }]}>
-            <Text style={[styles.selectedYearTitle, { color: colors.mainFont }]}>
-              {selectedYear.text}
-            </Text>
-            
-            {loadingTranscript ? (
-              <LoadingIndicator message="Loading transcript data..." />
-            ) : parsedTranscript ? (
-              <View style={styles.transcriptContainer}>
-                {/* Transcript Tables */}
-                <View style={styles.tablesContainer}>
-                  {parsedTranscript.semesters.map((semester, index) => (
-                    <SemesterTable key={index} semester={semester} index={index} />
-                  ))}
-                </View>
-                
-                {/* Cumulative GPA */}
-                <CumulativeGPACard transcriptData={parsedTranscript} />
-              </View>
-            ) : (
-              <Text style={[styles.selectedYearSubtitle, { color: colors.secondaryFont }]}>
-                Select a study year to view transcript
+        <View style={styles.transcriptSection}>
+          {/* Header with Season Title and GPAs */}
+          <View style={[styles.seasonHeader, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <View style={styles.seasonTitleContainer}>
+              <Text style={[styles.seasonLabel, { color: colors.secondaryFont }]}>Academic Year</Text>
+              <Text style={[styles.selectedYearTitle, { color: colors.mainFont }]}>
+                {formatYearToShort(selectedYear.text)}
               </Text>
-            )}
+              {parsedTranscript?.date && (
+                <Text style={[styles.updatedDate, { color: colors.secondaryFont }]}>
+                  Updated {parsedTranscript.date}
+                </Text>
+              )}
+            </View>
+            <View style={styles.gpaContainer}>
+              <View style={[styles.gpaCard, { backgroundColor: colors.tabColor }]}>
+                <Text style={[styles.gpaLabel, { color: '#FFFFFF' }]}>Semester GPA</Text>
+                <Text style={[styles.gpaValue, { color: '#FFFFFF' }]}>3.75</Text>
+              </View>
+              <View style={[styles.gpaCard, { backgroundColor: colors.tabColor }]}>
+                <Text style={[styles.gpaLabel, { color: '#FFFFFF' }]}>Cumulative GPA</Text>
+                <Text style={[styles.gpaValue, { color: '#FFFFFF' }]}>
+                  {parsedTranscript?.cumulativeGPA || '--'}
+                </Text>
+              </View>
+            </View>
           </View>
+          
+          {loadingTranscript ? (
+            <LoadingIndicator message="Loading transcript data..." />
+          ) : parsedTranscript ? (
+            <View style={styles.transcriptContainer}>
+              {/* Transcript Tables */}
+              <View style={styles.tablesContainer}>
+                {parsedTranscript.semesters.map((semester, index) => (
+                  <SemesterTable key={index} semester={semester} index={index} />
+                ))}
+              </View>
+            </View>
+          ) : (
+            <Text style={[styles.selectedYearSubtitle, { color: colors.secondaryFont }]}>
+              Select a study year to view transcript
+            </Text>
+          )}
         </View>
       )}
 
@@ -133,11 +171,38 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 16,
   },
-  selectedYearContainer: {
+  transcriptSection: {
+    marginHorizontal: 4,
+    marginBottom: 24,
+    paddingHorizontal: 8,
+  },
+  selectedYearTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  seasonLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 4,
+    opacity: 0.8,
+  },
+  updatedDate: {
+    fontSize: 12,
+    fontWeight: '400',
+    marginTop: 2,
+    opacity: 0.7,
+  },
+  seasonHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    borderRadius: 16,
+    marginBottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 12,
     borderWidth: 1,
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -146,10 +211,39 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  selectedYearTitle: {
-    fontSize: 20,
+  seasonTitleContainer: {
+    flex: 1,
+    paddingRight: 16,
+  },
+  gpaContainer: {
+    flexDirection: 'column',
+    gap: 6,
+  },
+  gpaCard: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    minWidth: 75,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  gpaLabel: {
+    fontSize: 11,
     fontWeight: '600',
-    marginBottom: 16,
+    marginBottom: 4,
+    opacity: 0.9,
+    textAlign: 'center',
+  },
+  gpaValue: {
+    fontSize: 20,
+    fontWeight: '800',
     textAlign: 'center',
   },
   selectedYearSubtitle: {
@@ -180,5 +274,6 @@ const styles = StyleSheet.create({
   },
   tablesContainer: {
     marginBottom: 20,
+    width: '100%',
   },
 });

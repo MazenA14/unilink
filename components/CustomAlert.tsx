@@ -59,11 +59,11 @@ export function useCustomAlert() {
   const getIconForType = (type?: string) => {
     switch (type) {
       case 'error':
-        return { name: 'xmark.circle.fill', color: colors.lowGrade };
+        return { name: 'xmark.circle.fill', color: '#F44336' };
       case 'success':
-        return { name: 'checkmark.circle.fill', color: colors.highGrade };
+        return { name: 'checkmark.circle.fill', color: '#4CAF50' };
       case 'warning':
-        return { name: 'exclamationmark.triangle.fill', color: colors.mediumGrade };
+        return { name: 'exclamationmark.triangle.fill', color: '#FF9800' };
       default:
         return { name: 'info.circle.fill', color: colors.tabColor };
     }
@@ -110,7 +110,7 @@ export function useCustomAlert() {
                   key={index}
                   style={[
                     styles.button,
-                    button.style === 'destructive' && { backgroundColor: colors.lowGrade },
+                    button.style === 'destructive' && { backgroundColor: '#F44336' },
                     button.style === 'cancel' && { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.secondaryFont },
                     button.style === 'default' && { backgroundColor: colors.tabColor },
                   ]}

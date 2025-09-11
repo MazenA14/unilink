@@ -3,42 +3,16 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import React from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function DashboardScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-
-  const upcomingAssignments = [
-    { title: 'Math 101 Assignment', dueDate: 'Due in 2 days', id: 1 },
-    { title: 'History Essay', dueDate: 'Due in 4 days', id: 2 },
-  ];
-
-  const recentGrades = [
-    { subject: 'Physics Exam', grade: 85, id: 1 },
-    { subject: 'English Paper', grade: 92, id: 2 },
-  ];
-
-  const announcements = [
-    { title: 'New Course Added', id: 1 },
-    { title: 'Library Hours Extended', id: 2 },
-  ];
-
-  const quickLinks = [
-    { title: 'Course Catalog', color: colors.tabColor, id: 1 },
-    { title: 'Academic Calendar', color: colors.tabColor, id: 2 },
-  ];
-
-  const getGradeColor = (grade: number) => {
-    if (grade >= 85) return colors.highGrade;
-    if (grade >= 70) return colors.mediumGrade;
-    return colors.lowGrade;
-  };
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -48,79 +22,6 @@ export default function DashboardScreen() {
         <TouchableOpacity>
           <IconSymbol name="bell" size={24} color={colors.mainFont} />
         </TouchableOpacity>
-      </View>
-
-      {/* Upcoming Section */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.mainFont }]}>Upcoming</Text>
-        {upcomingAssignments.map((assignment) => (
-          <TouchableOpacity
-            key={assignment.id}
-            style={[styles.card, { backgroundColor: colors.background }]}
-          >
-            <View style={[styles.iconContainer, { backgroundColor: colors.fileBackground }]}>
-              <IconSymbol name="doc.text" size={24} color={colors.mainFont} />
-            </View>
-            <View style={styles.cardContent}>
-              <Text style={[styles.cardTitle, { color: colors.mainFont }]}>
-                {assignment.title}
-              </Text>
-              <Text style={[styles.cardSubtitle, { color: colors.secondaryFont }]}>
-                {assignment.dueDate}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Recent Grades Section */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.mainFont }]}>Recent Grades</Text>
-        <View style={styles.gradesContainer}>
-          {recentGrades.map((grade) => (
-            <TouchableOpacity
-              key={grade.id}
-              style={[styles.gradeCard, { backgroundColor: colors.background }]}
-            >
-              <Text style={[styles.gradeSubject, { color: colors.mainFont }]}>
-                {grade.subject}
-              </Text>
-              <Text style={[styles.gradePercent, { color: getGradeColor(grade.grade) }]}>
-                {grade.grade}%
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* Announcements Section */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.mainFont }]}>Announcements</Text>
-        {announcements.map((announcement) => (
-          <TouchableOpacity
-            key={announcement.id}
-            style={[styles.card, { backgroundColor: colors.background }]}
-          >
-            <Text style={[styles.cardTitle, { color: colors.mainFont }]}>
-              {announcement.title}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Quick Links Section */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.mainFont }]}>Quick Links</Text>
-        {quickLinks.map((link) => (
-          <TouchableOpacity
-            key={link.id}
-            style={[styles.card, { backgroundColor: colors.background }]}
-          >
-            <Text style={[styles.linkText, { color: link.color }]}>
-              {link.title}
-            </Text>
-          </TouchableOpacity>
-        ))}
       </View>
     </ScrollView>
   );

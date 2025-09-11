@@ -20,22 +20,40 @@ export default function SemesterTable({ semester, index }: SemesterTableProps) {
       case 'A':
       case 'A+':
       case 'A-':
-        return colors.gradeA; // Dark Green for A grades
+        return colors.gradeExcellent; // Green for A grades
       case 'B':
       case 'B+':
       case 'B-':
-        return colors.gradeB; // Green for B grades
+        return colors.gradeGood; // Light Green for B grades
       case 'C':
       case 'C+':
       case 'C-':
-        return colors.gradeC; // Orange for C grades
+        return colors.gradeAverage; // Orange for C grades
       case 'D':
       case 'D+':
-        return colors.gradeD; // Dark Orange for D grades
+        return colors.gradeBelowAverage; // Red Orange for D grades
       case 'F':
-        return colors.gradeF; // Red for F grades
+        return colors.gradeFailing; // Red for F grades
       default:
         return colors.secondaryFont; // Default color for unknown grades
+    }
+  };
+
+  const getSemesterGPAColor = (gpa: string): string => {
+    const numericGPA = parseFloat(gpa);
+    
+    // GPA range: 0.7 (best) to 5 (worst)
+    // Divide into 5 color ranges
+    if (numericGPA <= 1.5) {
+      return colors.gradeExcellent; // Best range: 0.7 - 1.5 (A equivalent)
+    } else if (numericGPA <= 2.2) {
+      return colors.gradeGood; // Good range: 1.5 - 2.2 (B equivalent)
+    } else if (numericGPA <= 2.8) {
+      return colors.gradeAverage; // Average range: 2.2 - 2.8 (C equivalent)
+    } else if (numericGPA <= 3.5) {
+      return colors.gradeBelowAverage; // Below average range: 2.8 - 3.5 (D equivalent)
+    } else {
+      return colors.gradeFailing; // Worst range: 3.5 - 5.0 (F equivalent)
     }
   };
 
@@ -48,7 +66,7 @@ export default function SemesterTable({ semester, index }: SemesterTableProps) {
         <Text style={[styles.courseText, { color: colors.mainFont }]}>{course.courseName}</Text>
       </View>
       <View style={styles.courseNumeric}>
-        <Text style={[styles.courseText, { color: getGradeColor(course.letterGrade) }]}>{course.numericGrade}</Text>
+        <Text style={[styles.courseText, styles.boldText, { color: getGradeColor(course.letterGrade) }]}>{course.numericGrade}</Text>
       </View>
       <View style={styles.courseGrade}>
         <View style={[styles.gradeBadge, { backgroundColor: getGradeColor(course.letterGrade) }]}>
@@ -96,7 +114,7 @@ export default function SemesterTable({ semester, index }: SemesterTableProps) {
           <Text style={[styles.summaryText, { color: colors.mainFont }]}>Semester GPA</Text>
         </View>
         <View style={styles.courseNumeric}>
-          <Text style={[styles.summaryText, styles.boldText, { color: colors.tabColor }]}>{semester.semesterGPA}</Text>
+          <Text style={[styles.summaryText, styles.boldText, { color: getSemesterGPAColor(semester.semesterGPA) }]}>{semester.semesterGPA}</Text>
         </View>
         <View style={styles.courseGrade}></View>
         <View style={styles.courseHours}>
@@ -147,23 +165,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   courseSemester: {
-    flex: 0.8,
+    flex: 1.0,
     alignItems: 'center',
   },
   courseName: {
-    flex: 2.5,
+    flex: 1.8,
     paddingHorizontal: 4,
   },
   courseNumeric: {
-    flex: 0.6,
+    flex: 0.8,
     alignItems: 'center',
   },
   courseGrade: {
-    flex: 0.6,
+    flex: 0.8,
     alignItems: 'center',
   },
   courseHours: {
-    flex: 0.6,
+    flex: 0.8,
     alignItems: 'center',
   },
   headerText: {
