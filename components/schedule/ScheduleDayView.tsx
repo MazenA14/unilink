@@ -22,11 +22,11 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
   const dayPadding = basePadding;
 
   const periods = [
-    { key: 'first', name: 'First Period' },
-    { key: 'second', name: 'Second Period' },
-    { key: 'third', name: 'Third Period' },
-    { key: 'fourth', name: 'Fourth Period' },
-    { key: 'fifth', name: 'Fifth Period' },
+    { key: 'first', name: 'First Slot' },
+    { key: 'second', name: 'Second Slot' },
+    { key: 'third', name: 'Third Slot' },
+    { key: 'fourth', name: 'Fourth Slot' },
+    { key: 'fifth', name: 'Fifth Slot' },
   ] as const;
 
   return (

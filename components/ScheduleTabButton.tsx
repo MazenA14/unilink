@@ -8,6 +8,7 @@ import { ScheduleMenu } from './ScheduleMenu';
 
 export function ScheduleTabButton(props: BottomTabBarButtonProps) {
   const [menuVisible, setMenuVisible] = useState(false);
+  const [pressed, setPressed] = useState(false);
   const { setSelectedScheduleType } = useScheduleContext();
 
   const handlePress = () => {
@@ -40,12 +41,20 @@ export function ScheduleTabButton(props: BottomTabBarButtonProps) {
     <>
       <PlatformPressable
         {...props}
-        style={props.style}
+        android_ripple={{ color: 'transparent', borderless: false }}
+        style={[
+          props.style,
+          { opacity: pressed ? 0.6 : 1 }
+        ]}
         onPressIn={(ev) => {
+          setPressed(true);
           if (process.env.EXPO_OS === 'ios') {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           }
           props.onPressIn?.(ev);
+        }}
+        onPressOut={() => {
+          setPressed(false);
         }}
         onPress={(ev) => {
           handlePress();

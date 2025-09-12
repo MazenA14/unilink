@@ -69,7 +69,6 @@ export function ScheduleCard({ classData, periodName, scheduleType = 'personal' 
       borderTopRightRadius: 16,
       borderBottomRightRadius: 16,
     }]}>
-      <Text style={[styles.periodName, { color: typeColor }]}>{periodName}</Text>
       <Text style={[styles.courseName, { color: colors.text }]} numberOfLines={2}>
         {classData.courseName}
       </Text>
@@ -99,12 +98,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     minHeight: 80,
     flex: 1,
-  },
-  periodName: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 4,
-    textTransform: 'uppercase',
   },
   courseName: {
     fontSize: 14,
