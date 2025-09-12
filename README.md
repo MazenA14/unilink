@@ -43,3 +43,5 @@
 
 ## To-Do (Notes)
 - Clear Course grades cache on pull to refresh
+- Add all days on the schedule screen
+- Make the schedule open on the mobile's current day

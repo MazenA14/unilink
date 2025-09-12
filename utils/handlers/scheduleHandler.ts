@@ -1,6 +1,7 @@
 import { AuthManager } from '../auth';
 import { PROXY_SERVER } from '../config/proxyConfig';
 import { parseScheduleData, parseScheduleDataAlternative } from '../parsers/scheduleParser';
+import { parseScheduleDataSimple } from '../parsers/simpleScheduleParser';
 import { ScheduleData } from '../types/gucTypes';
 
 /**
@@ -181,10 +182,17 @@ export async function getScheduleData(): Promise<ScheduleData> {
       let scheduleData: ScheduleData;
       
       try {
-        scheduleData = parseScheduleData(html);
+        // Try the new simple parser first
+        scheduleData = parseScheduleDataSimple(html);
+        console.log('Simple parser succeeded');
       } catch (parseError) {
-        console.log('Primary parser failed, trying alternative parser...');
-        scheduleData = parseScheduleDataAlternative(html);
+        console.log('Simple parser failed, trying original parser...');
+        try {
+          scheduleData = parseScheduleData(html);
+        } catch (parseError2) {
+          console.log('Primary parser failed, trying alternative parser...');
+          scheduleData = parseScheduleDataAlternative(html);
+        }
       }
       
       console.log('=== SCHEDULE DATA RETRIEVED SUCCESSFULLY ===');

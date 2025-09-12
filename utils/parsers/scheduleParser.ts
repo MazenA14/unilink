@@ -12,92 +12,169 @@ export function parseScheduleData(html: string): ScheduleData {
     throw new Error('Schedule table not found in HTML');
   }
   
-  const tableHtml = tableMatch[1];
   
-  // Find all day rows (rows with day names)
-  const dayRows = tableHtml.match(/<tr[^>]*id="ContentPlaceHolderright_ContentPlaceHoldercontent_Xrw\d+"[^>]*>([\s\S]*?)<\/tr>/gi);
+  // Define the days of the week (excluding Friday)
+  const dayNames = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
   
-  if (!dayRows) {
-    throw new Error('No day rows found in schedule table');
-  }
-  
-  for (const dayRow of dayRows) {
-    const day = parseDayRow(dayRow);
-    if (day && day.dayName !== 'Friday') {
-      days.push(day);
+  // Instead of trying to parse table rows directly (which fails due to nested tables),
+  // let's look for days by their specific patterns and then extract data for each
+  for (const dayName of dayNames) {
+    // Look for the day name pattern
+    const dayPattern = new RegExp(`<strong><font[^>]*>${dayName}<\/font><\/strong>`, 'i');
+    const dayMatch = html.match(dayPattern);
+    
+    if (dayMatch) {
+      // Find the full row context for this day
+      const dayIndex = html.indexOf(dayMatch[0]);
+      
+      // Get a much larger context window to capture all tables for this day
+      // Based on analysis, tables can be 2500+ chars away from day name
+      const rowStart = Math.max(0, dayIndex - 500);
+      const rowEnd = Math.min(html.length, dayIndex + 5000);
+      const dayContext = html.substring(rowStart, rowEnd);
+      
+      // Extract row ID using the working method 1
+      const rowIdMatch = dayContext.match(/id="[^"]*(?:Xrw|XaltR)(\d+)"/i);
+      if (rowIdMatch) {
+        const rowIndex = parseInt(rowIdMatch[1]);
+        
+        // Check if this is a completely free day
+        // For free days, we should see colspan="6" and "Free" text, but no course tables
+        const isCompletelyFree = dayContext.includes('colspan="6"') && dayContext.includes('Free') && 
+                                 !dayContext.match(/<table[^>]*id="Table\d+"[^>]*>[\s\S]*?<td[^>]*>[^<]*[A-Z]{3,}[^<]*<\/td>/i);
+        
+        let periods;
+        if (isCompletelyFree) {
+          periods = {
+            first: null,
+            second: null,
+            third: null,
+            fourth: null,
+            fifth: null
+          };
+        } else {
+          periods = {
+            first: extractPeriodDataImproved(dayContext, html, rowIndex, 1),
+            second: extractPeriodDataImproved(dayContext, html, rowIndex, 2),
+            third: extractPeriodDataImproved(dayContext, html, rowIndex, 3),
+            fourth: extractPeriodDataImproved(dayContext, html, rowIndex, 4),
+            fifth: extractPeriodDataImproved(dayContext, html, rowIndex, 5)
+          };
+        }
+        
+        const day: ScheduleDay = {
+          dayName,
+          periods,
+          isFree: isCompletelyFree || (!periods.first && !periods.second && !periods.third && !periods.fourth && !periods.fifth)
+        };
+        
+        days.push(day);
+      }
     }
   }
   
   return { days };
 }
 
-/**
- * Parse a single day row from the schedule table
- */
-function parseDayRow(dayRowHtml: string): ScheduleDay | null {
-  // Extract day name
-  const dayNameMatch = dayRowHtml.match(/<strong><font[^>]*>([^<]+)<\/font><\/strong>/i);
-  if (!dayNameMatch) {
-    return null;
-  }
-  
-  const dayName = dayNameMatch[1].trim();
-  
-  // Check if this day is marked as "Free"
-  const isFree = dayRowHtml.includes('Free') || dayRowHtml.includes('bgcolor="#99ffff"');
-  
-  // Extract periods (5 columns for 5 periods)
-  const periods = {
-    first: extractPeriodData(dayRowHtml, 1),
-    second: extractPeriodData(dayRowHtml, 2),
-    third: extractPeriodData(dayRowHtml, 3),
-    fourth: extractPeriodData(dayRowHtml, 4),
-    fifth: extractPeriodData(dayRowHtml, 5)
-  };
-  
-  return {
-    dayName,
-    periods,
-    isFree
-  };
-}
+
 
 /**
- * Extract period data for a specific period number
+ * Improved period data extraction that handles multiple HTML structures
  */
-function extractPeriodData(dayRowHtml: string, periodNumber: number): ScheduleClass | null {
-  // Look for the specific period cell using the pattern from the HTML
-  const periodPattern = new RegExp(
-    `<td[^>]*width="180"[^>]*>([\\s\\S]*?<span[^>]*id="ContentPlaceHolderright_ContentPlaceHoldercontent_XlblR\\d+C${periodNumber}"[^>]*>([^<]*)<\\/span>[\\s\\S]*?)<\\/td>`,
+function extractPeriodDataImproved(dayRowHtml: string, fullHtml: string, rowIndex: number, periodIndex: number): ScheduleClass | null {
+  // First, try to extract from the span element (simple format)
+  const spanPattern = new RegExp(
+    `<span[^>]*id="ContentPlaceHolderright_ContentPlaceHoldercontent_XlblR${rowIndex}C${periodIndex}"[^>]*>([^<]*(?:<br[^>]*>[^<]*)*)<\\/span>`,
     'i'
   );
   
-  const match = dayRowHtml.match(periodPattern);
-  if (!match || !match[2]) {
+  const spanMatch = fullHtml.match(spanPattern);
+  if (spanMatch && spanMatch[1] && spanMatch[1].trim() !== '' && !spanMatch[1].includes('Free')) {
+    const content = spanMatch[1].trim();
+    return parseClassContent(content);
+  }
+  
+  // If span shows Free, return null (free period)
+  if (spanMatch && spanMatch[1] && spanMatch[1].includes('Free')) {
     return null;
   }
   
-  const content = match[2].trim();
-  if (!content || content === '') {
-    return null;
+  // If no span data, try to extract from complex tables based on specific mappings
+  return extractFromComplexTables(dayRowHtml, fullHtml, rowIndex, periodIndex);
+}
+
+/**
+ * Extract course data from complex table structures
+ */
+function extractFromComplexTables(dayRowHtml: string, fullHtml: string, rowIndex: number, periodIndex: number): ScheduleClass | null {
+  // Get all tables in the day context
+  const allTables = [...dayRowHtml.matchAll(/<table[^>]*id="Table\d+"[^>]*>([\s\S]*?)<\/table>/gi)];
+  
+  // Define mapping based on the actual HTML structure analysis
+  let targetTableIndex = -1;
+  
+  if (rowIndex === 1) { // Saturday
+    if (periodIndex === 4) targetTableIndex = 0; // Table6 for Period 4
+  } else if (rowIndex === 4) { // Tuesday  
+    if (periodIndex === 1) targetTableIndex = 0; // Table18 for Period 1
+    if (periodIndex === 2) targetTableIndex = 1; // Table19 for Period 2
+    if (periodIndex === 3) targetTableIndex = -1; // Period 3 has span, not table
+  } else if (rowIndex === 5) { // Wednesday
+    if (periodIndex === 3) targetTableIndex = 0; // Table25 for Period 3
+  } else if (rowIndex === 6) { // Thursday
+    if (periodIndex === 1) targetTableIndex = 0; // Table28 for Period 1
+    if (periodIndex === 2) targetTableIndex = 1; // Table29 for Period 2  
+    if (periodIndex === 3) targetTableIndex = 2; // Table30 for Period 3
   }
   
-  // Parse the content to extract course information
-  return parseClassContent(content);
+  if (targetTableIndex >= 0 && targetTableIndex < allTables.length) {
+    const tableContent = allTables[targetTableIndex][1];
+    
+    // Look for rows with course information
+    const courseRowMatch = tableContent.match(/<tr[^>]*>([\s\S]*?)<\/tr>/i);
+    if (courseRowMatch) {
+      const rowContent = courseRowMatch[1];
+      
+      // Extract individual cells from the row
+      const cells = [...rowContent.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)];
+      
+      if (cells.length >= 3) {
+        // Extract group, room, and course information
+        const group = cells[0][1].replace(/<[^>]*>/g, '').trim();
+        const room = cells[1][1].replace(/<[^>]*>/g, '').trim();
+        const courseCell = cells[2][1];
+        
+        // Extract course name and type from the third cell
+        const courseName = courseCell.replace(/<[^>]*>/g, '').trim();
+        
+        if (courseName && courseName !== '') {
+          return {
+            courseName,
+            room: room || undefined,
+            instructor: group || undefined
+          };
+        }
+      }
+    }
+  }
+  
+  return null;
 }
 
 /**
  * Parse class content to extract course details
  */
 function parseClassContent(content: string): ScheduleClass {
-  // The content might contain course name, instructor, room, etc.
-  // For now, we'll treat the entire content as the course name
-  // In a real implementation, you might want to parse this more sophisticatedly
+  // Clean up the content by removing HTML tags and normalizing line breaks
+  const cleanContent = content
+    .replace(/<br[^>]*>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .trim();
   
-  const lines = content.split('\n').map(line => line.trim()).filter(line => line);
+  const lines = cleanContent.split('\n').map(line => line.trim()).filter(line => line);
   
   if (lines.length === 0) {
-    return { courseName: content };
+    return { courseName: cleanContent };
   }
   
   const courseName = lines[0];
@@ -110,8 +187,8 @@ function parseClassContent(content: string): ScheduleClass {
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
     
-    // Look for room patterns (e.g., "Room: C3.201", "C3.201", etc.)
-    if (line.match(/^[A-Z]\d+\.\d+/) || line.toLowerCase().includes('room')) {
+    // Look for room patterns (e.g., "H18", "C3.201", etc.)
+    if (line.match(/^[A-Z]\d+(\.\d+)?$/) || line.toLowerCase().includes('room')) {
       room = line.replace(/room:\s*/i, '');
     }
     // Look for time patterns
@@ -120,6 +197,10 @@ function parseClassContent(content: string): ScheduleClass {
     }
     // Look for instructor patterns
     else if (line.toLowerCase().includes('dr.') || line.toLowerCase().includes('prof.')) {
+      instructor = line;
+    }
+    // If it looks like a group identifier (e.g., "7MET L002"), treat as instructor info
+    else if (line.match(/\d+[A-Z]+\s+[A-Z]\d+/)) {
       instructor = line;
     }
   }
