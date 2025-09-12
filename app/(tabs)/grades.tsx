@@ -2,18 +2,19 @@ import {
     CourseWithGrades,
     CurrentGradesSection,
     GradeType,
-    GradeTypeSelector,
     PreviousGradesSection,
     Season,
     YearGroup,
 } from '@/components/grades';
+import { GradesMenu } from '@/components/GradesMenu';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { GradeCache } from '@/utils/gradeCache';
 import { GUCAPIProxy as GUCAPI, GradeData } from '@/utils/gucApiProxy';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 
 export default function GradesScreen() {
@@ -33,6 +34,9 @@ export default function GradesScreen() {
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [loadingGrades, setLoadingGrades] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Menu state
+  const [menuVisible, setMenuVisible] = useState(false);
 
   // Load data when grade type changes
   useEffect(() => {
@@ -497,54 +501,85 @@ export default function GradesScreen() {
     return sum / coursesWithMidtermGrades.length;
   };
 
+  // Menu handlers
+  const handleMenuPress = () => {
+    setMenuVisible(true);
+  };
+
+  const handleMenuClose = () => {
+    setMenuVisible(false);
+  };
+
+  const handleMenuOptionPress = (option: string) => {
+    setGradeType(option as GradeType);
+    setMenuVisible(false);
+  };
+
 
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      refreshControl={<AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>Grades</Text>
-        
-        <GradeTypeSelector
-          gradeType={gradeType}
-          onGradeTypeChange={setGradeType}
-        />
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={<AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <Text style={[styles.title, { color: colors.text }]}>Grades</Text>
+            <TouchableOpacity
+              style={[styles.menuButton, { backgroundColor: colors.tint }]}
+              onPress={handleMenuPress}
+              activeOpacity={0.7}
+            >
+              <Ionicons 
+                name="menu" 
+                size={20} 
+                color={colorScheme === 'dark' ? '#000000' : '#FFFFFF'} 
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
 
-      {/* Current Grades Content */}
-      {gradeType === 'current' && (
-        <CurrentGradesSection
-          grades={grades}
-          loadingGrades={loadingGrades}
-          refreshing={refreshing}
-          getGradeColor={getGradeColor}
-          formatCourseName={formatCourseName}
-          getCourseCodeParts={getCourseCodeParts}
-        />
-      )}
+        {/* Current Grades Content */}
+        {gradeType === 'current' && (
+          <CurrentGradesSection
+            grades={grades}
+            loadingGrades={loadingGrades}
+            refreshing={refreshing}
+            getGradeColor={getGradeColor}
+            formatCourseName={formatCourseName}
+            getCourseCodeParts={getCourseCodeParts}
+          />
+        )}
 
-      {/* Previous Grades Content */}
-      {gradeType === 'previous' && (
-        <PreviousGradesSection
-          yearGroups={yearGroups}
-          selectedSeason={selectedSeason}
-          coursesWithGrades={coursesWithGrades}
-          loadingSeasons={loadingSeasons}
-          loadingCourses={loadingCourses}
-          loadingGrades={loadingGrades}
-          refreshing={refreshing}
-          onSeasonSelect={handleSeasonSelect}
-          onCourseToggle={handleCourseToggle}
-          getGradeColor={getGradeColor}
-          formatCourseName={formatCourseName}
-          getCourseCodeParts={getCourseCodeParts}
-          calculateAverage={calculateAverage}
-        />
-      )}
-    </ScrollView>
+        {/* Previous Grades Content */}
+        {gradeType === 'previous' && (
+          <PreviousGradesSection
+            yearGroups={yearGroups}
+            selectedSeason={selectedSeason}
+            coursesWithGrades={coursesWithGrades}
+            loadingSeasons={loadingSeasons}
+            loadingCourses={loadingCourses}
+            loadingGrades={loadingGrades}
+            refreshing={refreshing}
+            onSeasonSelect={handleSeasonSelect}
+            onCourseToggle={handleCourseToggle}
+            getGradeColor={getGradeColor}
+            formatCourseName={formatCourseName}
+            getCourseCodeParts={getCourseCodeParts}
+            calculateAverage={calculateAverage}
+          />
+        )}
+      </ScrollView>
+
+      {/* Grades Menu - Outside ScrollView */}
+      <GradesMenu
+        visible={menuVisible}
+        onClose={handleMenuClose}
+        onOptionPress={handleMenuOptionPress}
+      />
+    </View>
   );
 }
 
@@ -552,14 +587,36 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
   header: {
     padding: 20,
     paddingBottom: 10,
     paddingTop: 60,
   },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 4,
+  },
+  menuButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
 });

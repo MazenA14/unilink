@@ -42,8 +42,9 @@
 - eas build -p android --profile preview
 
 ## To-Do (Notes)
-- Clear Course grades cache on pull to refresh
+- Clear Course grades cache on pull to refresh and not be visibile while refreshing
 - Add all days on the schedule screen
 - Make the schedule open on the mobile's current day
 - Remove the effect that occurs on pressing on the tabs at the bottom
 - See schedule Caching
+- Change animation for the hamburger menu to slide from the right

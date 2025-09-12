@@ -1,12 +1,14 @@
 import { EmptyState, LoadingIndicator, ScheduleSelector, ScheduleTable } from '@/components/schedule';
+import { ScheduleMenuNew } from '@/components/ScheduleMenuNew';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { useScheduleContext } from '@/contexts/ScheduleContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useScheduleTypes } from '@/hooks/useScheduleTypes';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import React, { useEffect } from 'react';
-import { Alert, Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function ScheduleScreen() {
   const colorScheme = useColorScheme();
@@ -24,6 +26,9 @@ export default function ScheduleScreen() {
     handleOptionSelection,
     refetch,
   } = useScheduleTypes();
+
+  // Menu state
+  const [menuVisible, setMenuVisible] = useState(false);
 
   // Handle schedule type from menu navigation (context) - only run when selectedScheduleType changes
   useEffect(() => {
@@ -53,6 +58,20 @@ export default function ScheduleScreen() {
     } catch {
       Alert.alert('Error', 'Failed to refresh schedule data');
     }
+  };
+
+  // Menu handlers
+  const handleMenuPress = () => {
+    setMenuVisible(true);
+  };
+
+  const handleMenuClose = () => {
+    setMenuVisible(false);
+  };
+
+  const handleMenuOptionPress = (option: string) => {
+    handleScheduleTypeChange(option as any);
+    setMenuVisible(false);
   };
 
   const renderContent = () => {
@@ -93,49 +112,101 @@ export default function ScheduleScreen() {
   };
 
   return (
-    <ScrollView
-      style={[styles.scrollContainer, { backgroundColor: colors.background }]}
-      refreshControl={<AppRefreshControl refreshing={loading} onRefresh={handleRefresh} />}
-    >
-      {/* Header */}
-      <View style={[styles.header, { paddingHorizontal: dynamicPadding }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Schedule</Text>
-      </View>
-      
-      {/* Schedule Type Selector removed: selection now comes from the tab menu */}
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={<AppRefreshControl refreshing={loading} onRefresh={handleRefresh} />}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <Text style={[styles.title, { color: colors.text }]}>Schedule</Text>
+            <TouchableOpacity
+              style={[styles.menuButton, { backgroundColor: colors.tint }]}
+              onPress={handleMenuPress}
+              activeOpacity={0.7}
+            >
+              <Ionicons 
+                name="menu" 
+                size={20} 
+                color={colorScheme === 'dark' ? '#000000' : '#FFFFFF'} 
+              />
+            </TouchableOpacity>
+          </View>
+          
+        {/* Schedule Section Title */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            {scheduleType === 'personal' ? 'Personal Schedule' : 
+             scheduleType === 'staff' ? 'Staff Schedule' :
+             scheduleType === 'course' ? 'Course Schedule' : 'Group Schedule'}
+          </Text>
+        </View>
+        </View>
+        
+        {/* Schedule Type Selector removed: selection now comes from the hamburger menu */}
 
-      {/* Schedule Selector (for non-personal schedules) */}
-      {scheduleType !== 'personal' && (
-        <ScheduleSelector
-          type={scheduleType}
-          options={options}
-          selectedValue={selectedOption}
-          onSelectionChange={handleOptionSelection}
-          placeholder={`Select ${scheduleType === 'staff' ? 'Staff Member' : scheduleType === 'course' ? 'Course' : 'Group'}`}
-          loading={loading}
-        />
-      )}
+        {/* Schedule Selector (for non-personal schedules) */}
+        {scheduleType !== 'personal' && (
+          <ScheduleSelector
+            type={scheduleType}
+            options={options}
+            selectedValue={selectedOption}
+            onSelectionChange={handleOptionSelection}
+            placeholder={`Select ${scheduleType === 'staff' ? 'Staff Member' : scheduleType === 'course' ? 'Course' : 'Group'}`}
+            loading={loading}
+          />
+        )}
 
-      {/* Schedule Content */}
-      {renderContent()}
-    </ScrollView>
+        {/* Schedule Content */}
+        {renderContent()}
+      </ScrollView>
+
+      {/* Schedule Menu - Outside ScrollView */}
+      <ScheduleMenuNew
+        visible={menuVisible}
+        onClose={handleMenuClose}
+        onOptionPress={handleMenuOptionPress}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flex: 1,
-  },
   container: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
   header: {
-    paddingVertical: 20,
+    padding: 20,
+    paddingBottom: 10,
     paddingTop: 60,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
+  },
+  menuButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   subtitle: {
     fontSize: 16,
@@ -146,5 +217,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 8,
+  },
+  section: {
+    // marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 11,
+    marginBottom: 12,
   },
 });
