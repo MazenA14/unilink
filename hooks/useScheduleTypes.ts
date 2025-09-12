@@ -119,10 +119,10 @@ export function useScheduleTypes() {
       let data: ScheduleData;
       
       if (type === 'personal') {
-        // Use real API for personal schedule to test the parser
-        console.log('🚀 Fetching real personal schedule data...');
-        const { getScheduleData } = await import('../utils/handlers/scheduleHandler');
-        data = await getScheduleData();
+        // Use cached API for personal schedule
+        console.log('🚀 Fetching personal schedule data (with cache)...');
+        const { GUCAPIProxy } = await import('../utils/gucApiProxy');
+        data = await GUCAPIProxy.getScheduleData();
       } else {
         // Use mock data for other schedule types
         await new Promise(resolve => setTimeout(resolve, 1000));

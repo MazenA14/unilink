@@ -53,10 +53,52 @@ export const Colors = {
   },
 };
 
-// Schedule type colors
+// Schedule type colors - Warm theme colors
 export const ScheduleTypeColors = {
-  personal: '#ff4136', // Current tint
-  staff: '#34C759',    // Green
-  course: '#FF9500',   // Orange
-  group: '#AF52DE',    // Purple
+  personal: '#FF6B6B', // Vibrant coral red (matches app theme)
+  staff: '#FF8C42',    // Warm orange
+  course: '#FFB347',   // Golden orange
+  group: '#FF69B4',    // Hot pink
+};
+
+// Schedule color palettes for light and dark modes - matching app theme
+export const ScheduleColors = {
+  light: {
+    // Background colors - warm and colorful
+    periodRowBg: '#FFF5F5', // Very light red tint
+    periodRowBorder: '#FFE0E0', // Light red border
+    periodLabelBg: '#FFFFFF',
+    periodLabelBorder: '#FFE0E0',
+    emptyPeriodBg: '#FFF8F8', // Light warm background
+    emptyPeriodBorder: '#FFD6D6', // Warm border
+    
+    // Text colors
+    periodLabelText: '#2D1B1B', // Warm dark text
+    emptyText: '#8B5A5A', // Warm muted text
+    
+    // Accent colors - warm theme
+    accent1: '#FFE66D', // Yellow
+    accent2: '#FF8B94', // Pink
+    accent3: '#FFB347', // Orange
+    accent4: '#FFD3A5', // Peach
+  },
+  dark: {
+    // Background colors - warm dark theme
+    periodRowBg: '#2A1F1F', // Warm dark background
+    periodRowBorder: '#3D2A2A', // Warm dark border
+    periodLabelBg: '#1F1515', // Very dark warm background
+    periodLabelBorder: '#3D2A2A',
+    emptyPeriodBg: '#2A1F1F',
+    emptyPeriodBorder: '#3D2A2A',
+    
+    // Text colors
+    periodLabelText: '#F5E6E6', // Warm light text
+    emptyText: '#B8A0A0', // Warm muted light text
+    
+    // Accent colors - warm bright theme
+    accent1: '#FFD700', // Gold
+    accent2: '#FF69B4', // Hot pink
+    accent3: '#FF8C00', // Dark orange
+    accent4: '#FFA07A', // Light salmon
+  },
 };

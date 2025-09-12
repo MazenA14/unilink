@@ -1,4 +1,4 @@
-import { Colors, ScheduleTypeColors } from '@/constants/Colors';
+import { Colors, ScheduleColors, ScheduleTypeColors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import React from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
@@ -13,6 +13,7 @@ interface ScheduleDayViewProps {
 export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayViewProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const scheduleColors = ScheduleColors[colorScheme ?? 'light'];
   const screenWidth = Dimensions.get('window').width;
   const typeColor = ScheduleTypeColors[scheduleType];
   
@@ -39,7 +40,14 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
     ]}>
       {/* Day Header */}
       <View style={styles.dayHeader}>
-        <View style={[styles.dayTitlePill, { backgroundColor: typeColor }]}>
+        <View style={[styles.dayTitlePill, { 
+          backgroundColor: typeColor,
+          shadowColor: typeColor,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          elevation: 6,
+        }]}>
           <Text style={[styles.dayTitle, { color: colors.background }]}>{day.dayName}</Text>
         </View>
       </View>
@@ -50,13 +58,18 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
           const classData = day.periods[period.key];
           return (
             <View key={period.key} style={[styles.periodRow, { 
-              backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3',
-              borderColor: colors.border,
+              backgroundColor: scheduleColors.periodRowBg,
+              borderColor: scheduleColors.periodRowBorder,
               borderRadius: 16,
+              shadowColor: typeColor,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 3,
             }]}>
               <View style={[styles.periodLabel, { 
-                backgroundColor: typeColor + '20', 
-                borderColor: typeColor + '40',
+                backgroundColor: typeColor + '15', 
+                borderColor: typeColor + '30',
                 borderTopLeftRadius: 16,
                 borderBottomLeftRadius: 16,
               }]}>
@@ -67,12 +80,12 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
                   <ScheduleCard classData={classData} periodName={period.name} scheduleType={scheduleType} />
                 ) : (
                   <View style={[styles.emptyPeriod, { 
-                    backgroundColor: typeColor + '15', 
-                    borderColor: typeColor + '30',
+                    backgroundColor: scheduleColors.emptyPeriodBg, 
+                    borderColor: scheduleColors.emptyPeriodBorder,
                     borderTopRightRadius: 16,
                     borderBottomRightRadius: 16,
                   }]}>
-                    <Text style={[styles.emptyText, { color: typeColor }]}>Free</Text>
+                    <Text style={[styles.emptyText, { color: scheduleColors.emptyText }]}>Free</Text>
                   </View>
                 )}
               </View>

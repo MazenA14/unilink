@@ -1,4 +1,4 @@
-import { Colors, ScheduleTypeColors } from '@/constants/Colors';
+import { Colors, ScheduleColors, ScheduleTypeColors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -13,6 +13,7 @@ interface ScheduleCardProps {
 export function ScheduleCard({ classData, periodName, scheduleType = 'personal' }: ScheduleCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const scheduleColors = ScheduleColors[colorScheme ?? 'light'];
   const typeColor = ScheduleTypeColors[scheduleType];
 
   const renderTypeSpecificInfo = () => {
@@ -64,10 +65,12 @@ export function ScheduleCard({ classData, periodName, scheduleType = 'personal' 
 
   return (
     <View style={[styles.container, { 
-      backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3',
-      borderColor: typeColor,
+      backgroundColor: scheduleColors.periodLabelBg,
+      borderColor: typeColor + '40',
       borderTopRightRadius: 16,
       borderBottomRightRadius: 16,
+      borderLeftWidth: 3,
+      borderLeftColor: typeColor,
     }]}>
       <Text style={[styles.courseName, { color: colors.text }]} numberOfLines={2}>
         {classData.courseName}
