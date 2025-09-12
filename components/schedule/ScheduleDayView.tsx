@@ -41,8 +41,8 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
       {/* Day Header */}
       <View style={styles.dayHeader}>
         <View style={[styles.dayTitlePill, { 
-          backgroundColor: typeColor,
-          shadowColor: typeColor,
+          backgroundColor: colors.tint,
+          shadowColor: colors.tint,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.3,
           shadowRadius: 8,

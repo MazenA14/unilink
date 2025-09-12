@@ -1,6 +1,6 @@
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ScheduleDayView } from './ScheduleDayView';
 import { ScheduleDay, ScheduleType } from './types';
@@ -13,9 +13,7 @@ interface ScheduleTableProps {
 export function ScheduleTable({ scheduleData, scheduleType = 'personal' }: ScheduleTableProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-
-
-
+  const scrollViewRef = useRef<ScrollView>(null);
   const screenWidth = Dimensions.get('window').width;
 
   // Normalize day ordering to Saturday–Thursday (filter out Friday if present)
@@ -36,6 +34,32 @@ export function ScheduleTable({ scheduleData, scheduleType = 'personal' }: Sched
       });
   }, [scheduleData]);
 
+  // Get current day and scroll to it
+  const getCurrentDayIndex = () => {
+    const today = new Date();
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const currentDayName = dayNames[today.getDay()];
+    
+    // Find the index of current day in ordered days
+    const currentDayIndex = orderedDays.findIndex(day => day.dayName === currentDayName);
+    
+    // If current day is not found (e.g., Friday is filtered out), default to first day
+    return currentDayIndex >= 0 ? currentDayIndex : 0;
+  };
+
+  // Scroll to current day when component mounts or data changes
+  useEffect(() => {
+    if (orderedDays.length > 0 && scrollViewRef.current) {
+      const currentDayIndex = getCurrentDayIndex();
+      const scrollX = currentDayIndex * screenWidth;
+      
+      // Use setTimeout to ensure the ScrollView is fully rendered
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ x: scrollX, animated: false });
+      }, 100);
+    }
+  }, [orderedDays, screenWidth]);
+
   // Fallback if no data
   if (!orderedDays || orderedDays.length === 0) {
     return (
@@ -48,6 +72,7 @@ export function ScheduleTable({ scheduleData, scheduleType = 'personal' }: Sched
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
+        ref={scrollViewRef}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}

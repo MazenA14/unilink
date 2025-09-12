@@ -16,13 +16,13 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 const THEME_STORAGE_KEY = 'app_theme_preference';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [themePreference, setThemePreferenceState] = useState<ThemePreference>('light');
+  const [themePreference, setThemePreferenceState] = useState<ThemePreference>('dark');
   const systemColorScheme = useRNColorScheme();
 
   // Determine the actual color scheme based on preference
   const colorScheme: ColorScheme = 
     themePreference === 'system' 
-      ? (systemColorScheme || 'light')
+      ? (systemColorScheme || 'dark')
       : themePreference;
 
   // Load theme preference from storage
