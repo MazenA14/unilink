@@ -116,12 +116,22 @@ export function useScheduleTypes() {
     setError(null);
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      let data: ScheduleData;
       
-      const data = generateMockSchedule(type, selectedId);
+      if (type === 'personal') {
+        // Use real API for personal schedule to test the parser
+        console.log('🚀 Fetching real personal schedule data...');
+        const { getScheduleData } = await import('../utils/handlers/scheduleHandler');
+        data = await getScheduleData();
+      } else {
+        // Use mock data for other schedule types
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        data = generateMockSchedule(type, selectedId);
+      }
+      
       setScheduleData(data);
     } catch (err) {
+      console.error('❌ Error fetching schedule data:', err);
       setError('Failed to load schedule data');
       setScheduleData(null);
     } finally {

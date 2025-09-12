@@ -151,7 +151,7 @@ export function parseScheduleDataAlternative(html: string): ScheduleData {
       'i'
     );
     const freeRowMatch = html.match(freeRowPattern);
-    const isFree = freeRowMatch && freeRowMatch[1].includes('Free');
+    const isFree = !!(freeRowMatch && freeRowMatch[1].includes('Free'));
     
     // Extract periods for this day
     const periods = {

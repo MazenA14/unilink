@@ -40,3 +40,6 @@
 
 ## Build APK
 - eas build -p android --profile preview
+
+## To-Do (Notes)
+- Clear Course grades cache on pull to refresh

@@ -25,25 +25,23 @@ export default function ScheduleScreen() {
     refetch,
   } = useScheduleTypes();
 
-  // Handle schedule type from menu navigation (context)
+  // Handle schedule type from menu navigation (context) - only run when selectedScheduleType changes
   useEffect(() => {
-    console.log('Schedule screen - selectedScheduleType from context:', selectedScheduleType, 'current scheduleType:', scheduleType);
     if (selectedScheduleType && selectedScheduleType !== scheduleType) {
       console.log('Changing schedule type to:', selectedScheduleType);
       handleScheduleTypeChange(selectedScheduleType);
       // Clear the context after using it
       setSelectedScheduleType(null);
     }
-  }, [selectedScheduleType, scheduleType, handleScheduleTypeChange, setSelectedScheduleType]);
+  }, [selectedScheduleType]); // Removed other dependencies to prevent loop
 
-  // Handle schedule type from URL parameters (fallback)
+  // Handle schedule type from URL parameters (fallback) - only run when param changes
   useEffect(() => {
-    console.log('Schedule screen - paramScheduleType:', paramScheduleType, 'current scheduleType:', scheduleType);
-    if (paramScheduleType && paramScheduleType !== scheduleType) {
-      console.log('Changing schedule type to:', paramScheduleType);
+    if (paramScheduleType && paramScheduleType !== scheduleType && !selectedScheduleType) {
+      console.log('Changing schedule type from URL param to:', paramScheduleType);
       handleScheduleTypeChange(paramScheduleType as any);
     }
-  }, [paramScheduleType, scheduleType, handleScheduleTypeChange]);
+  }, [paramScheduleType]); // Removed other dependencies to prevent loop
   
   // Calculate dynamic padding based on screen width
   const screenWidth = Dimensions.get('window').width;

@@ -23,12 +23,10 @@ export function ScheduleTabButton(props: BottomTabBarButtonProps) {
   };
 
   const handleMenuOptionPress = (option: string) => {
-    console.log('Menu option pressed:', option);
     setMenuVisible(false);
     
     // Set the schedule type in context and navigate to schedule screen
     setSelectedScheduleType(option as any);
-    console.log('Setting schedule type to:', option);
     
     // Navigate to schedule screen with the selected type as a param
     router.push({ pathname: '/(tabs)/schedule', params: { scheduleType: option } });
