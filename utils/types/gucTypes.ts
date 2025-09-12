@@ -39,4 +39,11 @@ export interface ScheduleDay {
 
 export interface ScheduleData {
   days: ScheduleDay[];
+  type: 'personal' | 'staff' | 'course' | 'group';
+  metadata?: {
+    totalCourses?: number;
+    totalStudents?: number;
+    department?: string;
+    selectedItem?: string;
+  };
 }

@@ -33,7 +33,6 @@ export default function ScheduleScreen() {
   // Handle schedule type from menu navigation (context) - only run when selectedScheduleType changes
   useEffect(() => {
     if (selectedScheduleType && selectedScheduleType !== scheduleType) {
-      console.log('Changing schedule type to:', selectedScheduleType);
       handleScheduleTypeChange(selectedScheduleType);
       // Clear the context after using it
       setSelectedScheduleType(null);
@@ -43,7 +42,6 @@ export default function ScheduleScreen() {
   // Handle schedule type from URL parameters (fallback) - only run when param changes
   useEffect(() => {
     if (paramScheduleType && paramScheduleType !== scheduleType && !selectedScheduleType) {
-      console.log('Changing schedule type from URL param to:', paramScheduleType);
       handleScheduleTypeChange(paramScheduleType as any);
     }
   }, [paramScheduleType]); // Removed other dependencies to prevent loop

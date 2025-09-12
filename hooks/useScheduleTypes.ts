@@ -120,7 +120,6 @@ export function useScheduleTypes() {
       
       if (type === 'personal') {
         // Use cached API for personal schedule
-        console.log('🚀 Fetching personal schedule data (with cache)...');
         const { GUCAPIProxy } = await import('../utils/gucApiProxy');
         data = await GUCAPIProxy.getScheduleData();
       } else {
@@ -131,7 +130,6 @@ export function useScheduleTypes() {
       
       setScheduleData(data);
     } catch (err) {
-      console.error('❌ Error fetching schedule data:', err);
       setError('Failed to load schedule data');
       setScheduleData(null);
     } finally {

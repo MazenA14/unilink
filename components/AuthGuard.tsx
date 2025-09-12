@@ -24,7 +24,6 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
         router.replace('/login');
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
       router.replace('/login');
     } finally {
       setIsLoading(false);

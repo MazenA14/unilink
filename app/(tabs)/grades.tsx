@@ -73,7 +73,6 @@ export default function GradesScreen() {
         }
       }
 
-      console.log('Loading current grades from API...');
       const fetchedGrades = await GUCAPI.getCurrentGrades();
       
       setGrades(fetchedGrades);
@@ -82,7 +81,6 @@ export default function GradesScreen() {
       await GradeCache.setCachedCurrentGrades(fetchedGrades);
       
     } catch (error: any) {
-      console.error('Error loading current grades:', error);
       
       const errorMessage = error?.message || 'Unknown error occurred';
       
@@ -138,7 +136,6 @@ export default function GradesScreen() {
         }
       }
 
-      console.log('Loading seasons from API...');
       const fetchedSeasons = await GUCAPI.getAvailableSeasons();
       
       // Check which seasons have grades and add year information
@@ -158,7 +155,6 @@ export default function GradesScreen() {
               year
             };
           } catch (error) {
-            console.warn(`Failed to check grades for season ${season.text}:`, error);
             // If we can't check grades, assume it has them to avoid hiding valid seasons
             const yearMatch = season.text.match(/(\d{4})/);
             const year = yearMatch ? yearMatch[1] : 'Unknown';
@@ -206,7 +202,6 @@ export default function GradesScreen() {
       await GradeCache.setCachedSeasonsWithGrades(seasonsWithGrades, groupedYears);
       
     } catch (error: any) {
-      console.error('Error loading seasons:', error);
       
       const errorMessage = error?.message || 'Unknown error occurred';
       
@@ -253,7 +248,6 @@ export default function GradesScreen() {
         // Use cached data
         fetchedCourses = cachedCourses;
         midtermGrades = cachedMidtermGrades;
-        console.log(`Using cached data for season ${seasonId}: ${fetchedCourses.length} courses, ${midtermGrades.length} midterm grades`);
       } else {
         // Load from API
         const [apiCourses, apiMidtermGrades] = await Promise.all([
@@ -274,9 +268,6 @@ export default function GradesScreen() {
       setGrades(midtermGrades);
       
       // Create courses with their midterm grades
-      console.log('=== MIDTERM GRADE MATCHING DEBUG ===');
-      console.log('Fetched courses:', fetchedCourses.map(c => c.text));
-      console.log('Midterm grades:', midtermGrades.map(g => g.course));
       
       const coursesWithGradesData: CourseWithGrades[] = fetchedCourses.map(course => {
         // Find matching midterm grade for this course
@@ -287,11 +278,9 @@ export default function GradesScreen() {
         };
         
         const courseCode = extractCourseCode(course.text);
-        console.log(`Matching course "${course.text}" with code "${courseCode}"`);
         
         const midtermGrade = midtermGrades.find(grade => {
           const gradeCode = extractCourseCode(grade.course);
-          console.log(`  Checking against grade "${grade.course}" with code "${gradeCode}"`);
           
           return (
             grade.course === course.text ||
@@ -301,7 +290,6 @@ export default function GradesScreen() {
           );
         });
         
-        console.log(`Course "${course.text}" -> Midterm grade: ${midtermGrade ? midtermGrade.percentage + '%' : 'NOT FOUND'}`);
         
         return {
           ...course,
@@ -311,11 +299,9 @@ export default function GradesScreen() {
         };
       });
       
-      console.log('=====================================');
       
       setCoursesWithGrades(coursesWithGradesData);
     } catch (error) {
-      console.error('Error loading courses with grades:', error);
       Alert.alert(
         'Error',
         'Failed to load courses and grades. Please try again.',
@@ -332,16 +318,12 @@ export default function GradesScreen() {
       // Check cache first
       const cachedGrades = await GradeCache.getCachedDetailedGrades(seasonId, courseId);
       if (cachedGrades) {
-        console.log(`Using cached grades for course ${courseId}`);
         return cachedGrades;
       }
       
       // Check if courseId is a fallback ID (starts with 'course_')
       if (courseId.startsWith('course_')) {
         // For fallback courses, filter existing grades by course name
-        console.log('=== DETAILED COURSE GRADE FILTERING ===');
-        console.log('Course name:', courseName);
-        console.log('Total grades available:', grades.length);
         
         if (courseName && grades.length > 0) {
           // Try exact match first
@@ -357,10 +339,8 @@ export default function GradesScreen() {
           
           // Cache the results
           await GradeCache.setCachedDetailedGrades(seasonId, courseId, filteredGrades);
-          console.log(`Found ${filteredGrades.length} detailed grades for ${courseName}`);
           return filteredGrades;
         }
-        console.log('==========================================');
         return [];
       } else {
         // For real course IDs, make API call
@@ -369,7 +349,6 @@ export default function GradesScreen() {
         return fetchedGrades;
       }
     } catch (error) {
-      console.error('Error loading detailed course grades:', error);
       return [];
     }
   };
@@ -378,6 +357,9 @@ export default function GradesScreen() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     if (gradeType === 'previous') {
+      // Clear courses cache for all seasons to ensure fresh data
+      await GradeCache.clearAllCache();
+      
       // Force refresh from API (bypass cache)
       await loadSeasons(true);
       if (selectedSeason) {
@@ -414,9 +396,7 @@ export default function GradesScreen() {
           try {
             // Note: We don't need to manually clear cache here since the new system
             // will automatically handle cache validation and expiration
-            console.log(`Loading fresh data for course ${course.value}`);
           } catch (error) {
-            console.log('Error preparing fresh data load:', error);
           }
         }
         
@@ -425,12 +405,6 @@ export default function GradesScreen() {
           course.value,
           course.text
         );
-        console.log(`=== COURSE EXPANSION DEBUG ===`);
-        console.log(`Course: ${course.text}`);
-        console.log(`Course ID: ${course.value}`);
-        console.log(`Detailed grades returned: ${detailedGrades.length}`);
-        console.log(`Detailed grades:`, detailedGrades.map(g => `${g.course}: ${g.percentage}%`));
-        console.log(`================================`);
         course.detailedGrades = detailedGrades;
         course.isLoadingDetails = false;
       }

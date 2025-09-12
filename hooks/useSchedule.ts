@@ -11,13 +11,10 @@ export function useSchedule() {
       setLoading(true);
       setError(null);
       
-      console.log('Fetching schedule data...');
       const data = await GUCAPIProxy.getScheduleData();
       
-      console.log('Schedule data fetched successfully:', data);
       setScheduleData(data);
     } catch (err: any) {
-      console.error('Error fetching schedule:', err);
       setError(err.message || 'Failed to load schedule');
     } finally {
       setLoading(false);

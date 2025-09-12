@@ -49,6 +49,7 @@ const LoginScreen = () => {
           password: password,
         }),
       });
+      
 
       // Safely parse response (may be JSON or text)
       const contentType = response.headers.get('content-type') || '';
@@ -72,14 +73,6 @@ const LoginScreen = () => {
 
       const status = data?.status ?? response.status;
 
-      console.log('=== LOGIN DEBUG ===');
-      console.log('Response status:', response.status);
-      console.log('Content-Type:', contentType);
-      console.log('Data status:', data?.status);
-      console.log('Final status:', status);
-      console.log('Raw text (first 200 chars):', rawText.substring(0, 200));
-      console.log('Data object:', JSON.stringify(data, null, 2));
-      console.log('==================');
 
       // Check if this is a successful login (either explicit status 200 or HTTP 200 with no errors)
       const isSuccessful = status === 200 || (response.status === 200 && !data?.error);
@@ -102,11 +95,9 @@ const LoginScreen = () => {
           await AuthManager.storeSessionCookie(cookieString);
           // also store creds for NTLM mode in proxy requests
           await AuthManager.storeCredentials(username.trim(), password);
-          console.log('Login successful, credentials stored');
           router.replace('/(tabs)/dashboard');
         } 
         // else {
-        //   console.warn('Login succeeded but no Set-Cookie was returned by the server');
         //   // Still proceed if we got HTTP 200, assuming login worked
         //   await AuthManager.storeCredentials(username.trim(), password);
         // }
@@ -131,7 +122,6 @@ const LoginScreen = () => {
         });
       }
     } catch (error) {
-      console.error('Login error:', error);
       showAlert({
         title: 'Login Failed',
         message: 'Network or server error. Please try again shortly.',

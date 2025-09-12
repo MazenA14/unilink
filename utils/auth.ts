@@ -14,7 +14,6 @@ export class AuthManager {
     try {
       await AsyncStorage.setItem(this.SESSION_COOKIE_KEY, cookie);
     } catch (error) {
-      console.error('Failed to store session cookie:', error);
     }
   }
 
@@ -25,7 +24,6 @@ export class AuthManager {
     try {
       return await AsyncStorage.getItem(this.SESSION_COOKIE_KEY);
     } catch (error) {
-      console.error('Failed to retrieve session cookie:', error);
       return null;
     }
   }
@@ -37,7 +35,6 @@ export class AuthManager {
     try {
       await AsyncStorage.removeItem(this.SESSION_COOKIE_KEY);
     } catch (error) {
-      console.error('Failed to clear session cookie:', error);
     }
   }
 
@@ -49,7 +46,6 @@ export class AuthManager {
       await AsyncStorage.setItem(this.USERNAME_KEY, username);
       await AsyncStorage.setItem(this.PASSWORD_KEY, password);
     } catch (error) {
-      console.error('Failed to store credentials:', error);
     }
   }
 
@@ -64,7 +60,6 @@ export class AuthManager {
       ]);
       return { username, password };
     } catch (error) {
-      console.error('Failed to retrieve credentials:', error);
       return { username: null, password: null };
     }
   }
@@ -77,7 +72,6 @@ export class AuthManager {
       await AsyncStorage.removeItem(this.USERNAME_KEY);
       await AsyncStorage.removeItem(this.PASSWORD_KEY);
     } catch (error) {
-      console.error('Failed to clear credentials:', error);
     }
   }
 
@@ -88,7 +82,6 @@ export class AuthManager {
     try {
       await AsyncStorage.setItem(this.NICKNAME_KEY, nickname);
     } catch (error) {
-      console.error('Failed to store nickname:', error);
     }
   }
 
@@ -99,7 +92,6 @@ export class AuthManager {
     try {
       return await AsyncStorage.getItem(this.NICKNAME_KEY);
     } catch (error) {
-      console.error('Failed to retrieve nickname:', error);
       return null;
     }
   }
@@ -111,7 +103,6 @@ export class AuthManager {
     try {
       await AsyncStorage.removeItem(this.NICKNAME_KEY);
     } catch (error) {
-      console.error('Failed to clear nickname:', error);
     }
   }
 
@@ -122,7 +113,6 @@ export class AuthManager {
     try {
       await AsyncStorage.setItem(this.USER_ID_KEY, userId);
     } catch (error) {
-      console.error('Failed to store user id:', error);
     }
   }
 
@@ -130,7 +120,6 @@ export class AuthManager {
     try {
       return await AsyncStorage.getItem(this.USER_ID_KEY);
     } catch (error) {
-      console.error('Failed to retrieve user id:', error);
       return null;
     }
   }
@@ -139,7 +128,6 @@ export class AuthManager {
     try {
       await AsyncStorage.removeItem(this.USER_ID_KEY);
     } catch (error) {
-      console.error('Failed to clear user id:', error);
     }
   }
 
@@ -176,7 +164,6 @@ export class AuthManager {
    */
   static async logout(): Promise<void> {
     try {
-      console.log('=== PERFORMING FULL LOGOUT ===');
       
       // Clear all stored data
       await Promise.all([
@@ -186,9 +173,7 @@ export class AuthManager {
         this.clearUserId()
       ]);
       
-      console.log('All user data cleared successfully');
     } catch (error) {
-      console.error('Failed to perform logout:', error);
       throw error;
     }
   }
@@ -198,8 +183,6 @@ export class AuthManager {
    */
   static async login(username: string, password: string): Promise<boolean> {
     try {
-      console.log('=== PERFORMING LOGIN ===');
-      console.log('Username:', username);
       
       const response = await fetch('https://guc-connect-login.vercel.app/api/ntlm-login', {
         method: 'POST',
@@ -233,7 +216,6 @@ export class AuthManager {
       }
 
       const status = data?.status ?? response.status;
-      console.log('Login response status:', status);
 
       // Check if this is a successful login
       const isSuccessful = status === 200 || (response.status === 200 && !data?.error);
@@ -255,19 +237,15 @@ export class AuthManager {
         if (cookieString) {
           await this.storeSessionCookie(cookieString);
           await this.storeCredentials(username.trim(), password);
-          console.log('Login successful, credentials stored');
           return true;
         } else {
-          console.warn('Login succeeded but no Set-Cookie was returned');
           return false;
         }
       } else {
         const msg = data?.error || rawText || `HTTP ${response.status}`;
-        console.error('Login failed:', msg);
         return false;
       }
     } catch (error) {
-      console.error('Login error:', error);
       return false;
     }
   }
@@ -277,13 +255,11 @@ export class AuthManager {
    */
   static async logoutAndLogin(): Promise<boolean> {
     try {
-      console.log('=== PERFORMING LOGOUT AND LOGIN CYCLE ===');
       
       // Get current credentials before logout
       const { username, password } = await this.getCredentials();
       
       if (!username || !password) {
-        console.error('No stored credentials found for re-login');
         return false;
       }
       
@@ -291,20 +267,17 @@ export class AuthManager {
       await this.logout();
       
       // Wait a bit for logout to complete
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 50));
       
       // Perform login
       const loginSuccess = await this.login(username, password);
       
       if (loginSuccess) {
-        console.log('Logout and login cycle completed successfully');
       } else {
-        console.error('Logout and login cycle failed at login step');
       }
       
       return loginSuccess;
     } catch (error) {
-      console.error('Logout and login cycle failed:', error);
       return false;
     }
   }

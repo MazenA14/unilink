@@ -99,11 +99,8 @@ export async function getScheduleData(): Promise<ScheduleData> {
     let redirectCount = 0;
     
     try {
-      console.log(`=== SCHEDULE DATA ATTEMPT ${attempt} ===`);
-      console.log('Loading schedule data...');
       
       // Get initial page
-      console.log('Step 1: Getting initial scheduling page...');
       const initialData = await makeProxyRequest('https://apps.guc.edu.eg/student_ext/Scheduling/GroupSchedule.aspx');
       const initialHtml = initialData.html || initialData.body;
       
@@ -112,7 +109,6 @@ export async function getScheduleData(): Promise<ScheduleData> {
       // Check for server overload
       if (isServerOverloaded(initialHtml)) {
         if (attempt < maxAttempts) {
-          console.log(`Server overload detected (attempt ${attempt}), resetting session...`);
           await AuthManager.logoutAndLogin();
           continue;
         } else {
@@ -125,14 +121,11 @@ export async function getScheduleData(): Promise<ScheduleData> {
       let html = initialHtml;
       
       if (isRedirectResponse(html)) {
-        console.log('Step 2: Following redirects...');
         
         while (redirectCount < maxRedirects) {
-          console.log(`Step 2.${redirectCount + 1}: Following redirect to: ${currentUrl}`);
           
           // Extract redirect parameter
           const redirectParam = extractRedirectParam(html);
-          console.log(`Redirect parameter: ${redirectParam}`);
           
           // Update URL with redirect parameter
           currentUrl = `https://apps.guc.edu.eg/student_ext/Scheduling/GroupSchedule.aspx?v=${redirectParam}`;
@@ -145,14 +138,12 @@ export async function getScheduleData(): Promise<ScheduleData> {
           
           // Check for server overload
           if (isServerOverloaded(html)) {
-            console.log('Server overload detected during redirect, breaking redirect loop');
             throw new Error('Server overload detected during redirect');
           }
           
           // Check if we got another redirect
           if (isRedirectResponse(html)) {
             redirectCount++;
-            console.log(`Redirect ${redirectCount}/${maxRedirects} detected`);
             
             if (redirectCount >= maxRedirects) {
               throw new Error(`Maximum redirect limit (${maxRedirects}) reached`);
@@ -161,7 +152,6 @@ export async function getScheduleData(): Promise<ScheduleData> {
           }
           
           // We got the actual page, break out of redirect loop
-          console.log('Successfully reached schedule page (no more redirects)');
           break;
         }
       }
@@ -169,7 +159,6 @@ export async function getScheduleData(): Promise<ScheduleData> {
       // Check for server overload one more time
       if (isServerOverloaded(html)) {
         if (attempt < maxAttempts) {
-          console.log(`Server overload detected (attempt ${attempt}), resetting session...`);
           await AuthManager.logoutAndLogin();
           continue;
         } else {
@@ -178,36 +167,25 @@ export async function getScheduleData(): Promise<ScheduleData> {
       }
       
       // Parse the schedule data
-      console.log('Step 3: Parsing schedule data...');
       let scheduleData: ScheduleData;
       
       try {
         // Try the new simple parser first
         scheduleData = parseScheduleDataSimple(html);
-        console.log('Simple parser succeeded');
       } catch (parseError) {
-        console.log('Simple parser failed, trying original parser...');
         try {
           scheduleData = parseScheduleData(html);
         } catch (parseError2) {
-          console.log('Primary parser failed, trying alternative parser...');
           scheduleData = parseScheduleDataAlternative(html);
         }
       }
       
-      console.log('=== SCHEDULE DATA RETRIEVED SUCCESSFULLY ===');
-      console.log(`Total redirects followed: ${redirectCount}`);
-      console.log(`Found ${scheduleData.days.length} days in schedule`);
       
       return scheduleData;
       
     } catch (error: any) {
-      console.error(`=== ATTEMPT ${attempt} FAILED ===`);
-      console.error(`Error: ${error.message}`);
-      console.error(`Redirects attempted: ${redirectCount}`);
       
       if (attempt < maxAttempts) {
-        console.log('Resetting session and retrying...');
         await AuthManager.logoutAndLogin();
       } else {
         throw error;

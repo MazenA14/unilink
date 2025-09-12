@@ -73,7 +73,7 @@ export function parseScheduleData(html: string): ScheduleData {
     }
   }
   
-  return { days };
+  return { days, type: 'personal' as const };
 }
 
 
@@ -250,7 +250,7 @@ export function parseScheduleDataAlternative(html: string): ScheduleData {
     });
   }
   
-  return { days };
+  return { days, type: 'personal' as const };
 }
 
 /**

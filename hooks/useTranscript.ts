@@ -29,24 +29,24 @@ export function useTranscript() {
       if (!forceRefresh) {
         const cachedYears = await GradeCache.getCachedStudyYears();
         if (cachedYears && cachedYears.length > 0) {
-          console.log(`Loaded ${cachedYears.length} study years from cache`);
+(`Loaded ${cachedYears.length} study years from cache`);
           setStudyYears(cachedYears);
           setLoadingYears(false);
           return;
         }
       }
       
-      console.log('Loading study years from API...');
+('Loading study years from API...');
       const fetchedYears = await GUCAPI.getAvailableStudyYears();
       
       // Cache the fetched years
       await GradeCache.setCachedStudyYears(fetchedYears);
       
       setStudyYears(fetchedYears);
-      console.log(`Loaded ${fetchedYears.length} study years from API and cached`);
+(`Loaded ${fetchedYears.length} study years from API and cached`);
       
     } catch (error: any) {
-      console.error('Failed to load study years:', error);
+('Failed to load study years:', error);
       Alert.alert(
         'Error',
         `Failed to load study years: ${error.message}`,
@@ -58,52 +58,52 @@ export function useTranscript() {
   };
 
   const handleYearSelect = async (year: StudyYear) => {
-    console.log('=== YEAR SELECTED ===');
-    console.log('Selected year:', year);
-    console.log('Year value:', year.value);
-    console.log('Year text:', year.text);
+('=== YEAR SELECTED ===');
+('Selected year:', year);
+('Year value:', year.value);
+('Year text:', year.text);
     
     setSelectedYear(year);
     setParsedTranscript(null); // Clear previous data
     
     try {
       setLoadingTranscript(true);
-      console.log('=== LOADING TRANSCRIPT DATA ===');
+('=== LOADING TRANSCRIPT DATA ===');
       
       // Try to get cached transcript data first
-      console.log(`Checking cache for study year: "${year.value}"`);
+(`Checking cache for study year: "${year.value}"`);
       const cachedTranscript = await GradeCache.getCachedTranscriptData(year.value);
       if (cachedTranscript) {
-        console.log('=== LOADED TRANSCRIPT FROM CACHE ===');
-        console.log('Cached transcript data:', cachedTranscript);
+('=== LOADED TRANSCRIPT FROM CACHE ===');
+('Cached transcript data:', cachedTranscript);
         setParsedTranscript(cachedTranscript);
         setLoadingTranscript(false);
         return;
       } else {
-        console.log('=== NO CACHED TRANSCRIPT FOUND, FETCHING FROM API ===');
+('=== NO CACHED TRANSCRIPT FOUND, FETCHING FROM API ===');
       }
       
-      console.log(`Calling GUCAPI.getTranscriptData with year value: "${year.value}"`);
+(`Calling GUCAPI.getTranscriptData with year value: "${year.value}"`);
       
       // Call the existing getTranscriptData function
       const transcriptData = await GUCAPI.getTranscriptData(year.value);
       
-      console.log('=== TRANSCRIPT DATA LOADED SUCCESSFULLY ===');
-      console.log('Raw transcript data received:', transcriptData);
-      console.log('Data type:', typeof transcriptData);
-      console.log('Data keys:', transcriptData ? Object.keys(transcriptData) : 'No keys (null/undefined)');
+('=== TRANSCRIPT DATA LOADED SUCCESSFULLY ===');
+('Raw transcript data received:', transcriptData);
+('Data type:', typeof transcriptData);
+('Data keys:', transcriptData ? Object.keys(transcriptData) : 'No keys (null/undefined)');
       
       if (transcriptData && transcriptData.html) {
-        console.log('HTML content length:', transcriptData.html.length);
-        console.log('HTML preview (first 500 chars):', transcriptData.html.substring(0, 500));
+('HTML content length:', transcriptData.html.length);
+('HTML preview (first 500 chars):', transcriptData.html.substring(0, 500));
       }
       
       if (transcriptData && transcriptData.body) {
-        console.log('Body content length:', transcriptData.body.length);
-        console.log('Body preview (first 500 chars):', transcriptData.body.substring(0, 500));
+('Body content length:', transcriptData.body.length);
+('Body preview (first 500 chars):', transcriptData.body.substring(0, 500));
       }
       
-      console.log('=== TRANSCRIPT DATA SET IN STATE ===');
+('=== TRANSCRIPT DATA SET IN STATE ===');
       
       // Parse the HTML content
       const htmlContent = transcriptData.html || transcriptData.body;
@@ -111,28 +111,28 @@ export function useTranscript() {
         const parsed = parseTranscriptHTML(htmlContent);
         
         // Cache the parsed transcript data
-        console.log(`Caching transcript data for year: "${year.value}"`);
+(`Caching transcript data for year: "${year.value}"`);
         await GradeCache.setCachedTranscriptData(year.value, parsed);
-        console.log('=== TRANSCRIPT DATA CACHED SUCCESSFULLY ===');
+('=== TRANSCRIPT DATA CACHED SUCCESSFULLY ===');
         
         setParsedTranscript(parsed);
-        console.log('=== PARSED TRANSCRIPT DATA AND CACHED ===');
-        console.log('Parsed transcript:', parsed);
+('=== PARSED TRANSCRIPT DATA AND CACHED ===');
+('Parsed transcript:', parsed);
       }
       
     } catch (error: any) {
-      console.log('=== TRANSCRIPT DATA LOADING FAILED ===');
-      console.error('Error object:', error);
-      console.error('Error message:', error?.message);
-      console.error('Error stack:', error?.stack);
-      console.error('Error name:', error?.name);
-      console.error('Full error details:', JSON.stringify(error, null, 2));
+('=== TRANSCRIPT DATA LOADING FAILED ===');
+('Error object:', error);
+('Error message:', error?.message);
+('Error stack:', error?.stack);
+('Error name:', error?.name);
+('Full error details:', JSON.stringify(error, null, 2));
       
       const errorMessage = error?.message || 'Unknown error occurred';
-      console.log('Processed error message:', errorMessage);
+('Processed error message:', errorMessage);
       
       if (errorMessage.includes('Session expired') || errorMessage.includes('login')) {
-        console.log('Session expired error detected - showing session expired alert');
+('Session expired error detected - showing session expired alert');
         Alert.alert(
           'Session Expired',
           'Your session has expired. Please login again.',
@@ -140,7 +140,7 @@ export function useTranscript() {
             { 
               text: 'OK', 
               onPress: () => {
-                console.log('User acknowledged session expired alert');
+('User acknowledged session expired alert');
                 // Navigate back to login screen
                 // You can implement navigation logic here
               }
@@ -148,22 +148,22 @@ export function useTranscript() {
           ]
         );
       } else {
-        console.log('Generic error detected - showing generic error alert');
+('Generic error detected - showing generic error alert');
         Alert.alert(
           'Error',
           `Failed to load transcript data: ${errorMessage}`,
           [{ 
             text: 'OK',
             onPress: () => {
-              console.log('User acknowledged error alert');
+('User acknowledged error alert');
             }
           }]
         );
       }
     } finally {
       setLoadingTranscript(false);
-      console.log('=== TRANSCRIPT LOADING COMPLETED ===');
-      console.log('Loading state set to false');
+('=== TRANSCRIPT LOADING COMPLETED ===');
+('Loading state set to false');
     }
   };
 

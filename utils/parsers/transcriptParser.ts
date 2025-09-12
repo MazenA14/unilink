@@ -85,7 +85,6 @@ export function parseTranscriptHTML(html: string): TranscriptData | null {
       date: dateMatch ? dateMatch[1].trim() : '',
     };
   } catch (error) {
-    console.error('Error parsing transcript HTML:', error);
     return null;
   }
 }

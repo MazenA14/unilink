@@ -1,6 +1,6 @@
+import { AuthManager } from '@/utils/auth';
 import { Redirect } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { AuthManager } from '@/utils/auth';
 
 export default function Index() {
   const [ready, setReady] = useState(false);

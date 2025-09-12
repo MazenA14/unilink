@@ -114,7 +114,7 @@ export async function getAvailableStudyYears(): Promise<{value: string, text: st
       // Check for server overload
       if (isServerOverloaded(html)) {
         if (attempt < maxAttempts) {
-          console.log(`Server overload detected (attempt ${attempt}), resetting session...`);
+(`Server overload detected (attempt ${attempt}), resetting session...`);
           await AuthManager.logoutAndLogin();
           continue;
         } else {
@@ -137,17 +137,17 @@ export async function getAvailableStudyYears(): Promise<{value: string, text: st
       }
       
       if (years.length > 0) {
-        console.log(`Found ${years.length} study years`);
+(`Found ${years.length} study years`);
         return years;
       }
       
       throw new Error('No study years found');
       
     } catch (error: any) {
-      console.error(`Attempt ${attempt} failed:`, error.message);
+(`Attempt ${attempt} failed:`, error.message);
       
       if (attempt < maxAttempts) {
-        console.log('Resetting session and retrying...');
+('Resetting session and retrying...');
         await AuthManager.logoutAndLogin();
       } else {
         throw error;
@@ -171,27 +171,27 @@ export async function getTranscriptData(studyYearId: string): Promise<any> {
     let redirectCount = 0;
     
     try {
-      console.log(`=== TRANSCRIPT DATA ATTEMPT ${attempt} ===`);
-      console.log(`Loading transcript for study year: ${studyYearId}`);
+(`=== TRANSCRIPT DATA ATTEMPT ${attempt} ===`);
+(`Loading transcript for study year: ${studyYearId}`);
       
       // Get initial page
-      console.log('Step 1: Getting initial page...');
+('Step 1: Getting initial page...');
       const initialData = await makeProxyRequest('https://apps.guc.edu.eg/student_ext/Grade/Transcript_001.aspx');
       const initialHtml = initialData.html || initialData.body;
       
       if (!initialHtml) throw new Error('No HTML content received');
       
       // Extract redirect parameter
-      console.log('Step 2: Extracting redirect parameter...');
+('Step 2: Extracting redirect parameter...');
       const redirectParam = extractRedirectParam(initialHtml);
-      console.log(`Redirect parameter: ${redirectParam}`);
+(`Redirect parameter: ${redirectParam}`);
       
       // Follow redirects with protection against infinite loops
       let currentUrl = `https://apps.guc.edu.eg/student_ext/Grade/Transcript_001.aspx?v=${redirectParam}`;
       let html = initialHtml;
       
       while (redirectCount < maxRedirects) {
-        console.log(`Step 3.${redirectCount + 1}: Following redirect to: ${currentUrl}`);
+(`Step 3.${redirectCount + 1}: Following redirect to: ${currentUrl}`);
         const transcriptData = await makeProxyRequest(currentUrl);
         html = transcriptData.html || transcriptData.body;
         
@@ -199,14 +199,14 @@ export async function getTranscriptData(studyYearId: string): Promise<any> {
         
         // Check for server overload
         if (isServerOverloaded(html)) {
-          console.log('Server overload detected, breaking redirect loop to retry with fresh session');
+('Server overload detected, breaking redirect loop to retry with fresh session');
           throw new Error('Server overload detected during redirect');
         }
         
         // Check if we got another redirect
         if (isRedirectResponse(html)) {
           redirectCount++;
-          console.log(`Redirect ${redirectCount}/${maxRedirects} detected`);
+(`Redirect ${redirectCount}/${maxRedirects} detected`);
           
           if (redirectCount >= maxRedirects) {
             throw new Error(`Maximum redirect limit (${maxRedirects}) reached. Possible infinite redirect loop.`);
@@ -214,13 +214,13 @@ export async function getTranscriptData(studyYearId: string): Promise<any> {
           
           // Extract new redirect parameter
           const newRedirectParam = extractRedirectParam(html);
-          console.log(`New redirect parameter: ${newRedirectParam}`);
+(`New redirect parameter: ${newRedirectParam}`);
           currentUrl = `https://apps.guc.edu.eg/student_ext/Grade/Transcript_001.aspx?v=${newRedirectParam}`;
           continue;
         }
         
         // We got the actual page, break out of redirect loop
-        console.log('Successfully reached transcript page (no more redirects)');
+('Successfully reached transcript page (no more redirects)');
         break;
       }
       
@@ -231,7 +231,7 @@ export async function getTranscriptData(studyYearId: string): Promise<any> {
       // Check for server overload one more time
       if (isServerOverloaded(html)) {
         if (attempt < maxAttempts) {
-          console.log(`Server overload detected (attempt ${attempt}), resetting session...`);
+(`Server overload detected (attempt ${attempt}), resetting session...`);
           await AuthManager.logoutAndLogin();
           continue;
         } else {
@@ -240,15 +240,15 @@ export async function getTranscriptData(studyYearId: string): Promise<any> {
       }
       
       // Extract view state and submit form
-      console.log('Step 4: Extracting view state data...');
+('Step 4: Extracting view state data...');
       const viewStateData = extractViewState(html);
       
       if (!viewStateData.__VIEWSTATE || !viewStateData.__VIEWSTATEGENERATOR || !viewStateData.__EVENTVALIDATION) {
         throw new Error('Failed to extract view state data');
       }
       
-      console.log('Step 5: Submitting form with study year:', studyYearId);
-      console.log('Step 5.1: Using URL for form submission:', currentUrl);
+('Step 5: Submitting form with study year:', studyYearId);
+('Step 5.1: Using URL for form submission:', currentUrl);
       const formBody = new URLSearchParams({
         ...viewStateData,
         'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$stdYrLst': studyYearId,
@@ -256,27 +256,27 @@ export async function getTranscriptData(studyYearId: string): Promise<any> {
         '__EVENTARGUMENT': '',
       });
       
-      console.log('Step 6: Submitting form to get final transcript data...');
+('Step 6: Submitting form to get final transcript data...');
       const finalData = await makeProxyRequest(
         currentUrl,  // ✅ FIXED: Use the URL with redirect parameter, not base URL
         'POST',
         formBody.toString()
       );
       
-      console.log('=== TRANSCRIPT DATA RETRIEVED SUCCESSFULLY ===');
-      console.log(`Total redirects followed: ${redirectCount}`);
-      console.log(`Final data type: ${typeof finalData}`);
-      console.log(`Final data keys: ${finalData ? Object.keys(finalData) : 'No keys'}`);
+('=== TRANSCRIPT DATA RETRIEVED SUCCESSFULLY ===');
+(`Total redirects followed: ${redirectCount}`);
+(`Final data type: ${typeof finalData}`);
+(`Final data keys: ${finalData ? Object.keys(finalData) : 'No keys'}`);
       
       return finalData;
       
     } catch (error: any) {
-      // console.error(`=== ATTEMPT ${attempt} FAILED ===`);
-      // console.error(`Error: ${error.message}`);
-      // console.error(`Redirects attempted: ${redirectCount}`);
+      // (`=== ATTEMPT ${attempt} FAILED ===`);
+      // (`Error: ${error.message}`);
+      // (`Redirects attempted: ${redirectCount}`);
       
       if (attempt < maxAttempts) {
-        console.log('Resetting session and retrying...');
+('Resetting session and retrying...');
         await AuthManager.logoutAndLogin();
       } else {
         throw error;
@@ -291,10 +291,10 @@ export async function getTranscriptData(studyYearId: string): Promise<any> {
  * Reset session manually
  */
 export async function resetSession(): Promise<void> {
-  console.log('Performing manual session reset...');
+('Performing manual session reset...');
   const success = await AuthManager.logoutAndLogin();
   if (!success) {
     throw new Error('Session reset failed');
   }
-  console.log('Session reset completed');
+('Session reset completed');
 }

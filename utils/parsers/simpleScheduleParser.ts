@@ -13,7 +13,7 @@ export function parseScheduleDataSimple(html: string): ScheduleData {
   // Combine and organize by day
   const schedule = organizeByDay(courseSpans, courseTables);
   
-  return { days: schedule };
+  return { days: schedule, type: 'personal' as const };
 }
 
 /**
