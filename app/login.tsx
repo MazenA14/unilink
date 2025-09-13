@@ -6,15 +6,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 const LoginScreen = () => {
@@ -95,6 +95,14 @@ const LoginScreen = () => {
           await AuthManager.storeSessionCookie(cookieString);
           // also store creds for NTLM mode in proxy requests
           await AuthManager.storeCredentials(username.trim(), password);
+          
+          // Start preloading schedule data in the background
+          const { SchedulePreloader } = await import('@/utils/schedulePreloader');
+          SchedulePreloader.preloadSchedule().catch(error => {
+            console.log('Schedule preload failed:', error);
+            // Don't show error to user - preloading is optional
+          });
+          
           router.replace('/(tabs)/dashboard');
         } 
         // else {

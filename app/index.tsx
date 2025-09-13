@@ -9,7 +9,17 @@ export default function Index() {
   useEffect(() => {
     (async () => {
       try {
-        setAuthed(await AuthManager.isAuthenticated());
+        const isAuthenticated = await AuthManager.isAuthenticated();
+        setAuthed(isAuthenticated);
+        
+        // If user is already authenticated, preload schedule data
+        if (isAuthenticated) {
+          const { SchedulePreloader } = await import('@/utils/schedulePreloader');
+          SchedulePreloader.preloadSchedule().catch(error => {
+            console.log('Schedule preload failed:', error);
+            // Don't show error to user - preloading is optional
+          });
+        }
       } finally {
         setReady(true);
       }

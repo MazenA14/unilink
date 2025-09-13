@@ -237,6 +237,14 @@ export class AuthManager {
         if (cookieString) {
           await this.storeSessionCookie(cookieString);
           await this.storeCredentials(username.trim(), password);
+          
+          // Start preloading schedule data in the background
+          const { SchedulePreloader } = await import('./schedulePreloader');
+          SchedulePreloader.preloadSchedule().catch(error => {
+            console.log('Schedule preload failed:', error);
+            // Don't show error to user - preloading is optional
+          });
+          
           return true;
         } else {
           return false;

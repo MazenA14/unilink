@@ -9,7 +9,6 @@ export function EmptyState() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.icon, { color: colors.secondaryFont }]}>📅</Text>
       <Text style={[styles.title, { color: colors.mainFont }]}>
         No Schedule Available
       </Text>

@@ -95,7 +95,7 @@ export function useScheduleTypes() {
   const [scheduleType, setScheduleType] = useState<ScheduleType>('personal');
   const [selectedOption, setSelectedOption] = useState<string>('');
   const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const getOptions = (type: ScheduleType): ScheduleOption[] => {
@@ -111,8 +111,10 @@ export function useScheduleTypes() {
     }
   };
 
-  const fetchScheduleData = async (type: ScheduleType, selectedId?: string) => {
-    setLoading(true);
+  const fetchScheduleData = async (type: ScheduleType, selectedId?: string, skipLoadingState: boolean = false) => {
+    if (!skipLoadingState) {
+      setLoading(true);
+    }
     setError(null);
     
     try {
@@ -133,7 +135,9 @@ export function useScheduleTypes() {
       setError('Failed to load schedule data');
       setScheduleData(null);
     } finally {
-      setLoading(false);
+      if (!skipLoadingState) {
+        setLoading(false);
+      }
     }
   };
 
@@ -161,9 +165,30 @@ export function useScheduleTypes() {
     }
   };
 
+  // Check for cached data first, then load if needed
+  const loadInitialData = async () => {
+    try {
+      // Try to get cached data first
+      const { GradeCache } = await import('../utils/gradeCache');
+      const cachedData = await GradeCache.getCachedScheduleData();
+      
+      if (cachedData) {
+        // Use cached data immediately without loading state
+        setScheduleData(cachedData);
+        setLoading(false);
+        return;
+      }
+    } catch (error) {
+      // If cache check fails, continue with normal loading
+    }
+    
+    // No cached data or cache check failed, fetch fresh data
+    fetchScheduleData('personal');
+  };
+
   // Load personal schedule on mount
   useEffect(() => {
-    fetchScheduleData('personal');
+    loadInitialData();
   }, []);
 
   return {

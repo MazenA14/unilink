@@ -73,7 +73,8 @@ export default function ScheduleScreen() {
   };
 
   const renderContent = () => {
-    if (loading && (!scheduleData || scheduleData.days.length === 0)) {
+    // Show loading state if we're loading and don't have data yet
+    if (loading && !scheduleData) {
       return <LoadingIndicator />;
     }
 
@@ -92,7 +93,8 @@ export default function ScheduleScreen() {
       );
     }
 
-    if (!scheduleData || scheduleData.days.length === 0) {
+    // Show empty state only if we're not loading and have no data
+    if (!loading && (!scheduleData || scheduleData.days.length === 0)) {
       return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
           <EmptyState />
@@ -100,13 +102,17 @@ export default function ScheduleScreen() {
       );
     }
 
-    if(!loading && scheduleData && scheduleData.days.length > 0) {
+    // Show schedule data if we have it
+    if (scheduleData && scheduleData.days.length > 0) {
       return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
           <ScheduleTable scheduleData={scheduleData.days} scheduleType={scheduleType} />
         </View>
       );
     }
+
+    // Fallback loading state
+    return <LoadingIndicator />;
   };
 
   return (
