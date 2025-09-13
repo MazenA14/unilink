@@ -48,4 +48,5 @@
 - Remove the effect that occurs on pressing on the tabs at the bottom
 - See schedule Caching
 - Change animation for the hamburger menu to slide from the right
-- Save username and password to log in automatically
+- Use saved username and password to log in automatically
+- Replace 'Available Courses' with 'Semester N'

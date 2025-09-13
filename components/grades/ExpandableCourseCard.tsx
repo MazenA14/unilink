@@ -91,28 +91,22 @@ export default function ExpandableCourseCard({
                 ]}>
                   {course.midtermGrade ? 'Midterm Result' : 'No Midterm Grade'}
                 </Text>
+                {course.midtermGrade && (
+                  <Text
+                    style={[
+                      styles.statusBadgeGrade,
+                      { color: getGradeColor(course.midtermGrade.percentage) }
+                    ]}
+                  >
+                    {course.midtermGrade.percentage.toFixed(1)}%
+                  </Text>
+                )}
               </View>
             </View>
           </View>
           
           {/* Grade and Action Section */}
           <View style={styles.expandableCourseRight}>
-            {course.midtermGrade && (
-              <View style={[
-                styles.gradeBadge,
-                { backgroundColor: getGradeColor(course.midtermGrade.percentage) + '15' }
-              ]}>
-                <Text
-                  style={[
-                    styles.expandableCourseGrade,
-                    { color: getGradeColor(course.midtermGrade.percentage) }
-                  ]}
-                >
-                  {course.midtermGrade.percentage.toFixed(1)}%
-                </Text>
-              </View>
-            )}
-            
             <View style={[
               styles.expandButton,
               { 
@@ -251,17 +245,24 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 6,
     borderWidth: 1,
+    alignItems: 'center',
   },
   statusBadgeText: {
     fontSize: 11,
     fontWeight: '500',
     letterSpacing: 0.3,
   },
+  statusBadgeGrade: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
   expandableCourseRight: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
     flexShrink: 0,
+    marginLeft: 8,
   },
   gradeBadge: {
     paddingHorizontal: 12,
