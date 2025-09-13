@@ -40,6 +40,8 @@
 
 ## Build APK
 - eas build -p android --profile preview
+- Use 'npx expo install --check' to review and upgrade your dependencies
+- npm install -g eas-cli (If error Occurred)
 
 ## To-Do (Notes)
 - Clear Course grades cache on pull to refresh and not be visibile while refreshing
