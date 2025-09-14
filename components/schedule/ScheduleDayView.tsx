@@ -1,4 +1,4 @@
-import { Colors, ScheduleColors, ScheduleTypeColors } from '@/constants/Colors';
+import { Colors, ScheduleColors, ScheduleTypeColors, SlotTypeColors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import React from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
@@ -111,8 +111,13 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
               }]}>
                 <Text style={[styles.periodLabelText, { color: typeColor }]}>{period.name}</Text>
                 <Text style={[styles.periodTimingText, { color: typeColor }]}>{period.timing}</Text>
-                <View style={[styles.slotTypeBadge, { backgroundColor: typeColor + '20', borderColor: typeColor + '40' }]}>
-                  <Text style={[styles.slotTypeText, { color: typeColor }]}>{getSlotType(classData)}</Text>
+                <View style={[styles.slotTypeBadge, { 
+                  backgroundColor: SlotTypeColors[getSlotType(classData) as keyof typeof SlotTypeColors] + '20', 
+                  borderColor: SlotTypeColors[getSlotType(classData) as keyof typeof SlotTypeColors] + '40' 
+                }]}>
+                  <Text style={[styles.slotTypeText, { 
+                    color: SlotTypeColors[getSlotType(classData) as keyof typeof SlotTypeColors] 
+                  }]}>{getSlotType(classData)}</Text>
                 </View>
               </View>
               <View style={styles.periodContent}>

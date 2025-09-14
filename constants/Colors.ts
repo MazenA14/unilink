@@ -65,6 +65,18 @@ export const ScheduleTypeColors = {
   group: '#FF69B4',    // Hot pink
 };
 
+// Slot type colors - matching dashboard colors
+export const SlotTypeColors = {
+  Lecture: '#3B82F6',    // Blue
+  Tutorial: '#10B981',   // Green
+  Lab: '#F59E0B',        // Amber/Orange
+  Seminar: '#8B5CF6',    // Purple
+  Workshop: '#EF4444',   // Red
+  Project: '#06B6D4',    // Cyan
+  Thesis: '#84CC16',     // Lime
+  Free: '#6B7280',       // Gray
+};
+
 // Schedule color palettes for light and dark modes - matching app theme
 export const ScheduleColors = {
   light: {
