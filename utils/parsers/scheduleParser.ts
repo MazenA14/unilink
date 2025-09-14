@@ -12,7 +12,6 @@ export function parseScheduleData(html: string): ScheduleData {
     throw new Error('Schedule table not found in HTML');
   }
   
-  
   // Define the days of the week (excluding Friday)
   const dayNames = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
   

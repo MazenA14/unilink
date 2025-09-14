@@ -170,10 +170,27 @@ function getCourseForPeriod(spans: CourseSpan[], tables: CourseTable[], dayName:
   
   // Then check tables (map known table positions to periods)
   const tableMapping: { [key: string]: { [key: number]: string[] } } = {
-    'Saturday': { 4: ['Table6'] },
-    'Tuesday': { 1: ['Table18'], 2: ['Table19'] },
-    'Wednesday': { 3: ['Table25'] },
-    'Thursday': { 1: ['Table28'], 2: ['Table29'], 3: ['Table30'] }
+    'Saturday': { 
+      1: ['Table3'], 
+      2: ['Table4'], 
+      4: ['Table6'] 
+    },
+    'Tuesday': { 
+      1: ['Table18'], 
+      2: ['Table19'], 
+      3: ['Table20'], 
+      4: ['Table21'] 
+    },
+    'Wednesday': { 
+      2: ['Table24'], 
+      3: ['Table25'], 
+      4: ['Table26'] 
+    },
+    'Thursday': { 
+      1: ['Table28'], 
+      2: ['Table29'], 
+      3: ['Table30'] 
+    }
   };
   
   const expectedTables = tableMapping[dayName]?.[periodIndex] || [];

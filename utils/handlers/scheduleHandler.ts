@@ -180,7 +180,6 @@ export async function getScheduleData(): Promise<ScheduleData> {
         }
       }
       
-      
       return scheduleData;
       
     } catch (error: any) {
