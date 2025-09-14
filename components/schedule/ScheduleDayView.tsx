@@ -22,12 +22,48 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
   const basePadding = Math.max(12, screenWidth * 0.04);
   const dayPadding = basePadding;
 
+  // Function to extract slot type from class data
+  const getSlotType = (classData: any): string => {
+    if (!classData) return 'Free';
+    
+    // If slotType is explicitly provided, use it
+    if (classData.slotType) {
+      return classData.slotType;
+    }
+    
+    // Try to extract from course name
+    const courseName = classData.courseName?.toLowerCase() || '';
+    
+    // Common patterns for different class types
+    if (courseName.includes('lab') || courseName.includes('laboratory')) {
+      return 'Lab';
+    }
+    if (courseName.includes('tutorial') || courseName.includes('tut')) {
+      return 'Tutorial';
+    }
+    if (courseName.includes('seminar')) {
+      return 'Seminar';
+    }
+    if (courseName.includes('workshop')) {
+      return 'Workshop';
+    }
+    if (courseName.includes('project')) {
+      return 'Project';
+    }
+    if (courseName.includes('thesis') || courseName.includes('dissertation')) {
+      return 'Thesis';
+    }
+    
+    // Default to Lecture for regular courses
+    return 'Lecture';
+  };
+
   const periods = [
-    { key: 'first', name: 'First Slot' },
-    { key: 'second', name: 'Second Slot' },
-    { key: 'third', name: 'Third Slot' },
-    { key: 'fourth', name: 'Fourth Slot' },
-    { key: 'fifth', name: 'Fifth Slot' },
+    { key: 'first', name: '1st', timing: '8:15 - 9:45' },
+    { key: 'second', name: '2nd', timing: '10:00 - 11:30' },
+    { key: 'third', name: '3rd', timing: '11:45 - 1:15' },
+    { key: 'fourth', name: '4th', timing: '1:45 - 3:15' },
+    { key: 'fifth', name: '5th', timing: '3:45 - 5:15' },
   ] as const;
 
   return (
@@ -74,6 +110,10 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
                 borderBottomLeftRadius: 16,
               }]}>
                 <Text style={[styles.periodLabelText, { color: typeColor }]}>{period.name}</Text>
+                <Text style={[styles.periodTimingText, { color: typeColor }]}>{period.timing}</Text>
+                <View style={[styles.slotTypeBadge, { backgroundColor: typeColor + '20', borderColor: typeColor + '40' }]}>
+                  <Text style={[styles.slotTypeText, { color: typeColor }]}>{getSlotType(classData)}</Text>
+                </View>
               </View>
               <View style={styles.periodContent}>
                 {classData ? (
@@ -134,8 +174,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   periodLabelText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
+    textAlign: 'center',
+  },
+  periodTimingText: {
+    fontSize: 10,
+    fontWeight: '400',
+    textAlign: 'center',
+    marginTop: 2,
+    opacity: 0.8,
+  },
+  slotTypeBadge: {
+    marginTop: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignSelf: 'center',
+  },
+  slotTypeText: {
+    fontSize: 8,
+    fontWeight: '500',
     textAlign: 'center',
   },
   periodContent: {

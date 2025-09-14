@@ -197,10 +197,37 @@ function getCourseForPeriod(spans: CourseSpan[], tables: CourseTable[], dayName:
   for (const tableId of expectedTables) {
     const table = tables.find(t => t.tableId === tableId);
     if (table) {
+      // Extract slot type from course name
+      const getSlotType = (courseName: string): string => {
+        const name = courseName.toLowerCase();
+        
+        if (name.includes('lab') || name.includes('laboratory')) {
+          return 'Lab';
+        }
+        if (name.includes('tutorial') || name.includes('tut')) {
+          return 'Tutorial';
+        }
+        if (name.includes('seminar')) {
+          return 'Seminar';
+        }
+        if (name.includes('workshop')) {
+          return 'Workshop';
+        }
+        if (name.includes('project')) {
+          return 'Project';
+        }
+        if (name.includes('thesis') || name.includes('dissertation')) {
+          return 'Thesis';
+        }
+        
+        return 'Lecture';
+      };
+
       return {
         courseName: table.course,
         room: table.room,
-        instructor: table.group
+        instructor: table.group,
+        slotType: getSlotType(table.course)
       };
     }
   }
@@ -235,10 +262,37 @@ function parseClassContent(content: string): ScheduleClass {
     }
   }
   
+  // Extract slot type from course name
+  const getSlotType = (courseName: string): string => {
+    const name = courseName.toLowerCase();
+    
+    if (name.includes('lab') || name.includes('laboratory')) {
+      return 'Lab';
+    }
+    if (name.includes('tutorial') || name.includes('tut')) {
+      return 'Tutorial';
+    }
+    if (name.includes('seminar')) {
+      return 'Seminar';
+    }
+    if (name.includes('workshop')) {
+      return 'Workshop';
+    }
+    if (name.includes('project')) {
+      return 'Project';
+    }
+    if (name.includes('thesis') || name.includes('dissertation')) {
+      return 'Thesis';
+    }
+    
+    return 'Lecture';
+  };
+
   return {
     courseName,
     instructor,
-    room
+    room,
+    slotType: getSlotType(courseName)
   };
 }
 

@@ -204,11 +204,38 @@ function parseClassContent(content: string): ScheduleClass {
     }
   }
   
+  // Extract slot type from course name
+  const getSlotType = (courseName: string): string => {
+    const name = courseName.toLowerCase();
+    
+    if (name.includes('lab') || name.includes('laboratory')) {
+      return 'Lab';
+    }
+    if (name.includes('tutorial') || name.includes('tut')) {
+      return 'Tutorial';
+    }
+    if (name.includes('seminar')) {
+      return 'Seminar';
+    }
+    if (name.includes('workshop')) {
+      return 'Workshop';
+    }
+    if (name.includes('project')) {
+      return 'Project';
+    }
+    if (name.includes('thesis') || name.includes('dissertation')) {
+      return 'Thesis';
+    }
+    
+    return 'Lecture';
+  };
+
   return {
     courseName,
     instructor,
     room,
-    time
+    time,
+    slotType: getSlotType(courseName)
   };
 }
 

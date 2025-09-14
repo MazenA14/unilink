@@ -23,6 +23,7 @@ export interface ScheduleClass {
   instructor?: string;
   room?: string;
   time?: string;
+  slotType?: string;
 }
 
 export interface ScheduleDay {

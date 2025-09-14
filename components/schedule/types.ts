@@ -5,6 +5,7 @@ export interface ScheduleClass {
   instructor?: string;
   room?: string;
   time?: string;
+  slotType?: string;
   // New fields for different schedule types
   enrollmentCount?: number;    // For course schedules
   officeHours?: string;        // For staff schedules

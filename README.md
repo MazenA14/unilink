@@ -19,6 +19,7 @@
 - Add skeletons for everything that loads
 - Mobile Notifications
 - Update alert (Use a custom proxy server)
+- Add slot timing shift for BI/Architecture/... in the settings page (Should change the slot timing in the schedule page)
 
 ## To-Do List (Optional)
 - Evaluate Course
@@ -61,4 +62,4 @@
 - ReApply All cache timings
 - Unify the formating of the personal schedule
 - Add time under the slot number in the personal schedule
-- Maybe add slot type for each slot in the personal schedule
++ Maybe add slot type for each slot in the personal schedule
