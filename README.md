@@ -7,15 +7,17 @@
 + Check Previous Grades https://apps.guc.edu.eg/student_ext/Grade/CheckGradePerviousSemester_01.aspx
 + Transcript https://apps.guc.edu.eg/student_ext/Grade/Transcript_001.aspx?v=SBH574928
 + Settings page (Profile, Financials, Dark mode, Contact)
++ Student Schedule https://apps.guc.edu.eg/student_ext/Scheduling/GroupSchedule.aspx?v=825d1466-7884-412e-a97b-e8b49fe77839
 - Notifications https://apps.guc.edu.eg/student_ext/Main/Notifications.aspx
 - Search for Staff https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx
 - View Attendance https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx?v=NXM874921
 - Exam Seats https://apps.guc.edu.eg/student_ext/Exam/ViewExamSeat_01.aspx
-- Empty Slots (Rooms) https://gucroomschedule.web.app/
-- Student Schedule https://apps.guc.edu.eg/student_ext/Scheduling/GroupSchedule.aspx?v=825d1466-7884-412e-a97b-e8b49fe77839
 - Staff Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
 - Course Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
 - General Group Schedule https://apps.guc.edu.eg/student_ext/Scheduling/GeneralGroupSchedule.aspx
+- Empty Slots (Rooms) https://gucroomschedule.web.app/
+- Add skeletons for everything that loads
+- Mobile Notifications
 
 ## To-Do List (Optional)
 - Evaluate Course
@@ -31,6 +33,8 @@
 - Today's Schedule
 - Your Instructors this semester (List of view profiles separated by course)
 - Exam Seats
+- View Attendance
+- Other features button
 
 ## Database Schema
 ### Table 1
@@ -47,8 +51,12 @@
 - Clear Course grades cache on pull to refresh and not be visibile while refreshing
 - Add all days on the schedule screen
 - Make the schedule open on the mobile's current day
-- Remove the effect that occurs on pressing on the tabs at the bottom
++ Remove the effect that occurs on pressing on the tabs at the bottom
 - See schedule Caching
-- Change animation for the hamburger menu to slide from the right
++ Change animation for the hamburger menu to Fade in
 - Use saved username and password to log in automatically
 - Replace 'Available Courses' with 'Semester N'
+- ReApply All cache timings
+- Unify the formating of the personal schedule
+- Add time under the slot number in the personal schedule
+- Maybe add slot type for each slot in the personal schedule

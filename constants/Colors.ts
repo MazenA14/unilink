@@ -26,6 +26,8 @@ export const Colors = {
     // Error colors
     error: '#F44336',
     cardBackground: '#ffffff',
+    // CMS color - distinctive purple for app view changes
+    cms: '#8E44AD',
   },
   dark: {
     text: '#ffffff',
@@ -50,6 +52,8 @@ export const Colors = {
     // Error colors (dark theme variants)
     error: '#F44336',
     cardBackground: '#2a2a2a',
+    // CMS color - distinctive purple for app view changes (dark theme)
+    cms: '#9B59B6',
   },
 };
 
