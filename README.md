@@ -8,10 +8,10 @@
 + Transcript https://apps.guc.edu.eg/student_ext/Grade/Transcript_001.aspx?v=SBH574928
 + Settings page (Profile, Financials, Dark mode, Contact)
 + Student Schedule https://apps.guc.edu.eg/student_ext/Scheduling/GroupSchedule.aspx?v=825d1466-7884-412e-a97b-e8b49fe77839
++ Exam Seats https://apps.guc.edu.eg/student_ext/Exam/ViewExamSeat_01.aspx
 - Notifications https://apps.guc.edu.eg/student_ext/Main/Notifications.aspx
 - Search for Staff https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx
 - View Attendance https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx?v=NXM874921
-- Exam Seats https://apps.guc.edu.eg/student_ext/Exam/ViewExamSeat_01.aspx
 - Staff Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
 - Course Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
 - General Group Schedule https://apps.guc.edu.eg/student_ext/Scheduling/GeneralGroupSchedule.aspx

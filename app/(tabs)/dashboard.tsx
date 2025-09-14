@@ -2,6 +2,7 @@ import { Colors, ScheduleTypeColors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthManager } from '@/utils/auth';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ScrollView,
@@ -55,7 +56,10 @@ export default function DashboardScreen() {
               <Text style={[styles.gridText, { color: 'white' }]}>Instructors</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={[styles.gridItem, { backgroundColor: colors.gradeFailing, borderColor: colors.gradeFailing }]}>
+            <TouchableOpacity 
+              style={[styles.gridItem, { backgroundColor: colors.tint, borderColor: colors.tint }]}
+              onPress={() => router.push('/exam-seats')}
+            >
               <Ionicons name="document-text" size={20} color="white" />
               <Text style={[styles.gridText, { color: 'white' }]}>Exam Seats</Text>
             </TouchableOpacity>
@@ -113,8 +117,9 @@ export default function DashboardScreen() {
                     </Text>
                   </View>
                   <View style={styles.periodContentRight}>
-                    <View style={[styles.locationPill, { backgroundColor: ScheduleTypeColors.personal }]}>
-                      <Text style={[styles.locationText, { color: 'white' }]}>C3.201</Text>
+                    <View style={styles.roomContainer}>
+                      <Ionicons name="location-outline" size={14} color={colors.secondaryFont} />
+                      <Text style={[styles.roomText, { color: colors.secondaryFont }]}>C3.201</Text>
                     </View>
                     <View style={[styles.typePill, { backgroundColor: '#3B82F6' }]}>
                       <Text style={[styles.typeText, { color: 'white' }]}>Lecture</Text>
@@ -161,8 +166,9 @@ export default function DashboardScreen() {
                     </Text>
                   </View>
                   <View style={styles.periodContentRight}>
-                    <View style={[styles.locationPill, { backgroundColor: ScheduleTypeColors.personal }]}>
-                      <Text style={[styles.locationText, { color: 'white' }]}>C3.105</Text>
+                    <View style={styles.roomContainer}>
+                      <Ionicons name="location-outline" size={14} color={colors.secondaryFont} />
+                      <Text style={[styles.roomText, { color: colors.secondaryFont }]}>C3.105</Text>
                     </View>
                     <View style={[styles.typePill, { backgroundColor: '#10B981' }]}>
                       <Text style={[styles.typeText, { color: 'white' }]}>Tutorial</Text>
@@ -244,8 +250,9 @@ export default function DashboardScreen() {
                     </Text>
                   </View>
                   <View style={styles.periodContentRight}>
-                    <View style={[styles.locationPill, { backgroundColor: ScheduleTypeColors.personal }]}>
-                      <Text style={[styles.locationText, { color: 'white' }]}>C3.205</Text>
+                    <View style={styles.roomContainer}>
+                      <Ionicons name="location-outline" size={14} color={colors.secondaryFont} />
+                      <Text style={[styles.roomText, { color: colors.secondaryFont }]}>C3.205</Text>
                     </View>
                     <View style={[styles.typePill, { backgroundColor: '#F59E0B' }]}>
                       <Text style={[styles.typeText, { color: 'white' }]}>Lab</Text>
@@ -292,8 +299,9 @@ export default function DashboardScreen() {
                     </Text>
                   </View>
                   <View style={styles.periodContentRight}>
-                    <View style={[styles.locationPill, { backgroundColor: ScheduleTypeColors.personal }]}>
-                      <Text style={[styles.locationText, { color: 'white' }]}>C3.401</Text>
+                    <View style={styles.roomContainer}>
+                      <Ionicons name="location-outline" size={14} color={colors.secondaryFont} />
+                      <Text style={[styles.roomText, { color: colors.secondaryFont }]}>C3.401</Text>
                     </View>
                     <View style={[styles.typePill, { backgroundColor: '#3B82F6' }]}>
                       <Text style={[styles.typeText, { color: 'white' }]}>Lecture</Text>
@@ -513,17 +521,15 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 12,
   },
-  locationPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 16,
-    minWidth: 60,
+  roomContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 4,
   },
-  locationText: {
-    fontSize: 11,
-    fontWeight: '600',
-    textAlign: 'center',
+  roomText: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
   },
   periodContentRight: {
     alignItems: 'flex-end',

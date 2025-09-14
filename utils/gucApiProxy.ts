@@ -351,6 +351,31 @@ export class GUCAPIProxy {
   static getOutstandingPayments = getOutstandingPayments;
   static payOutstanding = payOutstanding;
   
+  /**
+   * Get exam seats data
+   */
+  static async getExamSeats(): Promise<string> {
+    try {
+      console.log('Fetching exam seats data...');
+      
+      const data = await this.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/Exam/ViewExamSeat_01.aspx'
+      );
+
+      const html = data.html || data.body;
+      
+      if (!html) {
+        throw new Error('No HTML content received from proxy');
+      }
+
+      console.log('Exam seats HTML length:', html.length);
+      return html;
+    } catch (error) {
+      console.error('Error fetching exam seats:', error);
+      throw error;
+    }
+  }
+
   // New session reset methods
   static getAvailableStudyYearsWithReset = getAvailableStudyYears;
   static getTranscriptDataWithReset = getTranscriptData;
