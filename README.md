@@ -1,4 +1,4 @@
-# GUC Connect
+# UniLink
 
 ## To-Do List
 + Login https://guc-connect-login.vercel.app/api/ntlm-login
@@ -18,10 +18,12 @@
 - Empty Slots (Rooms) https://gucroomschedule.web.app/
 - Add skeletons for everything that loads
 - Mobile Notifications
+- Update alert (Use a custom proxy server)
 
 ## To-Do List (Optional)
 - Evaluate Course
 - Evaluate Staff
+- Bachelor endpoint
 - Calendar
 - Force Reset Password
 - Reset Password # See Outlook

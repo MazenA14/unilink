@@ -326,15 +326,17 @@ export class GUCAPIProxy {
   /**
    * Get schedule data
    */
-  static async getScheduleData(): Promise<ScheduleData> {
-    // Try to get cached data first
-    const cachedData = await GradeCache.getCachedScheduleData();
-    if (cachedData) {
-('[CACHE] Using cached schedule data');
-      return cachedData;
+  static async getScheduleData(bypassCache: boolean = false): Promise<ScheduleData> {
+    // Try to get cached data first (unless bypassing cache)
+    if (!bypassCache) {
+      const cachedData = await GradeCache.getCachedScheduleData();
+      if (cachedData) {
+        console.log('[CACHE] Using cached schedule data');
+        return cachedData;
+      }
     }
 
-('[CACHE] No valid cached schedule data, fetching from server...');
+    console.log('[CACHE] Fetching fresh schedule data from server...');
     const freshData = await getScheduleData();
     
     // Cache the fresh data

@@ -111,7 +111,7 @@ export function useScheduleTypes() {
     }
   };
 
-  const fetchScheduleData = async (type: ScheduleType, selectedId?: string, skipLoadingState: boolean = false) => {
+  const fetchScheduleData = async (type: ScheduleType, selectedId?: string, skipLoadingState: boolean = false, bypassCache: boolean = false) => {
     if (!skipLoadingState) {
       setLoading(true);
     }
@@ -123,7 +123,7 @@ export function useScheduleTypes() {
       if (type === 'personal') {
         // Use cached API for personal schedule
         const { GUCAPIProxy } = await import('../utils/gucApiProxy');
-        data = await GUCAPIProxy.getScheduleData();
+        data = await GUCAPIProxy.getScheduleData(bypassCache);
       } else {
         // Use mock data for other schedule types
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -159,9 +159,9 @@ export function useScheduleTypes() {
 
   const refetch = async () => {
     if (scheduleType === 'personal') {
-      await fetchScheduleData(scheduleType);
+      await fetchScheduleData(scheduleType, undefined, false, true); // bypassCache = true for refresh
     } else if (selectedOption) {
-      await fetchScheduleData(scheduleType, selectedOption);
+      await fetchScheduleData(scheduleType, selectedOption, false, true); // bypassCache = true for refresh
     }
   };
 
