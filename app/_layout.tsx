@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
+import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ScheduleProvider } from '@/contexts/ScheduleContext';
 import { ShiftedScheduleProvider } from '@/contexts/ShiftedScheduleContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
@@ -17,6 +18,7 @@ function AppContent() {
       <Stack initialRouteName="login">
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="notifications" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
@@ -36,11 +38,13 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider>
-      <ShiftedScheduleProvider>
-        <ScheduleProvider>
-          <AppContent />
-        </ScheduleProvider>
-      </ShiftedScheduleProvider>
+      <NotificationProvider>
+        <ShiftedScheduleProvider>
+          <ScheduleProvider>
+            <AppContent />
+          </ScheduleProvider>
+        </ShiftedScheduleProvider>
+      </NotificationProvider>
     </ThemeProvider>
   );
 }

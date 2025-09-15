@@ -10,7 +10,7 @@
 + Student Schedule https://apps.guc.edu.eg/student_ext/Scheduling/GroupSchedule.aspx?v=825d1466-7884-412e-a97b-e8b49fe77839
 + Exam Seats https://apps.guc.edu.eg/student_ext/Exam/ViewExamSeat_01.aspx
 + Add slot timing shift for BI/Architecture/... in the settings page (Should change the slot timing in the schedule page)
-- Notifications https://apps.guc.edu.eg/student_ext/Main/Notifications.aspx
++ Notifications https://apps.guc.edu.eg/student_ext/Main/Notifications.aspx
 - Search for Staff https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx
 - View Attendance https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx?v=NXM874921
 - Staff Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
@@ -32,12 +32,12 @@
 - Game
 
 ## Dashboard should contain:
-- Notifications
-- Today's Schedule
++ Notifications
++ Today's Schedule
 - Your Instructors this semester (List of view profiles separated by course)
-- Exam Seats
++ Exam Seats
 - View Attendance
-- Other features button
++ CMS button
 
 ## Database Schema
 ### Table 1
@@ -51,16 +51,16 @@
 - npm install -g eas-cli (If error Occurred)
 
 ## To-Do (Notes)
-- Clear Course grades cache on pull to refresh and not be visibile while refreshing
 + Remove the effect that occurs on pressing on the tabs at the bottom
 + Change animation for the hamburger menu to Fade in
 + Unify the formating of the personal schedule
 + Maybe add slot type for each slot in the personal schedule
 + Add time under the slot number in the personal schedule
++ Make the schedule open on the mobile's current day
++ Replace 'Available Courses' with 'Semester N'
+- Clear Course grades cache on pull to refresh and not be visibile while refreshing
 - Add all days on the schedule screen
-- Make the schedule open on the mobile's current day
 - See schedule Caching
 - Use saved username and password to log in automatically
-- Replace 'Available Courses' with 'Semester N'
 - ReApply All cache timings
 - Clear all cache on logout

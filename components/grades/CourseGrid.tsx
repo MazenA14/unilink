@@ -5,6 +5,21 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import ExpandableCourseCard from './ExpandableCourseCard';
 import { CourseWithGrades } from './types';
 
+// Function to extract semester number from course names
+const extractSemesterNumber = (courses: CourseWithGrades[]): number | null => {
+  for (const course of courses) {
+    const courseName = course.text.toLowerCase();
+    
+    // Look for patterns like "1st", "2nd", "3rd", "6th" etc.
+    const semesterMatch = courseName.match(/(\d+)(?:st|nd|rd|th)/);
+    if (semesterMatch) {
+      return parseInt(semesterMatch[1], 10);
+    }
+  }
+  
+  return null;
+};
+
 interface CourseGridProps {
   coursesWithGrades: CourseWithGrades[];
   loadingCourses: boolean;
@@ -28,6 +43,10 @@ export default function CourseGrid({
 }: CourseGridProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  
+  // Extract semester number from course names
+  const semesterNumber = extractSemesterNumber(coursesWithGrades);
+  const title = semesterNumber ? `Semester ${semesterNumber}` : 'Available Courses';
 
   if (loadingCourses || loadingGrades) {
     return (
@@ -51,7 +70,7 @@ export default function CourseGrid({
   return (
     <>
       <View style={styles.courseGridHeader}>
-        <Text style={[styles.courseGridTitle, { color: colors.text }]}>Available Courses</Text>
+        <Text style={[styles.courseGridTitle, { color: colors.text }]}>{title}</Text>
         <View style={styles.courseGridMetrics}>
           <Text style={[styles.courseGridSubtitle, { color: colors.tabIconDefault }]}>
             {coursesWithGrades.length} course{coursesWithGrades.length !== 1 ? 's' : ''} available

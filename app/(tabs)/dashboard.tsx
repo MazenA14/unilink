@@ -1,4 +1,5 @@
 import { Colors, ScheduleTypeColors } from '@/constants/Colors';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useSchedule } from '@/hooks/useSchedule';
@@ -7,12 +8,12 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Animated,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Animated,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function DashboardScreen() {
@@ -21,6 +22,7 @@ export default function DashboardScreen() {
   const [nickname, setNickname] = useState<string>('Student');
   const { scheduleData, loading: scheduleLoading, refetch: refetchSchedule } = useSchedule();
   const { isShiftedScheduleEnabled } = useShiftedSchedule();
+  const { unreadCount, fetchNotifications } = useNotifications();
   const refreshRotation = useRef(new Animated.Value(0)).current;
 
   const loadNickname = useCallback(async () => {
@@ -222,7 +224,9 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     loadNickname();
-  }, [loadNickname]);
+    // Fetch notifications when dashboard loads
+    fetchNotifications();
+  }, [loadNickname, fetchNotifications]);
 
   // Reload nickname when screen comes into focus (e.g., returning from settings)
   useFocusEffect(
@@ -238,11 +242,16 @@ export default function DashboardScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={[styles.headerTitle, { color: colors.mainFont }]}>Dashboard</Text>
-          <TouchableOpacity style={[styles.notificationButton, { backgroundColor: `${colors.tint}15` }]}>
+          <TouchableOpacity 
+            style={[styles.notificationButton, { backgroundColor: `${colors.tint}15` }]}
+            onPress={() => router.push('/notifications')}
+          >
             <Ionicons name="notifications-outline" size={24} color={colors.tint} />
-            <View style={[styles.notificationBadge, { backgroundColor: colors.gradeFailing }]}>
-              <Text style={styles.badgeText}>3</Text>
-            </View>
+            {unreadCount > 0 && (
+              <View style={[styles.notificationBadge, { backgroundColor: colors.gradeFailing }]}>
+                <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount.toString()}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
