@@ -1,4 +1,3 @@
-import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import React, { createContext, useContext, useState } from 'react';
@@ -56,18 +55,6 @@ export function useCustomAlert() {
     setTimeout(() => setAlertConfig(null), 300);
   };
 
-  const getIconForType = (type?: string) => {
-    switch (type) {
-      case 'error':
-        return { name: 'xmark.circle.fill', color: '#F44336' };
-      case 'success':
-        return { name: 'checkmark.circle.fill', color: '#4CAF50' };
-      case 'warning':
-        return { name: 'exclamationmark.triangle.fill', color: '#FF9800' };
-      default:
-        return { name: 'info.circle.fill', color: colors.tabColor };
-    }
-  };
 
   const handleButtonPress = (button: AlertButton) => {
     hideAlert();
@@ -79,8 +66,6 @@ export function useCustomAlert() {
   const AlertComponent = () => {
     if (!alertConfig) return null;
 
-    const icon = getIconForType(alertConfig.type);
-
     return (
       <Modal
         visible={visible}
@@ -89,10 +74,10 @@ export function useCustomAlert() {
         onRequestClose={hideAlert}
       >
         <View style={styles.overlay}>
-          <View style={[styles.alertContainer, { backgroundColor: colors.background }]}>
-            <View style={styles.iconContainer}>
+          <View style={[styles.alertContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            {/* <View style={styles.iconContainer}>
               <IconSymbol name={icon.name as any} size={32} color={icon.color} />
-            </View>
+            </View> */}
             
             <Text style={[styles.title, { color: colors.mainFont }]}>
               {alertConfig.title}
@@ -110,7 +95,7 @@ export function useCustomAlert() {
                   key={index}
                   style={[
                     styles.button,
-                    button.style === 'destructive' && { backgroundColor: '#F44336' },
+                    button.style === 'destructive' && { backgroundColor: colors.tabColor },
                     button.style === 'cancel' && { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.secondaryFont },
                     button.style === 'default' && { backgroundColor: colors.tabColor },
                   ]}
@@ -118,7 +103,10 @@ export function useCustomAlert() {
                 >
                   <Text style={[
                     styles.buttonText,
-                    { color: button.style === 'cancel' ? colors.mainFont : colors.background }
+                    { 
+                      color: button.style === 'cancel' ? colors.mainFont : colors.background,
+                      fontWeight: button.style === 'cancel' ? '600' : '700'
+                    }
                   ]}>
                     {button.text}
                   </Text>
@@ -128,7 +116,7 @@ export function useCustomAlert() {
                   style={[styles.button, { backgroundColor: colors.tabColor }]}
                   onPress={hideAlert}
                 >
-                  <Text style={[styles.buttonText, { color: colors.background }]}>
+                  <Text style={[styles.buttonText, { color: colors.background, fontWeight: '700' }]}>
                     OK
                   </Text>
                 </TouchableOpacity>
@@ -155,7 +143,8 @@ const styles = StyleSheet.create({
   },
   alertContainer: {
     width: Math.min(width - 40, 320),
-    borderRadius: 16,
+    borderRadius: 12,
+    borderWidth: 1,
     padding: 24,
     alignItems: 'center',
     elevation: 10,
@@ -188,7 +177,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
   },
   buttonText: {

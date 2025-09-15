@@ -1,5 +1,6 @@
 import { useCustomAlert } from '@/components/CustomAlert';
 import { Colors } from '@/constants/Colors';
+import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthManager } from '@/utils/auth';
@@ -13,6 +14,7 @@ export default function SettingsScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const { showAlert, AlertComponent } = useCustomAlert();
   const { themePreference, setThemePreference } = useTheme();
+  const { isShiftedScheduleEnabled, setShiftedScheduleEnabled } = useShiftedSchedule();
   const [displayName, setDisplayName] = useState<string>('');
   const [editVisible, setEditVisible] = useState(false);
   const [editValue, setEditValue] = useState('');
@@ -79,7 +81,7 @@ export default function SettingsScreen() {
   const handleLogout = async () => {
     showAlert({
       title: 'Logout',
-      message: 'Are you sure you want to logout?',
+      message: 'Are you sure you want to logout?\nThis will clear all your saved data',
       type: 'warning',
       buttons: [
         {
@@ -105,8 +107,8 @@ export default function SettingsScreen() {
         <Text style={[styles.title, { color: colors.mainFont }]}>Settings</Text>
 
         {/* Profile Section */}
+        <Text style={[styles.sectionTitle, { color: colors.secondaryFont, marginTop: 0 }]}>PROFILE</Text>
         <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
-          <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>PROFILE</Text>
           <View style={styles.rowBetween}>
             <View style={{ flex: 1 }}>
               <Text style={[styles.primaryText, { color: colors.mainFont }]}>
@@ -120,8 +122,8 @@ export default function SettingsScreen() {
         </View>
 
         {/* Financials Section */}
+        <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>FINANCIALS</Text>
         <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
-          <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>FINANCIALS</Text>
           {loadingPayments ? (
             <View style={styles.rowBetween}>
               <ActivityIndicator size="small" color={colors.tabColor} />
@@ -133,7 +135,7 @@ export default function SettingsScreen() {
           ) : (
             <View>
               {payments.map((p: any, idx: number) => (
-                <View key={idx} style={[styles.paymentRow, { borderColor: colors.border }]}> 
+                <View key={idx} style={[styles.paymentRow, { borderColor: colors.border, borderTopWidth: idx === 0 ? 0 : 1 }]}> 
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.primaryText, { color: colors.mainFont }]}>
                       {p.description}
@@ -195,22 +197,35 @@ export default function SettingsScreen() {
         </View>
 
         {/* Appearance Section */}
+        <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>APPEARANCE</Text>
         <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
-          <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>APPEARANCE</Text>
           <View style={styles.rowBetween}>
             <Text style={[styles.primaryText, { color: colors.mainFont }]}>Dark Mode</Text>
             <Switch
               value={isDark}
               onValueChange={(val) => setThemePreference(val ? 'dark' : 'light')}
               trackColor={{ false: colors.border, true: colors.tabColor }}
-              thumbColor={isDark ? colors.background : '#ffffff'}
+              thumbColor="#ffffff"
+            />
+          </View>
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <View style={styles.rowBetween}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.primaryText, { color: colors.mainFont }]}>Delayed 3rd Slot</Text>
+              <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>* For Pharmacy, Applied Arts and Law Students (11:45 -&gt; 12:00)</Text>
+            </View>
+            <Switch
+              value={isShiftedScheduleEnabled}
+              onValueChange={setShiftedScheduleEnabled}
+              trackColor={{ false: colors.border, true: colors.tabColor }}
+              thumbColor="#ffffff"
             />
           </View>
         </View>
 
         {/* Support & Actions */}
+        <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>SUPPORT</Text>
         <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
-          <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>SUPPORT</Text>
           <TouchableOpacity
             style={styles.rowBetween}
             onPress={async () => {
@@ -230,7 +245,7 @@ export default function SettingsScreen() {
           >
             <Text style={[styles.primaryText, { color: colors.mainFont }]}>Contact</Text>
           </TouchableOpacity>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <TouchableOpacity style={styles.rowBetween} onPress={handleLogout}>
             <Text style={[styles.logoutLabel, { color: colors.tabColor }]}>Logout</Text>
           </TouchableOpacity>
@@ -291,6 +306,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 1.2,
+    marginTop: 24,
     marginBottom: 12,
   },
   rowBetween: {
@@ -325,10 +341,9 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     marginVertical: 12,
-    backgroundColor: '#00000010',
   },
   logoutLabel: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
   },
   modalOverlay: {
@@ -391,7 +406,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 10,
     gap: 12,
-    borderTopWidth: 1,
   },
   paymentAmount: {
     fontSize: 16,

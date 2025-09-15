@@ -6,6 +6,7 @@ export class AuthManager {
   private static PASSWORD_KEY = 'gucPassword';
   private static NICKNAME_KEY = 'displayNickname';
   private static USER_ID_KEY = 'gucUserId';
+  private static SHIFTED_SCHEDULE_KEY = 'shiftedScheduleEnabled';
 
   /**
    * Store session cookie from login response
@@ -160,6 +161,17 @@ export class AuthManager {
   }
 
   /**
+   * Clear the shifted schedule preference
+   */
+  static async clearShiftedSchedulePreference(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(this.SHIFTED_SCHEDULE_KEY);
+    } catch (error) {
+      // Ignore errors
+    }
+  }
+
+  /**
    * Perform full logout - clear all stored data
    */
   static async logout(): Promise<void> {
@@ -170,7 +182,8 @@ export class AuthManager {
         this.clearSessionCookie(),
         this.clearCredentials(),
         this.clearNickname(),
-        this.clearUserId()
+        this.clearUserId(),
+        this.clearShiftedSchedulePreference()
       ]);
       
     } catch (error) {

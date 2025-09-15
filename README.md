@@ -9,6 +9,7 @@
 + Settings page (Profile, Financials, Dark mode, Contact)
 + Student Schedule https://apps.guc.edu.eg/student_ext/Scheduling/GroupSchedule.aspx?v=825d1466-7884-412e-a97b-e8b49fe77839
 + Exam Seats https://apps.guc.edu.eg/student_ext/Exam/ViewExamSeat_01.aspx
++ Add slot timing shift for BI/Architecture/... in the settings page (Should change the slot timing in the schedule page)
 - Notifications https://apps.guc.edu.eg/student_ext/Main/Notifications.aspx
 - Search for Staff https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx
 - View Attendance https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx?v=NXM874921
@@ -19,7 +20,6 @@
 - Add skeletons for everything that loads
 - Mobile Notifications
 - Update alert (Use a custom proxy server)
-- Add slot timing shift for BI/Architecture/... in the settings page (Should change the slot timing in the schedule page)
 
 ## To-Do List (Optional)
 - Evaluate Course
@@ -63,3 +63,4 @@
 - Use saved username and password to log in automatically
 - Replace 'Available Courses' with 'Semester N'
 - ReApply All cache timings
+- Clear all cache on logout

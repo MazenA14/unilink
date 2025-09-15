@@ -1,4 +1,5 @@
 import { Colors, ScheduleColors, ScheduleTypeColors, SlotTypeColors } from '@/constants/Colors';
+import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import React from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
@@ -16,6 +17,7 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
   const scheduleColors = ScheduleColors[colorScheme ?? 'light'];
   const screenWidth = Dimensions.get('window').width;
   const typeColor = ScheduleTypeColors[scheduleType];
+  const { isShiftedScheduleEnabled } = useShiftedSchedule();
   
   
   // Calculate dynamic padding based on screen width
@@ -176,7 +178,7 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
   const periods = [
     { key: 'first', name: '1st', timing: '8:15 - 9:45' },
     { key: 'second', name: '2nd', timing: '10:00 - 11:30' },
-    { key: 'third', name: '3rd', timing: '11:45 - 1:15' },
+    { key: 'third', name: '3rd', timing: isShiftedScheduleEnabled ? '12:00 - 1:30' : '11:45 - 1:15' },
     { key: 'fourth', name: '4th', timing: '1:45 - 3:15' },
     { key: 'fifth', name: '5th', timing: '3:45 - 5:15' },
   ] as const;
