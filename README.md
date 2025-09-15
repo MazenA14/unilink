@@ -11,15 +11,16 @@
 + Exam Seats https://apps.guc.edu.eg/student_ext/Exam/ViewExamSeat_01.aspx
 + Add slot timing shift for BI/Architecture/... in the settings page (Should change the slot timing in the schedule page)
 + Notifications https://apps.guc.edu.eg/student_ext/Main/Notifications.aspx
-- Search for Staff https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx
+
 - View Attendance https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx?v=NXM874921
+- Search for Staff https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx
 - Staff Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
 - Course Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
 - General Group Schedule https://apps.guc.edu.eg/student_ext/Scheduling/GeneralGroupSchedule.aspx
-- Empty Slots (Rooms) https://gucroomschedule.web.app/
 - Add skeletons for everything that loads
 - Mobile Notifications
-- Update alert (Use a custom proxy server)
+- Update alert + update Changelog (Use a custom proxy server)
+- Empty Slots (Rooms) https://gucroomschedule.web.app/
 
 ## To-Do List (Optional)
 - Evaluate Course
@@ -34,10 +35,11 @@
 ## Dashboard should contain:
 + Notifications
 + Today's Schedule
-- Your Instructors this semester (List of view profiles separated by course)
 + Exam Seats
-- View Attendance
 + CMS button
+
+- Your Instructors this semester (List of view profiles separated by course)
+- View Attendance
 
 ## Database Schema
 ### Table 1
@@ -58,6 +60,7 @@
 + Add time under the slot number in the personal schedule
 + Make the schedule open on the mobile's current day
 + Replace 'Available Courses' with 'Semester N'
+
 - Clear Course grades cache on pull to refresh and not be visibile while refreshing
 - Add all days on the schedule screen
 - See schedule Caching
