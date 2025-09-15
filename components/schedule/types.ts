@@ -6,6 +6,7 @@ export interface ScheduleClass {
   room?: string;
   time?: string;
   slotType?: string;
+  courseCode?: string;         // Extracted course code (e.g., "7MET L001")
   // New fields for different schedule types
   enrollmentCount?: number;    // For course schedules
   officeHours?: string;        // For staff schedules

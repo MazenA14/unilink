@@ -2,8 +2,8 @@ import { Colors, ScheduleTypeColors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthManager } from '@/utils/auth';
 import { Feather, Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -17,15 +17,37 @@ export default function DashboardScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const [nickname, setNickname] = useState<string>('Student');
 
-  useEffect(() => {
-    const loadNickname = async () => {
-      const storedNickname = await AuthManager.getNickname();
-      if (storedNickname) {
-        setNickname(storedNickname);
+  const loadNickname = useCallback(async () => {
+    // First try to get stored nickname
+    const storedNickname = await AuthManager.getNickname();
+    if (storedNickname) {
+      setNickname(storedNickname);
+      return;
+    }
+    
+    // If no stored nickname, extract first name from username
+    const { username } = await AuthManager.getCredentials();
+    if (username) {
+      // Extract first name from username (assuming format: user.name or user_name)
+      const firstName = username.split(/[._]/)[0];
+      if (firstName) {
+        // Capitalize first letter
+        const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+        setNickname(capitalizedFirstName);
       }
-    };
-    loadNickname();
+    }
   }, []);
+
+  useEffect(() => {
+    loadNickname();
+  }, [loadNickname]);
+
+  // Reload nickname when screen comes into focus (e.g., returning from settings)
+  useFocusEffect(
+    useCallback(() => {
+      loadNickname();
+    }, [loadNickname])
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

@@ -27,7 +27,7 @@ const generateMockSchedule = (type: ScheduleType, selectedId?: string): Schedule
       dayName: 'Saturday',
       periods: {
         first: selectedId ? {
-          courseName: type === 'staff' ? 'CS101 - Programming' : 
+          courseName: type === 'staff' ? 'DMET 502 Lecture (7MET L001)' : 
                      type === 'course' ? 'CS101 - Introduction to Programming' : 'CS101 - Programming',
           instructor: type === 'staff' ? 'Dr. Ahmed Hassan' : 'Dr. Sarah Mohamed',
           room: 'Room 101',
@@ -38,7 +38,7 @@ const generateMockSchedule = (type: ScheduleType, selectedId?: string): Schedule
         } : null,
         second: null,
         third: selectedId ? {
-          courseName: type === 'staff' ? 'CS201 - Data Structures' : 
+          courseName: type === 'staff' ? 'CS201 - Data Structures [Tutorial]' : 
                      type === 'course' ? 'CS201 - Data Structures' : 'CS201 - Data Structures',
           instructor: type === 'staff' ? 'Dr. Ahmed Hassan' : 'Dr. Omar Ali',
           room: 'Room 102',
@@ -57,7 +57,7 @@ const generateMockSchedule = (type: ScheduleType, selectedId?: string): Schedule
       periods: {
         first: null,
         second: selectedId ? {
-          courseName: type === 'staff' ? 'CS301 - Algorithms' : 
+          courseName: type === 'staff' ? 'CS301 - Algorithms - Lab' : 
                      type === 'course' ? 'CS301 - Algorithms' : 'CS301 - Algorithms',
           instructor: type === 'staff' ? 'Dr. Ahmed Hassan' : 'Dr. Ahmed Hassan',
           room: 'Room 103',

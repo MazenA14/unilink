@@ -1,5 +1,7 @@
 import { Colors, ScheduleColors, ScheduleTypeColors } from '@/constants/Colors';
+// Updated to support courseCode
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { ScheduleClass, ScheduleType } from './types';
@@ -75,15 +77,23 @@ export function ScheduleCard({ classData, periodName, scheduleType = 'personal' 
       <Text style={[styles.courseName, { color: colors.text }]} numberOfLines={2}>
         {classData.courseName}
       </Text>
+      {classData.courseCode && (
+        <Text style={[styles.courseCode, { color: colors.secondaryFont }]} numberOfLines={1}>
+          {classData.courseCode}
+        </Text>
+      )}
       {classData.instructor && (
         <Text style={[styles.instructor, { color: colors.secondaryFont }]} numberOfLines={1}>
           {classData.instructor}
         </Text>
       )}
       {classData.room && (
-        <Text style={[styles.room, { color: colors.secondaryFont }]} numberOfLines={1}>
-          📍 {classData.room}
-        </Text>
+        <View style={styles.roomContainer}>
+          <Ionicons name="location-outline" size={14} color={colors.secondaryFont} />
+          <Text style={[styles.room, { color: colors.secondaryFont }]} numberOfLines={1}>
+            {classData.room}
+          </Text>
+        </View>
       )}
       {classData.time && (
         <Text style={[styles.time, { color: colors.secondaryFont }]} numberOfLines={1}>
@@ -107,13 +117,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
   },
+  courseCode: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 2,
+    opacity: 0.8,
+  },
   instructor: {
     fontSize: 12,
     marginBottom: 2,
   },
+  roomContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
   room: {
     fontSize: 12,
-    marginBottom: 2,
+    marginLeft: 4,
   },
   time: {
     fontSize: 12,
