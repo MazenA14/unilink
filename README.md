@@ -52,14 +52,14 @@
 
 ## To-Do (Notes)
 - Clear Course grades cache on pull to refresh and not be visibile while refreshing
++ Remove the effect that occurs on pressing on the tabs at the bottom
++ Change animation for the hamburger menu to Fade in
++ Unify the formating of the personal schedule
++ Maybe add slot type for each slot in the personal schedule
++ Add time under the slot number in the personal schedule
 - Add all days on the schedule screen
 - Make the schedule open on the mobile's current day
-+ Remove the effect that occurs on pressing on the tabs at the bottom
 - See schedule Caching
-+ Change animation for the hamburger menu to Fade in
 - Use saved username and password to log in automatically
 - Replace 'Available Courses' with 'Semester N'
 - ReApply All cache timings
-- Unify the formating of the personal schedule
-- Add time under the slot number in the personal schedule
-+ Maybe add slot type for each slot in the personal schedule
