@@ -1,10 +1,13 @@
 import { Colors, ScheduleTypeColors } from '@/constants/Colors';
+import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useSchedule } from '@/hooks/useSchedule';
 import { AuthManager } from '@/utils/auth';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,6 +19,9 @@ export default function DashboardScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [nickname, setNickname] = useState<string>('Student');
+  const { scheduleData, loading: scheduleLoading, refetch: refetchSchedule } = useSchedule();
+  const { isShiftedScheduleEnabled } = useShiftedSchedule();
+  const refreshRotation = useRef(new Animated.Value(0)).current;
 
   const loadNickname = useCallback(async () => {
     // First try to get stored nickname
@@ -37,6 +43,182 @@ export default function DashboardScreen() {
       }
     }
   }, []);
+
+  // Get today's schedule and day name
+  const getTodaysSchedule = () => {
+    if (!scheduleData?.days) return { dayName: '', periods: null };
+    
+    const today = new Date();
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const currentDayName = dayNames[today.getDay()];
+    
+    // If it's Friday, fallback to Saturday
+    const targetDayName = currentDayName === 'Friday' ? 'Saturday' : currentDayName;
+    
+    const todaySchedule = scheduleData.days.find(day => day.dayName === targetDayName);
+    
+    if (todaySchedule) {
+      return { dayName: targetDayName, periods: todaySchedule.periods };
+    }
+    
+    return { dayName: targetDayName, periods: null };
+  };
+
+  const { dayName, periods } = getTodaysSchedule();
+
+  // Get period timing based on shifted schedule setting
+  const getPeriodTiming = (periodKey: string) => {
+    const timings = {
+      first: '8:15\n9:45',
+      second: '10:00\n11:30',
+      third: isShiftedScheduleEnabled ? '12:00\n1:30' : '11:45\n1:15',
+      fourth: isShiftedScheduleEnabled ? '2:00\n3:30' : '1:45\n3:15',
+      fifth: isShiftedScheduleEnabled ? '4:00\n5:30' : '3:45\n5:15',
+    };
+    return timings[periodKey as keyof typeof timings] || '';
+  };
+
+  // Function to extract course code from course name
+  const getCourseCode = (classData: any): string => {
+    if (!classData?.courseName) return '';
+    
+    const courseName = classData.courseName;
+    
+    // Look for course code patterns like "7MET L001", "CSEN601", etc.
+    const courseCodePatterns = [
+      /(\d+[A-Z]+\s+[A-Z]\d+)/,  // Pattern like "7MET L001"
+      /([A-Z]{2,}\d{3,})/,        // Pattern like "CSEN601"
+      /([A-Z]{3,}\d{2,})/,        // Pattern like "MATH101"
+    ];
+    
+    for (const pattern of courseCodePatterns) {
+      const match = courseName.match(pattern);
+      if (match) {
+        return match[1];
+      }
+    }
+    
+    return '';
+  };
+
+  // Function to clean course name by removing type information
+  const cleanCourseName = (classData: any): string => {
+    if (!classData?.courseName) return '';
+    
+    let courseName = classData.courseName;
+    
+    // Remove common type patterns from course name
+    const typePatterns = [
+      /\s*\(lab\)/gi,
+      /\s*\(laboratory\)/gi,
+      /\s*\(tutorial\)/gi,
+      /\s*\(tut\)/gi,
+      /\s*\(seminar\)/gi,
+      /\s*\(workshop\)/gi,
+      /\s*\(project\)/gi,
+      /\s*\(thesis\)/gi,
+      /\s*\(dissertation\)/gi,
+      /\s*\[lab\]/gi,
+      /\s*\[laboratory\]/gi,
+      /\s*\[tutorial\]/gi,
+      /\s*\[tut\]/gi,
+      /\s*\[seminar\]/gi,
+      /\s*\[workshop\]/gi,
+      /\s*\[project\]/gi,
+      /\s*\[thesis\]/gi,
+      /\s*\[dissertation\]/gi,
+      /\s*-\s*lab/gi,
+      /\s*-\s*laboratory/gi,
+      /\s*-\s*tutorial/gi,
+      /\s*-\s*tut/gi,
+      /\s*-\s*seminar/gi,
+      /\s*-\s*workshop/gi,
+      /\s*-\s*project/gi,
+      /\s*-\s*thesis/gi,
+      /\s*-\s*dissertation/gi,
+      // Additional patterns for common formats
+      /\s+lab\s*$/gi,
+      /\s+laboratory\s*$/gi,
+      /\s+tutorial\s*$/gi,
+      /\s+tut\s*$/gi,
+      /\s+seminar\s*$/gi,
+      /\s+workshop\s*$/gi,
+      /\s+project\s*$/gi,
+      /\s+thesis\s*$/gi,
+      /\s+dissertation\s*$/gi,
+      // Patterns with numbers (e.g., "Lab 1", "Tutorial 2")
+      /\s+lab\s+\d+\s*$/gi,
+      /\s+laboratory\s+\d+\s*$/gi,
+      /\s+tutorial\s+\d+\s*$/gi,
+      /\s+tut\s+\d+\s*$/gi,
+      /\s+seminar\s+\d+\s*$/gi,
+      /\s+workshop\s+\d+\s*$/gi,
+      /\s+project\s+\d+\s*$/gi,
+      // Lecture patterns
+      /\s+lecture\s*$/gi,
+      /\s*\(lecture\)/gi,
+      /\s*\[lecture\]/gi,
+      /\s*-\s*lecture/gi,
+      /\s+lecture\s+/gi,
+      // Test pattern for "Lecture" at the end
+      / lecture$/gi,
+      // Course code patterns (e.g., "7MET L001", "CSEN601", etc.)
+      /\s*\(\d+[A-Z]+\s+[A-Z]\d+\)/gi,
+      /\s*\[\d+[A-Z]+\s+[A-Z]\d+\]/gi,
+      /\s*-\s*\d+[A-Z]+\s+[A-Z]\d+/gi,
+    ];
+    
+    // Apply all patterns to clean the course name
+    for (const pattern of typePatterns) {
+      courseName = courseName.replace(pattern, '');
+    }
+    
+    // Clean up extra spaces
+    courseName = courseName.replace(/\s+/g, ' ').trim();
+    
+    return courseName;
+  };
+
+  // Get slot type color
+  const getSlotTypeColor = (slotType: string) => {
+    const colors = {
+      'Lecture': '#3B82F6',
+      'Tutorial': '#10B981',
+      'Lab': '#F59E0B',
+      'Seminar': '#8B5CF6',
+      'Workshop': '#EF4444',
+      'Project': '#06B6D4',
+      'Thesis': '#84CC16',
+      'Free': '#6B7280',
+    };
+    return colors[slotType as keyof typeof colors] || '#6B7280';
+  };
+
+  // Handle refresh schedule
+  const handleRefreshSchedule = async () => {
+    try {
+      // Start rotation animation
+      refreshRotation.setValue(0);
+      Animated.loop(
+        Animated.timing(refreshRotation, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        })
+      ).start();
+
+      await refetchSchedule();
+      
+      // Stop animation
+      refreshRotation.stopAnimation();
+      refreshRotation.setValue(0);
+    } catch (error) {
+      console.log('Failed to refresh schedule:', error);
+      // Stop animation on error
+      refreshRotation.stopAnimation();
+      refreshRotation.setValue(0);
+    }
+  };
 
   useEffect(() => {
     loadNickname();
@@ -101,237 +283,141 @@ export default function DashboardScreen() {
         {/* Today's Schedule */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.mainFont }]}>Today&apos;s Schedule</Text>
+          {dayName && (
+            <View style={styles.dayNameRow}>
+              <Text style={[styles.dayName, { color: colors.secondaryFont }]}>{dayName}</Text>
+              <TouchableOpacity 
+                style={styles.refreshIconButton}
+                onPress={handleRefreshSchedule}
+                disabled={scheduleLoading}
+              >
+                <Animated.View
+                  style={{
+                    transform: [{
+                      rotate: refreshRotation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0deg', '360deg'],
+                      })
+                    }]
+                  }}
+                >
+                  <Ionicons 
+                    name="refresh" 
+                    size={20} 
+                    color={colors.tint} 
+                  />
+                </Animated.View>
+              </TouchableOpacity>
+            </View>
+          )}
           <View style={styles.periodsContainer}>
-            {/* First Period */}
-            <View style={[styles.periodRow, { 
-              backgroundColor: colorScheme === 'dark' ? '#2A1F1F' : '#FFF5F5',
-              borderColor: colorScheme === 'dark' ? '#3D2A2A' : '#FFE0E0',
-              borderRadius: 16,
-              shadowColor: ScheduleTypeColors.personal,
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 3,
-            }]}>
-              <View style={[styles.periodLabel, { 
-                backgroundColor: ScheduleTypeColors.personal + '15', 
-                borderColor: ScheduleTypeColors.personal + '30',
-                borderTopLeftRadius: 16,
-                borderBottomLeftRadius: 16,
-              }]}>
-                <Text style={[styles.periodLabelText, { color: ScheduleTypeColors.personal }]}>1st</Text>
-              </View>
-              <View style={[styles.periodContent, { 
-                backgroundColor: colors.cardBackground,
-                borderColor: ScheduleTypeColors.personal + '40',
-                borderTopRightRadius: 16,
-                borderBottomRightRadius: 16,
-                borderLeftWidth: 3,
-                borderLeftColor: ScheduleTypeColors.personal,
-              }]}>
-                <View style={styles.periodContentRow}>
-                  <View style={styles.periodContentLeft}>
-                    <Text style={[styles.courseName, { color: colors.mainFont }]} numberOfLines={2}>
-                      Data Structures
-                    </Text>
-                    <Text style={[styles.time, { color: colors.secondaryFont }]} numberOfLines={1}>
-                      10:00 AM - 11:30 AM
-                    </Text>
-                  </View>
-                  <View style={styles.periodContentRight}>
-                    <View style={styles.roomContainer}>
-                      <Ionicons name="location-outline" size={14} color={colors.secondaryFont} />
-                      <Text style={[styles.roomText, { color: colors.secondaryFont }]}>C3.201</Text>
-                    </View>
-                    <View style={[styles.typePill, { backgroundColor: '#3B82F6' }]}>
-                      <Text style={[styles.typeText, { color: 'white' }]}>Lecture</Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            {/* Second Period */}
-            <View style={[styles.periodRow, { 
-              backgroundColor: colorScheme === 'dark' ? '#2A1F1F' : '#FFF5F5',
-              borderColor: colorScheme === 'dark' ? '#3D2A2A' : '#FFE0E0',
-              borderRadius: 16,
-              shadowColor: ScheduleTypeColors.personal,
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 3,
-            }]}>
-              <View style={[styles.periodLabel, { 
-                backgroundColor: ScheduleTypeColors.personal + '15', 
-                borderColor: ScheduleTypeColors.personal + '30',
-                borderTopLeftRadius: 16,
-                borderBottomLeftRadius: 16,
-              }]}>
-                <Text style={[styles.periodLabelText, { color: ScheduleTypeColors.personal }]}>2nd</Text>
-              </View>
-              <View style={[styles.periodContent, { 
-                backgroundColor: colors.cardBackground,
-                borderColor: ScheduleTypeColors.personal + '40',
-                borderTopRightRadius: 16,
-                borderBottomRightRadius: 16,
-                borderLeftWidth: 3,
-                borderLeftColor: ScheduleTypeColors.personal,
-              }]}>
-                <View style={styles.periodContentRow}>
-                  <View style={styles.periodContentLeft}>
-                    <Text style={[styles.courseName, { color: colors.mainFont }]} numberOfLines={2}>
-                      Algorithms
-                    </Text>
-                    <Text style={[styles.time, { color: colors.secondaryFont }]} numberOfLines={1}>
-                      2:00 PM - 3:30 PM
-                    </Text>
-                  </View>
-                  <View style={styles.periodContentRight}>
-                    <View style={styles.roomContainer}>
-                      <Ionicons name="location-outline" size={14} color={colors.secondaryFont} />
-                      <Text style={[styles.roomText, { color: colors.secondaryFont }]}>C3.105</Text>
-                    </View>
-                    <View style={[styles.typePill, { backgroundColor: '#10B981' }]}>
-                      <Text style={[styles.typeText, { color: 'white' }]}>Tutorial</Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            {/* Third Period */}
-            <View style={[styles.periodRow, { 
-              backgroundColor: colorScheme === 'dark' ? '#2A1F1F' : '#FFF5F5',
-              borderColor: colorScheme === 'dark' ? '#3D2A2A' : '#FFE0E0',
-              borderRadius: 16,
-              shadowColor: ScheduleTypeColors.personal,
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 3,
-            }]}>
-              <View style={[styles.periodLabel, { 
-                backgroundColor: ScheduleTypeColors.personal + '15', 
-                borderColor: ScheduleTypeColors.personal + '30',
-                borderTopLeftRadius: 16,
-                borderBottomLeftRadius: 16,
-              }]}>
-                <Text style={[styles.periodLabelText, { color: ScheduleTypeColors.personal }]}>3rd</Text>
-              </View>
-              <View style={[styles.periodContent, { 
-                backgroundColor: colors.cardBackground,
-                borderColor: ScheduleTypeColors.personal + '40',
-                borderTopRightRadius: 16,
-                borderBottomRightRadius: 16,
-                borderLeftWidth: 3,
-                borderLeftColor: ScheduleTypeColors.personal,
+            {scheduleLoading ? (
+              <View style={[styles.periodRow, { 
+                backgroundColor: colorScheme === 'dark' ? '#2A1F1F' : '#FFF5F5',
+                borderColor: colorScheme === 'dark' ? '#3D2A2A' : '#FFE0E0',
+                borderRadius: 16,
                 justifyContent: 'center',
                 alignItems: 'center',
+                paddingVertical: 20,
               }]}>
-                <Text style={[styles.courseName, { color: colors.secondaryFont, fontStyle: 'italic', textAlign: 'center' }]}>
-                  Free Slot
+                <Text style={[styles.courseName, { color: colors.secondaryFont, fontStyle: 'italic' }]}>
+                  Loading schedule...
                 </Text>
               </View>
-            </View>
-
-            {/* Fourth Period */}
-            <View style={[styles.periodRow, { 
-              backgroundColor: colorScheme === 'dark' ? '#2A1F1F' : '#FFF5F5',
-              borderColor: colorScheme === 'dark' ? '#3D2A2A' : '#FFE0E0',
-              borderRadius: 16,
-              shadowColor: ScheduleTypeColors.personal,
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 3,
-            }]}>
-              <View style={[styles.periodLabel, { 
-                backgroundColor: ScheduleTypeColors.personal + '15', 
-                borderColor: ScheduleTypeColors.personal + '30',
-                borderTopLeftRadius: 16,
-                borderBottomLeftRadius: 16,
-              }]}>
-                <Text style={[styles.periodLabelText, { color: ScheduleTypeColors.personal }]}>4th</Text>
-              </View>
-              <View style={[styles.periodContent, { 
-                backgroundColor: colors.cardBackground,
-                borderColor: ScheduleTypeColors.personal + '40',
-                borderTopRightRadius: 16,
-                borderBottomRightRadius: 16,
-                borderLeftWidth: 3,
-                borderLeftColor: ScheduleTypeColors.personal,
-              }]}>
-                <View style={styles.periodContentRow}>
-                  <View style={styles.periodContentLeft}>
-                    <Text style={[styles.courseName, { color: colors.mainFont }]} numberOfLines={2}>
-                      Computer Networks
-                    </Text>
-                    <Text style={[styles.time, { color: colors.secondaryFont }]} numberOfLines={1}>
-                      6:00 PM - 7:30 PM
-                    </Text>
-                  </View>
-                  <View style={styles.periodContentRight}>
-                    <View style={styles.roomContainer}>
-                      <Ionicons name="location-outline" size={14} color={colors.secondaryFont} />
-                      <Text style={[styles.roomText, { color: colors.secondaryFont }]}>C3.205</Text>
+            ) : periods ? (
+              ['first', 'second', 'third', 'fourth', 'fifth'].map((periodKey, index) => {
+                const classData = periods[periodKey as keyof typeof periods];
+                const periodNumber = ['1st', '2nd', '3rd', '4th', '5th'][index];
+                const timing = getPeriodTiming(periodKey);
+                
+                return (
+                  <View key={periodKey} style={[styles.periodRow, { 
+                    backgroundColor: colorScheme === 'dark' ? '#2A1F1F' : '#FFF5F5',
+                    borderColor: colorScheme === 'dark' ? '#3D2A2A' : '#FFE0E0',
+                    borderRadius: 16,
+                    shadowColor: ScheduleTypeColors.personal,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 4,
+                    elevation: 3,
+                  }]}>
+                    <View style={[styles.periodLabel, { 
+                      backgroundColor: ScheduleTypeColors.personal + '15', 
+                      borderColor: ScheduleTypeColors.personal + '30',
+                      borderTopLeftRadius: 16,
+                      borderBottomLeftRadius: 16,
+                    }]}>
+                      <Text style={[styles.periodLabelText, { color: ScheduleTypeColors.personal }]}>{periodNumber}</Text>
+                      <Text style={[styles.periodTimingText, { color: ScheduleTypeColors.personal, fontSize: 10 }]}>{timing}</Text>
                     </View>
-                    <View style={[styles.typePill, { backgroundColor: '#F59E0B' }]}>
-                      <Text style={[styles.typeText, { color: 'white' }]}>Lab</Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            {/* Fifth Period */}
-            <View style={[styles.periodRow, { 
-              backgroundColor: colorScheme === 'dark' ? '#2A1F1F' : '#FFF5F5',
-              borderColor: colorScheme === 'dark' ? '#3D2A2A' : '#FFE0E0',
-              borderRadius: 16,
-              shadowColor: ScheduleTypeColors.personal,
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 3,
-            }]}>
-              <View style={[styles.periodLabel, { 
-                backgroundColor: ScheduleTypeColors.personal + '15', 
-                borderColor: ScheduleTypeColors.personal + '30',
-                borderTopLeftRadius: 16,
-                borderBottomLeftRadius: 16,
-              }]}>
-                <Text style={[styles.periodLabelText, { color: ScheduleTypeColors.personal }]}>5th</Text>
-              </View>
-              <View style={[styles.periodContent, { 
-                backgroundColor: colors.cardBackground,
-                borderColor: ScheduleTypeColors.personal + '40',
-                borderTopRightRadius: 16,
-                borderBottomRightRadius: 16,
-                borderLeftWidth: 3,
-                borderLeftColor: ScheduleTypeColors.personal,
-              }]}>
-                <View style={styles.periodContentRow}>
-                  <View style={styles.periodContentLeft}>
-                    <Text style={[styles.courseName, { color: colors.mainFont }]} numberOfLines={2}>
-                      Software Engineering
-                    </Text>
-                    <Text style={[styles.time, { color: colors.secondaryFont }]} numberOfLines={1}>
-                      8:00 PM - 9:30 PM
-                    </Text>
-                  </View>
-                  <View style={styles.periodContentRight}>
-                    <View style={styles.roomContainer}>
-                      <Ionicons name="location-outline" size={14} color={colors.secondaryFont} />
-                      <Text style={[styles.roomText, { color: colors.secondaryFont }]}>C3.401</Text>
-                    </View>
-                    <View style={[styles.typePill, { backgroundColor: '#3B82F6' }]}>
-                      <Text style={[styles.typeText, { color: 'white' }]}>Lecture</Text>
+                    <View style={[styles.periodContent, { 
+                      backgroundColor: colors.cardBackground,
+                      borderColor: ScheduleTypeColors.personal + '40',
+                      borderTopRightRadius: 16,
+                      borderBottomRightRadius: 16,
+                      borderLeftWidth: 3,
+                      borderLeftColor: ScheduleTypeColors.personal,
+                    }]}>
+                      {classData ? (
+                        <View style={styles.periodContentRow}>
+                          <View style={styles.periodContentLeft}>
+                            <Text style={[styles.courseName, { color: colors.mainFont }]} numberOfLines={2}>
+                              {cleanCourseName(classData)}
+                            </Text>
+                            {getCourseCode(classData) && (
+                              <Text style={[styles.courseCode, { color: colors.secondaryFont }]} numberOfLines={1}>
+                                {getCourseCode(classData)}
+                              </Text>
+                            )}
+                            {classData.instructor && (
+                              <Text style={[styles.instructor, { color: colors.secondaryFont }]} numberOfLines={1}>
+                                {classData.instructor}
+                              </Text>
+                            )}
+                          </View>
+                          <View style={styles.periodContentRight}>
+                            {classData.room && (
+                              <View style={styles.roomContainer}>
+                                <Ionicons name="location-outline" size={14} color={colors.secondaryFont} />
+                                <Text style={[styles.roomText, { color: colors.secondaryFont }]}>{classData.room}</Text>
+                              </View>
+                            )}
+                            {classData.slotType && (
+                              <View style={[styles.typePill, { backgroundColor: getSlotTypeColor(classData.slotType) }]}>
+                                <Text style={[styles.typeText, { color: 'white' }]}>{classData.slotType}</Text>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                      ) : (
+                        <View style={[styles.periodContent, { 
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          borderWidth: 0,
+                        }]}>
+                          <Text style={[styles.courseName, { color: colors.secondaryFont, fontStyle: 'italic', textAlign: 'center' }]}>
+                            Free Slot
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   </View>
-                </View>
+                );
+              })
+            ) : (
+              <View style={[styles.periodRow, { 
+                backgroundColor: colorScheme === 'dark' ? '#2A1F1F' : '#FFF5F5',
+                borderColor: colorScheme === 'dark' ? '#3D2A2A' : '#FFE0E0',
+                borderRadius: 16,
+                justifyContent: 'center',
+                alignItems: 'center',
+                paddingVertical: 20,
+              }]}>
+                <Text style={[styles.courseName, { color: colors.secondaryFont, fontStyle: 'italic' }]}>
+                  No schedule data available
+                </Text>
               </View>
-            </View>
+            )}
           </View>
         </View>
 
@@ -508,6 +594,32 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
+  periodTimingText: {
+    fontSize: 10,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  dayNameRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  dayName: {
+    fontSize: 16,
+    fontWeight: '600',
+    left: 10,
+    textAlign: 'left',
+  },
+  refreshIconButton: {
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  refreshingIcon: {
+    opacity: 0.6,
+  },
   periodContent: {
     flex: 1,
     padding: 12,
@@ -518,6 +630,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
     lineHeight: 18,
+  },
+  courseCode: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginBottom: 2,
+    opacity: 0.7,
   },
   instructor: {
     fontSize: 12,
@@ -651,12 +769,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     opacity: 0.6,
     fontWeight: '500',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
   },
   viewAllButton: {
     flexDirection: 'row',
