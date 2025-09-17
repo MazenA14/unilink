@@ -1,12 +1,13 @@
 import { useCustomAlert } from '@/components/CustomAlert';
 import { Colors } from '@/constants/Colors';
+import { DefaultScreenType, useDefaultScreen } from '@/contexts/DefaultScreenContext';
 import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthManager } from '@/utils/auth';
 import { GUCAPIProxy, PaymentItem } from '@/utils/gucApiProxy';
 import { router } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function SettingsScreen() {
@@ -15,6 +16,7 @@ export default function SettingsScreen() {
   const { showAlert, AlertComponent } = useCustomAlert();
   const { themePreference, setThemePreference } = useTheme();
   const { isShiftedScheduleEnabled, setShiftedScheduleEnabled } = useShiftedSchedule();
+  const { defaultScreen, setDefaultScreen } = useDefaultScreen();
   const [displayName, setDisplayName] = useState<string>('');
   const [editVisible, setEditVisible] = useState(false);
   const [editValue, setEditValue] = useState('');
@@ -22,8 +24,23 @@ export default function SettingsScreen() {
   const [payments, setPayments] = useState<PaymentItem[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
   const [payingIndex, setPayingIndex] = useState<number | null>(null);
+  const [defaultScreenDropdownVisible, setDefaultScreenDropdownVisible] = useState(false);
+  const [pillButtonLayout, setPillButtonLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const pillButtonRef = useRef<View>(null);
 
   const isDark = useMemo(() => themePreference === 'dark' || (themePreference === 'system' && (colorScheme === 'dark')), [themePreference, colorScheme]);
+
+  const screenOptions: { value: DefaultScreenType; label: string }[] = [
+    { value: 'dashboard', label: 'Dashboard' },
+    { value: 'grades', label: 'Grades' },
+    { value: 'schedule', label: 'Schedule' },
+    { value: 'transcript', label: 'Transcript' },
+    { value: 'settings', label: 'Settings' },
+  ];
+
+  const getScreenLabel = (screen: DefaultScreenType) => {
+    return screenOptions.find(option => option.value === screen)?.label || 'Dashboard';
+  };
 
   useEffect(() => {
     (async () => {
@@ -49,13 +66,17 @@ export default function SettingsScreen() {
           await AuthManager.storeUserId(fetched);
         }
       }
+    })();
+  }, []);
 
+  useEffect(() => {
+    (async () => {
+      setLoadingPayments(true);
       try {
-        setLoadingPayments(true);
-        const data = await GUCAPIProxy.getOutstandingPayments();
-        setPayments(data);
-      } catch {
-        setPayments([]);
+        const fetched = await GUCAPIProxy.getOutstandingPayments();
+        setPayments(fetched);
+      } catch (error) {
+        console.error('Error fetching payments:', error);
       } finally {
         setLoadingPayments(false);
       }
@@ -69,8 +90,13 @@ export default function SettingsScreen() {
 
   const saveNickname = async () => {
     const trimmed = editValue.trim();
-    if (trimmed.length === 0) {
-      setEditVisible(false);
+    if (!trimmed) {
+      showAlert({
+        title: 'Invalid Nickname',
+        message: 'Nickname cannot be empty.',
+        type: 'error',
+        buttons: [{ text: 'OK', style: 'cancel' }],
+      });
       return;
     }
     await AuthManager.storeNickname(trimmed);
@@ -78,21 +104,18 @@ export default function SettingsScreen() {
     setEditVisible(false);
   };
 
-  const handleLogout = async () => {
+  const logout = async () => {
     showAlert({
       title: 'Logout',
-      message: 'Are you sure you want to logout?\nThis will clear all your saved data',
+      message: 'Are you sure you want to logout?',
       type: 'warning',
       buttons: [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Logout',
           style: 'destructive',
           onPress: async () => {
-            await AuthManager.clearSessionCookie();
+            await AuthManager.logout();
             router.replace('/login');
           },
         },
@@ -123,6 +146,11 @@ export default function SettingsScreen() {
 
         {/* Financials Section */}
         <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>FINANCIALS</Text>
+        <View style={[styles.warningCard, { backgroundColor: colorScheme === 'dark' ? '#2a0a0a' : '#f8d7da', borderColor: colors.error }]}>
+          <Text style={[styles.warningText, { color: colors.error }]}>
+            Pay through the app at your own responsibility.
+          </Text>
+        </View>
         <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
           {loadingPayments ? (
             <View style={styles.rowBetween}>
@@ -223,6 +251,41 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>PREFERENCES</Text>
+        {/* <NotificationSettings /> */}         
+        
+        <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
+          <View style={styles.rowBetween}>
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <Text style={[styles.primaryText, { color: colors.mainFont }]}>Default Screen</Text>
+              <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>
+                Choose which screen to open when the app starts
+              </Text>
+            </View>
+            <TouchableOpacity
+              ref={pillButtonRef}
+              style={[styles.pillButton, { backgroundColor: colors.tabColor }]}
+              onPress={() => {
+                pillButtonRef.current?.measureInWindow((x, y, width, height) => {
+                  setPillButtonLayout({ x, y, width, height });
+                  setDefaultScreenDropdownVisible(true);
+                });
+              }}
+            >
+              <Text style={[styles.pillText, { color: colors.background }]}>
+                {getScreenLabel(defaultScreen)}
+              </Text>
+              <Text style={[styles.pillArrow, { color: colors.background }]}>▼</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        
+
+        {/* Development Test Section - Remove in production */}
+        {/* <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>DEVELOPMENT</Text>
+        <NotificationTest /> */}
+
         {/* Support & Actions */}
         <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>SUPPORT</Text>
         <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
@@ -246,34 +309,119 @@ export default function SettingsScreen() {
             <Text style={[styles.primaryText, { color: colors.mainFont }]}>Contact</Text>
           </TouchableOpacity>
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <TouchableOpacity style={styles.rowBetween} onPress={handleLogout}>
-            <Text style={[styles.logoutLabel, { color: colors.tabColor }]}>Logout</Text>
+          <TouchableOpacity
+            style={styles.rowBetween}
+            onPress={logout}
+          >
+            <Text style={[styles.primaryText, { color: colors.gradeFailing }]}>Logout</Text>
           </TouchableOpacity>
         </View>
       </View>
-      <AlertComponent />
-      <Modal transparent visible={editVisible} animationType="fade" onRequestClose={() => setEditVisible(false)}>
+
+      <Modal
+        visible={editVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setEditVisible(false)}
+      >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: colors.background }]}> 
+          <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
             <Text style={[styles.modalTitle, { color: colors.mainFont }]}>Edit Nickname</Text>
             <TextInput
-              style={[styles.modalInput, { borderColor: colors.border, color: colors.mainFont }]}
+              style={[styles.textInput, { 
+                backgroundColor: colors.background, 
+                color: colors.mainFont,
+                borderColor: colors.border 
+              }]}
               value={editValue}
               onChangeText={setEditValue}
-              placeholder="Enter display name"
+              placeholder="Enter nickname"
               placeholderTextColor={colors.secondaryFont}
+              autoFocus
             />
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={[styles.modalBtn, { borderColor: colors.border }]} onPress={() => setEditVisible(false)}>
-                <Text style={[styles.modalBtnText, { color: colors.mainFont }]}>Cancel</Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.border }]}
+                onPress={() => setEditVisible(false)}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.mainFont }]}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBtnPrimary, { backgroundColor: colors.tabColor }]} onPress={saveNickname}>
-                <Text style={[styles.modalBtnPrimaryText, { color: colors.background }]}>Save</Text>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.tabColor }]}
+                onPress={saveNickname}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.background }]}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
+
+      {/* Default Screen Selection Dropdown */}
+      <Modal
+        visible={defaultScreenDropdownVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setDefaultScreenDropdownVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.dropdownOverlay}
+          activeOpacity={1}
+          onPress={() => setDefaultScreenDropdownVisible(false)}
+        >
+          {pillButtonLayout && (
+            <View 
+              style={[
+                styles.dropdownContainer,
+                {
+                  top: pillButtonLayout.y + pillButtonLayout.height + 8,
+                  left: pillButtonLayout.x,
+                  width: pillButtonLayout.width,
+                  backgroundColor: colors.cardBackground,
+                  borderColor: colors.border,
+                  shadowColor: colorScheme === 'dark' ? '#000000' : '#000000',
+                }
+              ]}
+            >
+              {screenOptions.map((option, index) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.dropdownItem,
+                    { 
+                      backgroundColor: defaultScreen === option.value ? colors.tabColor + '20' : 'transparent',
+                      borderBottomColor: index < screenOptions.length - 1 ? colors.border : 'transparent',
+                      borderTopLeftRadius: index === 0 ? 12 : 0,
+                      borderTopRightRadius: index === 0 ? 12 : 0,
+                      borderBottomLeftRadius: index === screenOptions.length - 1 ? 12 : 0,
+                      borderBottomRightRadius: index === screenOptions.length - 1 ? 12 : 0,
+                    }
+                  ]}
+                  onPress={async () => {
+                    await setDefaultScreen(option.value);
+                    setDefaultScreenDropdownVisible(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.dropdownItemText,
+                    { 
+                      color: defaultScreen === option.value ? colors.tabColor : colors.mainFont,
+                      fontWeight: defaultScreen === option.value ? '600' : '400'
+                    }
+                  ]}>
+                    {option.label}
+                  </Text>
+                  {defaultScreen === option.value && (
+                    <Text style={[styles.checkmark, { color: colors.tabColor }]}>✓</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </TouchableOpacity>
+      </Modal>
+
+      {AlertComponent()}
     </ScrollView>
   );
 }
@@ -283,31 +431,37 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 40,
+    padding: 16,
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
+    fontWeight: '700',
     marginBottom: 24,
+    letterSpacing: -0.5,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 24,
+    marginBottom: 8,
+    letterSpacing: 0.5,
   },
   card: {
     borderRadius: 12,
-    borderWidth: 1,
     padding: 16,
-    marginBottom: 16,
+    borderWidth: 1,
   },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    marginTop: 24,
-    marginBottom: 12,
+  warningCard: {
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  warningText: {
+    fontSize: 11,
+    fontWeight: '500',
+    textAlign: 'left',
+    lineHeight: 16,
   },
   rowBetween: {
     flexDirection: 'row',
@@ -315,113 +469,128 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   primaryText: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '500',
   },
   secondaryText: {
     fontSize: 14,
     marginTop: 4,
   },
-  balanceText: {
-    marginTop: 6,
-    fontSize: 22,
-    fontWeight: '800',
-  },
-  payNowBtn: {
-    paddingHorizontal: 16,
-    height: 40,
-    borderRadius: 10,
+  paymentRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: 12,
   },
-  payNowText: {
+  paymentAmount: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 12,
+  },
+  payBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  payBtnText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   divider: {
     height: 1,
     marginVertical: 12,
   },
-  logoutLabel: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
-  modalCard: {
-    width: '100%',
-    maxWidth: 360,
+  modalContent: {
+    width: '80%',
+    padding: 20,
     borderRadius: 12,
-    padding: 16,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 12,
+    fontWeight: '600',
+    marginBottom: 16,
   },
-  modalInput: {
-    height: 48,
+  textInput: {
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    marginBottom: 12,
+    borderRadius: 8,
+    padding: 12,
     fontSize: 16,
+    marginBottom: 16,
   },
-  modalActions: {
+  modalButtons: {
     flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
   },
-  modalBtn: {
-    paddingHorizontal: 16,
-    height: 40,
-    borderRadius: 10,
-    borderWidth: 1,
+  modalButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
     alignItems: 'center',
-    justifyContent: 'center',
+    marginHorizontal: 4,
   },
-  modalBtnText: {
-    fontSize: 14,
+  modalButtonText: {
+    fontSize: 16,
     fontWeight: '600',
   },
-  modalBtnPrimary: {
-    paddingHorizontal: 16,
-    height: 40,
-    borderRadius: 10,
+  pillContainer: {
+    marginTop: 12,
+    alignItems: 'flex-end',
+  },
+  pillButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    minWidth: 120,
     justifyContent: 'center',
   },
-  modalBtnPrimaryText: {
+  pillText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
+    marginRight: 6,
   },
-  paymentRow: {
+  pillArrow: {
+    fontSize: 10,
+  },
+  dropdownOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  dropdownContainer: {
+    position: 'absolute',
+    borderRadius: 12,
+    borderWidth: 1,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+    zIndex: 1000,
+  },
+  dropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 10,
-    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
   },
-  paymentAmount: {
-    fontSize: 16,
-    fontWeight: '800',
-    marginLeft: 12,
-  },
-  payBtn: {
-    marginLeft: 12,
-    paddingHorizontal: 14,
-    height: 36,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  payBtnText: {
+  dropdownItemText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
+  },
+  checkmark: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

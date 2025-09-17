@@ -60,10 +60,15 @@
 + Add time under the slot number in the personal schedule
 + Make the schedule open on the mobile's current day
 + Replace 'Available Courses' with 'Semester N'
++ See schedule Caching
++ Add all days on the schedule screen
++ Add default screen choice in settings (Preferences Section)
++ Remove Pay button or make it redirect to the guc website and check the already implemented redirection
 
 - Clear Course grades cache on pull to refresh and not be visibile while refreshing
-- Add all days on the schedule screen
-- See schedule Caching
 - Use saved username and password to log in automatically
 - ReApply All cache timings
 - Clear all cache on logout
+- Move semester gpa to the top
+- Apply smart caching, fetch grades & attendance on loading dashboard
+- Put course name in the schedule (Match it from grades or attendance)

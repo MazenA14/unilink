@@ -60,7 +60,6 @@ export default function NotificationsScreen() {
     },
     onPanResponderMove: (evt, gestureState) => {
       if (gestureState.dy > 0) {
-        console.log('Swipe detected:', gestureState.dy);
         translateY.setValue(gestureState.dy);
         const progress = Math.min(gestureState.dy / 200, 1);
         opacity.setValue(1 - progress);

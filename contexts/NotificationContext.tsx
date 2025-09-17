@@ -1,5 +1,7 @@
 import { fetchNotifications } from '@/utils/handlers/notificationHandler';
 import { parseNotifications, processNotifications } from '@/utils/parsers/notificationParser';
+import { notificationBackendService } from '@/utils/services/notificationBackendService';
+import { pushNotificationService } from '@/utils/services/pushNotificationService';
 import {
     Notification,
     NotificationActions,
@@ -7,7 +9,9 @@ import {
     NotificationState
 } from '@/utils/types/notificationTypes';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import React, { createContext, useCallback, useContext, useEffect, useReducer } from 'react';
+import { AppState } from 'react-native';
 
 // Storage keys
 const NOTIFICATIONS_STORAGE_KEY = 'notifications_cache';
@@ -23,6 +27,8 @@ const initialState: NotificationState = {
   loading: false,
   error: null,
   lastFetched: null,
+  pushToken: null,
+  pushPermissionGranted: false,
 };
 
 // Action types
@@ -33,7 +39,9 @@ type NotificationAction =
   | { type: 'MARK_AS_READ'; payload: string }
   | { type: 'MARK_ALL_AS_READ' }
   | { type: 'SET_LAST_FETCHED'; payload: string }
-  | { type: 'CLEAR_ERROR' };
+  | { type: 'CLEAR_ERROR' }
+  | { type: 'SET_PUSH_TOKEN'; payload: string | null }
+  | { type: 'SET_PUSH_PERMISSION'; payload: boolean };
 
 // Reducer
 function notificationReducer(state: NotificationState, action: NotificationAction): NotificationState {
@@ -82,6 +90,12 @@ function notificationReducer(state: NotificationState, action: NotificationActio
     case 'CLEAR_ERROR':
       return { ...state, error: null };
     
+    case 'SET_PUSH_TOKEN':
+      return { ...state, pushToken: action.payload };
+    
+    case 'SET_PUSH_PERMISSION':
+      return { ...state, pushPermissionGranted: action.payload };
+    
     default:
       return state;
   }
@@ -93,6 +107,23 @@ const NotificationContext = createContext<(NotificationState & NotificationActio
 // Provider component
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(notificationReducer, initialState);
+
+  // Check permission status
+  const checkPermissionStatus = useCallback(async () => {
+    try {
+      const hasPermission = await pushNotificationService.isPermissionGranted();
+      dispatch({ type: 'SET_PUSH_PERMISSION', payload: hasPermission });
+      
+      if (hasPermission) {
+        const token = await pushNotificationService.getExpoPushToken();
+        dispatch({ type: 'SET_PUSH_TOKEN', payload: token });
+      } else {
+        dispatch({ type: 'SET_PUSH_TOKEN', payload: null });
+      }
+    } catch (error) {
+      console.error('Error checking permission status:', error);
+    }
+  }, []);
 
   // Load notifications from cache
   const loadCachedNotifications = useCallback(async () => {
@@ -130,6 +161,60 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     loadCachedNotifications();
   }, [loadCachedNotifications]);
+
+  // Initialize push notifications
+  useEffect(() => {
+    const initializePushNotifications = async () => {
+      try {
+        // Check if running in Expo Go
+        if (pushNotificationService.isExpoGo()) {
+          console.warn(pushNotificationService.getExpoGoWarning());
+          // Still allow local notifications in Expo Go
+          dispatch({ type: 'SET_PUSH_PERMISSION', payload: true });
+          dispatch({ type: 'SET_PUSH_TOKEN', payload: null });
+          
+          // Set up notification listeners for local notifications
+          const cleanup = pushNotificationService.setupNotificationListeners();
+          return cleanup;
+        }
+
+        // Check permission status
+        await checkPermissionStatus();
+
+        // Set up notification listeners
+        const cleanup = pushNotificationService.setupNotificationListeners();
+        return cleanup;
+      } catch (error) {
+        console.error('Error initializing push notifications:', error);
+      }
+    };
+
+    const cleanup = initializePushNotifications();
+    return () => {
+      cleanup.then(cleanupFn => cleanupFn?.());
+    };
+  }, [checkPermissionStatus]);
+
+  // Check permission status when app becomes active
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === 'active') {
+        // Check permission status when app becomes active
+        checkPermissionStatus();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription?.remove();
+  }, [checkPermissionStatus]);
+
+  // Check permission status when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      // Check permission status when screen comes into focus
+      checkPermissionStatus();
+    }, [checkPermissionStatus])
+  );
 
   // Save notifications to cache
   const saveNotificationsToCache = useCallback(async (notifications: Notification[]) => {
@@ -188,6 +273,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
       dispatch({ type: 'SET_NOTIFICATIONS', payload: notificationsWithReadStatus });
       dispatch({ type: 'SET_LAST_FETCHED', payload: new Date().toISOString() });
+      
+      // Check for new notifications and send push notifications
+      await checkForNewNotifications(processedNotifications);
       
       // Save to cache
       await saveNotificationsToCache(notificationsWithReadStatus);
@@ -251,6 +339,64 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
+  // Request push notification permissions
+  const requestPushPermissions = useCallback(async () => {
+    try {
+      const hasPermission = await pushNotificationService.requestPermissions();
+      dispatch({ type: 'SET_PUSH_PERMISSION', payload: hasPermission });
+
+      if (hasPermission) {
+        const token = await pushNotificationService.getExpoPushToken();
+        dispatch({ type: 'SET_PUSH_TOKEN', payload: token });
+        
+        // Register token with backend
+        if (token) {
+          await notificationBackendService.registerPushToken(token, 'current-user');
+        }
+        
+        return token;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error requesting push permissions:', error);
+      return null;
+    }
+  }, []);
+
+  // Send local notification for new GUC notifications
+  const sendLocalNotification = useCallback(async (notification: Notification) => {
+    try {
+      await pushNotificationService.scheduleGUCNotification(notification);
+    } catch (error) {
+      console.error('Error sending local notification:', error);
+    }
+  }, []);
+
+  // Check for new notifications and send push notifications
+  const checkForNewNotifications = useCallback(async (newNotifications: Notification[]) => {
+    try {
+      // Get previously seen notification IDs
+      const seenIdsData = await AsyncStorage.getItem('seen_notification_ids');
+      const seenIds: Set<string> = seenIdsData ? new Set(JSON.parse(seenIdsData)) : new Set();
+
+      // Find new notifications
+      const newNotificationsToNotify = newNotifications.filter(
+        notification => !seenIds.has(notification.id)
+      );
+
+      // Send push notifications for new notifications
+      for (const notification of newNotificationsToNotify) {
+        await sendLocalNotification(notification);
+      }
+
+      // Update seen notification IDs
+      const allIds = new Set([...seenIds, ...newNotifications.map(n => n.id)]);
+      await AsyncStorage.setItem('seen_notification_ids', JSON.stringify([...allIds]));
+    } catch (error) {
+      console.error('Error checking for new notifications:', error);
+    }
+  }, [sendLocalNotification]);
+
   const contextValue: NotificationState & NotificationActions = {
     ...state,
     fetchNotifications: fetchNotificationsFromAPI,
@@ -259,6 +405,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     refreshNotifications,
     clearError,
     clearCache,
+    requestPushPermissions,
+    sendLocalNotification,
+    checkForNewNotifications,
   };
 
   return (

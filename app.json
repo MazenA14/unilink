@@ -28,6 +28,12 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
+    "notification": {
+      "icon": "./assets/images/icon.png",
+      "color": "#007AFF",
+      "androidMode": "default",
+      "androidCollapsedTitle": "#{unread_notifications} new notifications"
+    },
     "plugins": [
       "expo-router",
       [
@@ -39,6 +45,14 @@
             "image": "./assets/images/splash-screen-icon.png",
             "backgroundColor": "#1a1a1a"
           }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#007AFF",
+          "defaultChannel": "default"
         }
       ]
     ],

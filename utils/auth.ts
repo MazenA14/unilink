@@ -7,6 +7,7 @@ export class AuthManager {
   private static NICKNAME_KEY = 'displayNickname';
   private static USER_ID_KEY = 'gucUserId';
   private static SHIFTED_SCHEDULE_KEY = 'shiftedScheduleEnabled';
+  private static DEFAULT_SCREEN_KEY = 'defaultScreen';
 
   /**
    * Store session cookie from login response
@@ -172,6 +173,39 @@ export class AuthManager {
   }
 
   /**
+   * Store the default screen preference
+   */
+  static async storeDefaultScreen(screen: string): Promise<void> {
+    try {
+      await AsyncStorage.setItem(this.DEFAULT_SCREEN_KEY, screen);
+    } catch (error) {
+      // Ignore errors
+    }
+  }
+
+  /**
+   * Retrieve the stored default screen preference
+   */
+  static async getDefaultScreen(): Promise<string | null> {
+    try {
+      return await AsyncStorage.getItem(this.DEFAULT_SCREEN_KEY);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Clear the default screen preference
+   */
+  static async clearDefaultScreen(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(this.DEFAULT_SCREEN_KEY);
+    } catch (error) {
+      // Ignore errors
+    }
+  }
+
+  /**
    * Perform full logout - clear all stored data
    */
   static async logout(): Promise<void> {
@@ -183,7 +217,8 @@ export class AuthManager {
         this.clearCredentials(),
         this.clearNickname(),
         this.clearUserId(),
-        this.clearShiftedSchedulePreference()
+        this.clearShiftedSchedulePreference(),
+        this.clearDefaultScreen()
       ]);
       
     } catch (error) {

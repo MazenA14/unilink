@@ -1,18 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Tabs } from 'expo-router';
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Platform } from 'react-native';
 
 import { AuthGuard } from '@/components/AuthGuard';
 import { HapticTab } from '@/components/HapticTab';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
+import { useDefaultScreen } from '@/contexts/DefaultScreenContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { defaultScreen, isLoading } = useDefaultScreen();
 
   // Memoize icon components to prevent re-creation and improve performance
   const tabIcons = useMemo(() => ({
@@ -26,7 +28,7 @@ export default function TabLayout() {
   return (
     <AuthGuard>
       <Tabs
-        initialRouteName="dashboard"
+        initialRouteName={isLoading ? "dashboard" : defaultScreen}
         screenOptions={{
           tabBarActiveTintColor: colors.tint,
           headerShown: false,

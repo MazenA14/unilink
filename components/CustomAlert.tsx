@@ -1,6 +1,6 @@
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import React, { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState } from 'react';
 import {
   Dimensions,
   Modal,
@@ -23,7 +23,7 @@ interface AlertConfig {
   type?: 'info' | 'error' | 'success' | 'warning';
 }
 
-interface AlertContextType {
+interface AlertContextType {  
   showAlert: (config: AlertConfig) => void;
   hideAlert: () => void;
 }
@@ -97,7 +97,7 @@ export function useCustomAlert() {
                     styles.button,
                     button.style === 'destructive' && { backgroundColor: colors.tabColor },
                     button.style === 'cancel' && { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.secondaryFont },
-                    button.style === 'default' && { backgroundColor: colors.tabColor },
+                    (button.style === 'default' || !button.style) && { backgroundColor: colors.tabColor },
                   ]}
                   onPress={() => handleButtonPress(button)}
                 >

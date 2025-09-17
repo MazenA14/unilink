@@ -34,6 +34,10 @@ export interface NotificationState {
   error: string | null;
   /** Last time notifications were fetched */
   lastFetched: string | null;
+  /** Expo push token for this device */
+  pushToken: string | null;
+  /** Whether push notification permission is granted */
+  pushPermissionGranted: boolean;
 }
 
 /**
@@ -52,6 +56,12 @@ export interface NotificationActions {
   clearError: () => void;
   /** Clear cache (for testing) */
   clearCache: () => Promise<void>;
+  /** Request push notification permissions */
+  requestPushPermissions: () => Promise<string | null>;
+  /** Send local notification */
+  sendLocalNotification: (notification: Notification) => Promise<void>;
+  /** Check for new notifications and send push notifications */
+  checkForNewNotifications: (notifications: Notification[]) => Promise<void>;
 }
 
 /**
