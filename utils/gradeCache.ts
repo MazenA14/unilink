@@ -22,6 +22,9 @@ const CACHE_KEYS = {
   DETAILED_GRADES: 'guc_cache_detailed_grades',
   SEASONS_WITH_GRADES: 'guc_cache_seasons_with_grades',
   CURRENT_GRADES: 'guc_cache_current_grades',
+  CURRENT_COURSES: 'guc_cache_current_courses',
+  CURRENT_COURSE_GRADES: 'guc_cache_current_course_grades',
+  COURSE_ID_TO_NAME: 'guc_cache_course_id_to_name',
   // Transcript cache keys
   STUDY_YEARS: 'guc_cache_study_years',
   TRANSCRIPT_DATA: 'guc_cache_transcript_data',
@@ -45,6 +48,10 @@ interface YearGroup {
 interface Course {
   value: string;
   text: string;
+}
+
+interface CourseIdToNameMapping {
+  [courseId: string]: string;
 }
 
 interface CachedData<T> {
@@ -78,6 +85,13 @@ interface CachedDetailedGradesData {
       grades: GradeData[];
       timestamp: number;
     };
+  };
+}
+
+interface CachedCurrentCourseGradesData {
+  [courseId: string]: {
+    grades: GradeData[];
+    timestamp: number;
   };
 }
 
@@ -313,6 +327,78 @@ export class GradeCache {
     }
   }
 
+  // ===== CURRENT COURSES CACHE =====
+
+  /**
+   * Get cached current courses
+   */
+  static async getCachedCurrentCourses(): Promise<Course[] | null> {
+    return this.getCachedData<Course[]>(CACHE_KEYS.CURRENT_COURSES);
+  }
+
+  /**
+   * Set cached current courses
+   */
+  static async setCachedCurrentCourses(courses: Course[]): Promise<void> {
+    await this.setCachedData(CACHE_KEYS.CURRENT_COURSES, courses);
+  }
+
+  /**
+   * Clear current courses cache
+   */
+  static async clearCurrentCoursesCache(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(CACHE_KEYS.CURRENT_COURSES);
+      console.log('Cleared current courses cache');
+    } catch (error) {
+      console.log('Error clearing current courses cache:', error);
+    }
+  }
+
+  // ===== CURRENT COURSE GRADES CACHE =====
+
+  /**
+   * Get cached grades for a specific current course
+   */
+  static async getCachedCurrentCourseGrades(courseId: string): Promise<GradeData[] | null> {
+    const cachedData = await this.getCachedData<CachedCurrentCourseGradesData>(CACHE_KEYS.CURRENT_COURSE_GRADES);
+    if (!cachedData || !cachedData[courseId]) return null;
+    
+    const courseData = cachedData[courseId];
+    if (!this.isCacheValid(courseData.timestamp)) {
+      // Remove expired course data
+      delete cachedData[courseId];
+      await this.setCachedData(CACHE_KEYS.CURRENT_COURSE_GRADES, cachedData);
+      return null;
+    }
+
+    return courseData.grades;
+  }
+
+  /**
+   * Set cached grades for a specific current course
+   */
+  static async setCachedCurrentCourseGrades(courseId: string, grades: GradeData[]): Promise<void> {
+    const cachedData = await this.getCachedData<CachedCurrentCourseGradesData>(CACHE_KEYS.CURRENT_COURSE_GRADES) || {};
+    cachedData[courseId] = {
+      grades,
+      timestamp: Date.now(),
+    };
+    await this.setCachedData(CACHE_KEYS.CURRENT_COURSE_GRADES, cachedData);
+  }
+
+  /**
+   * Clear current course grades cache
+   */
+  static async clearCurrentCourseGradesCache(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(CACHE_KEYS.CURRENT_COURSE_GRADES);
+      console.log('Cleared current course grades cache');
+    } catch (error) {
+      console.log('Error clearing current course grades cache:', error);
+    }
+  }
+
   // ===== DETAILED GRADES CACHE =====
 
   /**
@@ -392,6 +478,8 @@ export class GradeCache {
     midtermGradesCount: number;
     detailedGradesCount: number;
     currentGradesCount: number;
+    currentCoursesCount: number;
+    currentCourseGradesCount: number;
     studyYearsCount: number;
     transcriptDataCount: number;
     totalCacheSize: number;
@@ -402,6 +490,8 @@ export class GradeCache {
       const midtermData = await this.getCachedData<CachedMidtermGradesData>(CACHE_KEYS.MIDTERM_GRADES) || {};
       const detailedData = await this.getCachedData<CachedDetailedGradesData>(CACHE_KEYS.DETAILED_GRADES) || {};
       const currentGradesData = await this.getCachedCurrentGrades() || [];
+      const currentCoursesData = await this.getCachedCurrentCourses() || [];
+      const currentCourseGradesData = await this.getCachedData<CachedCurrentCourseGradesData>(CACHE_KEYS.CURRENT_COURSE_GRADES) || {};
       const studyYearsData = await this.getCachedStudyYears() || [];
       const transcriptData = await this.getCachedData<CachedTranscriptData>(CACHE_KEYS.TRANSCRIPT_DATA) || {};
 
@@ -409,6 +499,8 @@ export class GradeCache {
       let midtermGradesCount = 0;
       let detailedGradesCount = 0;
       let currentGradesCount = currentGradesData.length;
+      let currentCoursesCount = currentCoursesData.length;
+      let currentCourseGradesCount = 0;
       let studyYearsCount = studyYearsData.length;
       let transcriptDataCount = Object.keys(transcriptData).length;
 
@@ -429,6 +521,11 @@ export class GradeCache {
         }
       }
 
+      // Count current course grades
+      for (const courseData of Object.values(currentCourseGradesData)) {
+        currentCourseGradesCount += courseData.grades.length;
+      }
+
       // Estimate cache size
       const allKeys = Object.values(CACHE_KEYS);
       let totalCacheSize = 0;
@@ -445,6 +542,8 @@ export class GradeCache {
         midtermGradesCount,
         detailedGradesCount,
         currentGradesCount,
+        currentCoursesCount,
+        currentCourseGradesCount,
         studyYearsCount,
         transcriptDataCount,
         totalCacheSize,
@@ -457,6 +556,8 @@ export class GradeCache {
         midtermGradesCount: 0,
         detailedGradesCount: 0,
         currentGradesCount: 0,
+        currentCoursesCount: 0,
+        currentCourseGradesCount: 0,
         studyYearsCount: 0,
         transcriptDataCount: 0,
         totalCacheSize: 0,
@@ -661,6 +762,64 @@ export class GradeCache {
 ('Cleared schedule cache');
     } catch (error) {
 ('Error clearing schedule cache:', error);
+    }
+  }
+
+  /**
+   * Get cached course ID to name mapping
+   */
+  static async getCachedCourseIdToName(): Promise<CourseIdToNameMapping | null> {
+    try {
+      console.log(`[CACHE] Getting cached course ID to name mapping for key: ${CACHE_KEYS.COURSE_ID_TO_NAME}`);
+      const cachedData = await AsyncStorage.getItem(CACHE_KEYS.COURSE_ID_TO_NAME);
+      if (!cachedData) {
+        console.log(`[CACHE] No cached course ID to name mapping found for key: ${CACHE_KEYS.COURSE_ID_TO_NAME}`);
+        return null;
+      }
+
+      const parsed: CachedData<CourseIdToNameMapping> = JSON.parse(cachedData);
+      console.log(`[CACHE] Found cached course ID to name mapping, timestamp: ${parsed.timestamp}`);
+      
+      if (!this.isCacheValid(parsed.timestamp)) {
+        console.log(`[CACHE] Course ID to name mapping cache expired, removing...`);
+        await AsyncStorage.removeItem(CACHE_KEYS.COURSE_ID_TO_NAME);
+        return null;
+      }
+
+      console.log(`[CACHE] Course ID to name mapping cache hit`);
+      return parsed.data;
+    } catch (error) {
+      console.log(`[CACHE] Error reading course ID to name mapping cache:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Set cached course ID to name mapping
+   */
+  static async setCachedCourseIdToName(mapping: CourseIdToNameMapping): Promise<void> {
+    try {
+      const cachedData: CachedData<CourseIdToNameMapping> = {
+        data: mapping,
+        timestamp: Date.now(),
+      };
+      
+      await AsyncStorage.setItem(CACHE_KEYS.COURSE_ID_TO_NAME, JSON.stringify(cachedData));
+      console.log(`[CACHE] Course ID to name mapping cached successfully`);
+    } catch (error) {
+      console.log(`[CACHE] Error caching course ID to name mapping:`, error);
+    }
+  }
+
+  /**
+   * Clear course ID to name mapping cache
+   */
+  static async clearCourseIdToNameCache(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(CACHE_KEYS.COURSE_ID_TO_NAME);
+      console.log('Cleared course ID to name mapping cache');
+    } catch (error) {
+      console.log('Error clearing course ID to name mapping cache:', error);
     }
   }
 

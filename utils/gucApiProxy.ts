@@ -14,7 +14,7 @@ export class GUCAPIProxy {
   /**
    * Make authenticated request through proxy server
    */
-  private static async makeProxyRequest(url: string, method: string = 'GET', body?: any, options?: { allowNon200?: boolean }): Promise<any> {
+  private static async makeProxyRequest(url: string, method: string = 'GET', body?: any, options?: { allowNon200?: boolean, headers?: Record<string, string> }): Promise<any> {
     const sessionCookie = await AuthManager.getSessionCookie();
     const { username, password } = await AuthManager.getCredentials();
 
@@ -24,6 +24,11 @@ export class GUCAPIProxy {
       cookies: sessionCookie || '',
       body,
     };
+
+    // Add custom headers if provided
+    if (options?.headers) {
+      payload.headers = options.headers;
+    }
 
     // If we have creds, enable NTLM per-request as fallback
     if (username && password) {
@@ -256,6 +261,138 @@ export class GUCAPIProxy {
       return courseSpecific;
     } catch (error) {
 ('Error fetching previous grades:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get available courses for current semester
+   */
+  static async getAvailableCourses(): Promise<{value: string, text: string}[]> {
+    try {
+      console.log('Fetching available courses...');
+      
+      const data = await this.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/Grade/CheckGrade_01.aspx'
+      );
+
+      const html = data.html || data.body;
+      
+      if (!html) {
+        throw new Error('No HTML content received from proxy');
+      }
+
+      console.log('=== COURSE EXTRACTION DEBUG ===');
+      console.log('HTML length:', html.length);
+      console.log('Contains "smCrsLst":', html.includes('smCrsLst'));
+      
+      const courses = extractCourses(html);
+      console.log(`Found ${courses.length} available courses`);
+      if (courses.length > 0) {
+        console.log('Sample courses:', courses.slice(0, 3));
+      }
+      console.log('==========================================');
+      
+      return courses;
+    } catch (error) {
+      console.log('Error fetching available courses:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get grades for a specific course
+   */
+  static async getCourseGrades(courseId: string): Promise<GradeData[]> {
+    try {
+      console.log(`Fetching grades for course: ${courseId}`);
+      
+      // First get the initial page to extract view state
+      const initialData = await this.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/Grade/CheckGrade_01.aspx'
+      );
+      
+      const initialHtml = initialData.html || initialData.body;
+      if (!initialHtml) {
+        throw new Error('No HTML content received from proxy');
+      }
+      
+      const viewState = extractViewState(initialHtml);
+      
+      // Extract hidden fields from the initial page
+      const studentIdMatch = initialHtml.match(/<input[^>]*name="ctl00\$ctl00\$ContentPlaceHolderright\$ContentPlaceHoldercontent\$HiddenFieldstudent"[^>]*value="([^"]*)"[^>]*>/i);
+      const seasonIdMatch = initialHtml.match(/<input[^>]*name="ctl00\$ctl00\$ContentPlaceHolderright\$ContentPlaceHoldercontent\$HiddenFieldseason"[^>]*value="([^"]*)"[^>]*>/i);
+      
+      const studentId = studentIdMatch ? studentIdMatch[1] : '';
+      const seasonId = seasonIdMatch ? seasonIdMatch[1] : '';
+      
+      console.log('Extracted hidden fields:', { studentId, seasonId });
+      console.log('View state extracted:', { 
+        viewState: viewState.__VIEWSTATE ? 'present' : 'missing',
+        viewStateGenerator: viewState.__VIEWSTATEGENERATOR ? 'present' : 'missing',
+        eventValidation: viewState.__EVENTVALIDATION ? 'present' : 'missing'
+      });
+      
+      // Create form data to select the course
+      const formData = new URLSearchParams();
+      formData.append('__EVENTTARGET', 'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$smCrsLst');
+      formData.append('__EVENTARGUMENT', '');
+      formData.append('__LASTFOCUS', '');
+      formData.append('__VIEWSTATE', viewState.__VIEWSTATE);
+      formData.append('__VIEWSTATEGENERATOR', viewState.__VIEWSTATEGENERATOR);
+      formData.append('__EVENTVALIDATION', viewState.__EVENTVALIDATION);
+      formData.append('ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$smCrsLst', courseId);
+      
+      // Add hidden fields if found
+      if (studentId) {
+        formData.append('ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$HiddenFieldstudent', studentId);
+      }
+      if (seasonId) {
+        formData.append('ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$HiddenFieldseason', seasonId);
+      }
+      
+      console.log('Form data being sent:', formData.toString());
+      
+      // Submit the form to select the course
+      const courseData = await this.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/Grade/CheckGrade_01.aspx',
+        'POST',
+        formData.toString(),
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+      );
+      
+      const courseHtml = courseData.html || courseData.body;
+      if (!courseHtml) {
+        throw new Error('No HTML content received after course selection');
+      }
+      
+      console.log('=== COURSE GRADE EXTRACTION DEBUG ===');
+      console.log('HTML length after course selection:', courseHtml.length);
+      console.log('Contains "Mid-Term Results":', courseHtml.includes('Mid-Term Results'));
+      console.log('Contains "Quiz/Assignment":', courseHtml.includes('Quiz/Assignment'));
+      console.log('Contains "midDg":', courseHtml.includes('midDg'));
+      console.log('Contains "rptrNtt":', courseHtml.includes('rptrNtt'));
+      
+      // Check if the course was actually selected by looking for the selected option
+      const selectedCourseMatch = courseHtml.match(/<option[^>]*selected="selected"[^>]*value="([^"]*)"[^>]*>([^<]*)<\/option>/i);
+      if (selectedCourseMatch) {
+        console.log('Selected course found:', { value: selectedCourseMatch[1], text: selectedCourseMatch[2] });
+      } else {
+        console.log('No selected course found in HTML');
+      }
+      
+      // Extract both mid-term results and quiz/assignment grades
+      const midtermGrades = extractGradeData(courseHtml);
+      const courseGrades = extractCourseGradeData(courseHtml);
+      
+      const allGrades = [...midtermGrades, ...courseGrades];
+      
+      console.log(`Found ${midtermGrades.length} mid-term grades and ${courseGrades.length} course grades`);
+      console.log('==========================================');
+      
+      return allGrades;
+    } catch (error) {
+      console.log('Error fetching course grades:', error);
       throw error;
     }
   }

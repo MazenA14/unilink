@@ -1,7 +1,9 @@
 import { Colors, ScheduleColors, ScheduleTypeColors, SlotTypeColors } from '@/constants/Colors';
 import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import React from 'react';
+import { GradeCache } from '@/utils/gradeCache';
+import { GUCAPIProxy } from '@/utils/gucApiProxy';
+import { useEffect, useState } from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { ScheduleCard } from './ScheduleCard';
 import { ScheduleDay, ScheduleType } from './types';
@@ -19,6 +21,124 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
   const typeColor = ScheduleTypeColors[scheduleType];
   const { isShiftedScheduleEnabled } = useShiftedSchedule();
   
+  // State for course name mapping
+  const [courseNameMapping, setCourseNameMapping] = useState<{ [courseId: string]: string }>({});
+  
+  // Load course name mapping on component mount
+  useEffect(() => {
+    const loadCourseNameMapping = async () => {
+      try {
+        // First try to get from cache
+        let mapping = await GradeCache.getCachedCourseIdToName();
+        
+        // If no mapping in cache, try to load available courses and create mapping
+        if (!mapping) {
+          console.log('No course mapping in cache, loading available courses...');
+          try {
+            const availableCourses = await GUCAPIProxy.getAvailableCourses();
+            
+            // Create course ID to name mapping
+            const courseIdToNameMapping: { [courseId: string]: string } = {};
+            availableCourses.forEach(course => {
+              courseIdToNameMapping[course.value] = course.text;
+            });
+            
+            // Cache the mapping
+            await GradeCache.setCachedCourseIdToName(courseIdToNameMapping);
+            mapping = courseIdToNameMapping;
+            console.log('Course mapping created and cached');
+          } catch (error) {
+            console.error('Error loading available courses for mapping:', error);
+          }
+        }
+        
+        if (mapping) {
+          setCourseNameMapping(mapping);
+        }
+      } catch (error) {
+        console.error('Error loading course name mapping:', error);
+      }
+    };
+    
+    loadCourseNameMapping();
+  }, []);
+  
+  // Utility function to get course name by matching course names
+  const getCourseNameByMatching = (scheduleCourseName: string): string | null => {
+    if (!scheduleCourseName || Object.keys(courseNameMapping).length === 0) {
+      return null;
+    }
+    
+    // Try to find a match in the course mapping
+    // First, try exact match
+    for (const [courseId, courseName] of Object.entries(courseNameMapping)) {
+      if (courseName === scheduleCourseName) {
+        return courseName;
+      }
+    }
+    
+    // Try partial matching - look for course names that contain the schedule course name
+    for (const [courseId, courseName] of Object.entries(courseNameMapping)) {
+      if (courseName.toLowerCase().includes(scheduleCourseName.toLowerCase()) ||
+          scheduleCourseName.toLowerCase().includes(courseName.toLowerCase())) {
+        return courseName;
+      }
+    }
+    
+    // Try to match by extracting course code from both
+    const scheduleCourseCode = extractCourseCode(scheduleCourseName);
+    if (scheduleCourseCode) {
+      for (const [courseId, courseName] of Object.entries(courseNameMapping)) {
+        const mappedCourseCode = extractCourseCode(courseName);
+        if (mappedCourseCode && mappedCourseCode === scheduleCourseCode) {
+          return courseName;
+        }
+      }
+    }
+    
+    return null;
+  };
+
+  // Function to extract course title from full course name
+  // Example: "MET Computer Science 7th Semester - DMET502 Computer Graphics" -> "Computer Graphics"
+  const extractCourseTitle = (fullCourseName: string): string => {
+    if (!fullCourseName) return '';
+    
+    // Look for pattern: "something - COURSECODE Course Title"
+    const match = fullCourseName.match(/- ([A-Z]+\d+[A-Z]*)\s+(.+)$/);
+    if (match) {
+      return match[2].trim(); // Return the course title part
+    }
+    
+    // Look for pattern: "something - COURSECODE Course Title (Lab/Tutorial)"
+    const matchWithType = fullCourseName.match(/- ([A-Z]+\d+[A-Z]*)\s+(.+?)\s*\(?(lab|tutorial|tut|seminar|workshop|project|thesis|dissertation)\)?/i);
+    if (matchWithType) {
+      return matchWithType[2].trim();
+    }
+    
+    // Fallback: if no dash pattern, try to extract from end after course code
+    const courseCodeMatch = fullCourseName.match(/([A-Z]+\d+[A-Z]*)\s+(.+)$/);
+    if (courseCodeMatch) {
+      return courseCodeMatch[2].trim();
+    }
+    
+    // If no pattern matches, return the original name
+    return fullCourseName;
+  };
+  
+  // Function to extract course code from course name (e.g., "CSEN 701" -> "CSEN701")
+  const extractCourseCode = (courseName: string): string => {
+    if (!courseName) return '';
+    
+    // Remove spaces and extract course code pattern
+    const match = courseName.match(/([A-Z]{2,4}[a-z]?)\s*(\d{3,4})/);
+    if (match) {
+      return match[1] + match[2]; // e.g., "CSEN" + "701" = "CSEN701"
+    }
+    
+    // Fallback: remove all spaces
+    return courseName.replace(/\s+/g, '');
+  };
   
   // Calculate dynamic padding based on screen width
   const basePadding = Math.max(12, screenWidth * 0.04);
@@ -214,11 +334,6 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
               backgroundColor: scheduleColors.periodRowBg,
               borderColor: scheduleColors.periodRowBorder,
               borderRadius: 16,
-              shadowColor: typeColor,
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 3,
             }]}>
               <View style={[styles.periodLabel, { 
                 backgroundColor: typeColor + '15', 
@@ -229,11 +344,10 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
                 <Text style={[styles.periodLabelText, { color: typeColor }]}>{period.name}</Text>
                 <Text style={[styles.periodTimingText, { color: typeColor }]}>{period.timing}</Text>
                 <View style={[styles.slotTypeBadge, { 
-                  backgroundColor: SlotTypeColors[getSlotType(classData) as keyof typeof SlotTypeColors] + '20', 
-                  borderColor: SlotTypeColors[getSlotType(classData) as keyof typeof SlotTypeColors] + '40' 
+                  backgroundColor: SlotTypeColors[getSlotType(classData) as keyof typeof SlotTypeColors]
                 }]}>
                   <Text style={[styles.slotTypeText, { 
-                    color: SlotTypeColors[getSlotType(classData) as keyof typeof SlotTypeColors] 
+                    color: 'white'
                   }]}>{getSlotType(classData)}</Text>
                 </View>
               </View>
@@ -242,8 +356,42 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
                   <ScheduleCard 
                     classData={{
                       ...classData,
-                      courseName: cleanCourseName(classData),
-                      courseCode: getCourseCode(classData)
+                      courseName: (() => {
+                        // Try to get course name from mapping using matching
+                        const mappedCourseName = getCourseNameByMatching(classData.courseName);
+                        
+                        if (mappedCourseName) {
+                          // Extract the course title from the mapped course name
+                          const extractedTitle = extractCourseTitle(mappedCourseName);
+                          // If extraction worked (title is different from full name), use it
+                          if (extractedTitle !== mappedCourseName) {
+                            return extractedTitle;
+                          }
+                          // Otherwise, use the mapped course name as is
+                          return mappedCourseName;
+                        }
+                        
+                        // Fallback: try to extract course title from original course name
+                        const originalTitle = extractCourseTitle(classData.courseName);
+                        if (originalTitle !== classData.courseName) {
+                          return originalTitle;
+                        }
+                        
+                        // Final fallback to original cleaned course name
+                        return cleanCourseName(classData);
+                      })(),
+                      courseCode: (() => {
+                        // Try to get course code from mapped course name first
+                        const mappedCourseName = getCourseNameByMatching(classData.courseName);
+                        if (mappedCourseName) {
+                          const code = extractCourseCode(mappedCourseName);
+                          if (code) return code;
+                        }
+                        
+                        // Fallback: extract from original course name
+                        const originalCode = getCourseCode(classData);
+                        return extractCourseCode(originalCode || classData.courseName);
+                      })()
                     }} 
                     periodName={period.name} 
                     scheduleType={scheduleType} 
@@ -298,8 +446,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   periodLabel: {
-    width: 100,
-    padding: 8,
+    width: 80,
+    padding: 6,
     borderRightWidth: 1,
     justifyContent: 'center',
   },
@@ -317,15 +465,16 @@ const styles = StyleSheet.create({
   },
   slotTypeBadge: {
     marginTop: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    minWidth: 50,
+    alignItems: 'center',
     alignSelf: 'center',
   },
   slotTypeText: {
-    fontSize: 8,
-    fontWeight: '500',
+    fontSize: 9,
+    fontWeight: '600',
     textAlign: 'center',
   },
   periodContent: {

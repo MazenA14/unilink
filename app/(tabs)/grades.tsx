@@ -1,10 +1,10 @@
 import {
-    CourseWithGrades,
-    CurrentGradesSection,
-    GradeType,
-    PreviousGradesSection,
-    Season,
-    YearGroup,
+  CourseWithGrades,
+  CurrentGradesSection,
+  GradeType,
+  PreviousGradesSection,
+  Season,
+  YearGroup
 } from '@/components/grades';
 import { GradesMenu } from '@/components/GradesMenu';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
@@ -13,7 +13,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { GradeCache } from '@/utils/gradeCache';
 import { GUCAPIProxy as GUCAPI, GradeData } from '@/utils/gucApiProxy';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 
@@ -372,6 +372,11 @@ export default function GradesScreen() {
     setRefreshing(false);
   }, [selectedSeason, gradeType]);
 
+  const handleCurrentGradesRefresh = useCallback(async () => {
+    // This will be called by the CurrentGradesSection component
+    // We can add any additional refresh logic here if needed
+  }, []);
+
   // (Development helpers removed)
 
   const handleSeasonSelect = (season: Season) => {
@@ -518,12 +523,10 @@ export default function GradesScreen() {
         {/* Current Grades Content */}
         {gradeType === 'current' && (
           <CurrentGradesSection
-            grades={grades}
-            loadingGrades={loadingGrades}
-            refreshing={refreshing}
             getGradeColor={getGradeColor}
             formatCourseName={formatCourseName}
             getCourseCodeParts={getCourseCodeParts}
+            onRefresh={handleCurrentGradesRefresh}
           />
         )}
 

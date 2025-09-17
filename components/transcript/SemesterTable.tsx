@@ -1,6 +1,5 @@
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Course, Semester } from './types';
 
@@ -82,7 +81,13 @@ export default function SemesterTable({ semester, index }: SemesterTableProps) {
   return (
     <View style={[styles.semesterTable, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}>
       <View style={[styles.semesterHeader, { backgroundColor: colors.tabColor }]}>
-        <Text style={[styles.semesterTitle, { color: '#FFFFFF' }]}>{semester.name}</Text>
+        <View style={styles.semesterHeaderContent}>
+          <Text style={[styles.semesterTitle, { color: '#FFFFFF' }]}>{semester.name}</Text>
+          <View style={[styles.semesterGpaBadge, { backgroundColor: getSemesterGPAColor(semester.semesterGPA) }]}>
+            <Text style={[styles.semesterGpaLabel, { color: '#FFFFFF' }]}>GPA</Text>
+            <Text style={[styles.semesterGpaValue, { color: '#FFFFFF' }]}>{semester.semesterGPA}</Text>
+          </View>
+        </View>
       </View>
       
       {/* Table Header */}
@@ -109,16 +114,9 @@ export default function SemesterTable({ semester, index }: SemesterTableProps) {
       
       {/* Semester Summary */}
       <View style={[styles.semesterSummary, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3' }]}>
-        <View style={styles.courseSemester}></View>
-        <View style={styles.courseName}>
-          <Text style={[styles.summaryText, { color: colors.mainFont }]}>Semester GPA</Text>
-        </View>
-        <View style={styles.courseNumeric}>
-          <Text style={[styles.summaryText, styles.boldText, { color: getSemesterGPAColor(semester.semesterGPA) }]}>{semester.semesterGPA}</Text>
-        </View>
-        <View style={styles.courseGrade}></View>
-        <View style={styles.courseHours}>
-          <Text style={[styles.summaryText, { color: colors.secondaryFont }]}>{semester.totalHours}h</Text>
+        <View style={styles.summaryContent}>
+          <Text style={[styles.summaryText, { color: colors.mainFont }]}>Total Credit Hours</Text>
+          <Text style={[styles.summaryText, styles.boldText, { color: colors.mainFont }]}>{semester.totalHours}h</Text>
         </View>
       </View>
     </View>
@@ -144,9 +142,45 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
   },
+  semesterHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
   semesterTitle: {
     fontSize: 18,
     fontWeight: '700',
+    flex: 1,
+    marginRight: 12,
+    marginLeft: 8,
+  },
+  semesterGpaBadge: {
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    minWidth: 65,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  semesterGpaLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    opacity: 0.9,
+    marginBottom: 2,
+    letterSpacing: 0.5,
+  },
+  semesterGpaValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
   tableHeader: {
     flexDirection: 'row',
@@ -160,9 +194,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   semesterSummary: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.02)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  summaryContent: {
     flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   courseSemester: {
     flex: 1.0,

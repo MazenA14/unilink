@@ -42,8 +42,11 @@
 - View Attendance
 
 ## Database Schema
-### Table 1
+### Table 1 (Userdata)
 - Username, GUC-ID, Date Joined App, Last Opened Date, Number of Times Opened App, GPA, Joined Season (58), Major (MET)
+
+### Table 2 (Feedback)
+- Username, Notes, Season Joined (58), Date
 
 -------------------------- -------------------------- -------------------------- --------------------------
 
@@ -64,11 +67,11 @@
 + Add all days on the schedule screen
 + Add default screen choice in settings (Preferences Section)
 + Remove Pay button or make it redirect to the guc website and check the already implemented redirection
++ Move semester gpa to the top
++ Use saved username and password to log in automatically
 
 - Clear Course grades cache on pull to refresh and not be visibile while refreshing
-- Use saved username and password to log in automatically
 - ReApply All cache timings
 - Clear all cache on logout
-- Move semester gpa to the top
 - Apply smart caching, fetch grades & attendance on loading dashboard
 - Put course name in the schedule (Match it from grades or attendance)

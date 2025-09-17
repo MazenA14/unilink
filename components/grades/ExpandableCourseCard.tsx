@@ -1,7 +1,6 @@
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CourseWithGrades } from './types';
 
@@ -44,8 +43,8 @@ export default function ExpandableCourseCard({
           <View style={[
             styles.expandableCourseIcon,
             { 
-              backgroundColor: course.midtermGrade ? colors.tint + '20' : colors.border + '40',
-              borderColor: course.midtermGrade ? colors.tint + '40' : colors.border + '60'
+              backgroundColor: course.midtermGrade ? colors.tint + '20' : colors.noGrades + '20',
+              borderColor: course.midtermGrade ? colors.tint + '40' : colors.noGrades + '40'
             }
           ]}>
             {(() => {
@@ -54,13 +53,13 @@ export default function ExpandableCourseCard({
                 <>
                   <Text style={[
                     styles.expandableCourseIconText,
-                    { color: course.midtermGrade ? colors.tint : colors.tabIconDefault }
+                    { color: course.midtermGrade ? colors.tint : colors.noGrades }
                   ]}>
                     {code}
                   </Text>
                   <Text style={[
                     styles.expandableCourseIconNumber,
-                    { color: course.midtermGrade ? colors.tint : colors.tabIconDefault }
+                    { color: course.midtermGrade ? colors.tint : colors.noGrades }
                   ]}>
                     {number}
                   </Text>
@@ -81,13 +80,13 @@ export default function ExpandableCourseCard({
               <View style={[
                 styles.statusBadge,
                 { 
-                  backgroundColor: course.midtermGrade ? colors.tint + '15' : colors.border + '30',
-                  borderColor: course.midtermGrade ? colors.tint + '30' : colors.border + '50'
+                  backgroundColor: course.midtermGrade ? colors.tint + '15' : colors.noGrades + '15',
+                  borderColor: course.midtermGrade ? colors.tint + '30' : colors.noGrades + '30'
                 }
               ]}>
                 <Text style={[
                   styles.statusBadgeText,
-                  { color: course.midtermGrade ? colors.tint : colors.tabIconDefault }
+                  { color: course.midtermGrade ? colors.tint : colors.noGrades }
                 ]}>
                   {course.midtermGrade ? 'Midterm Result' : 'No Midterm Grade'}
                 </Text>

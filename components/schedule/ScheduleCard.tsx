@@ -2,7 +2,6 @@ import { Colors, ScheduleColors, ScheduleTypeColors } from '@/constants/Colors';
 // Updated to support courseCode
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { ScheduleClass, ScheduleType } from './types';
 
@@ -17,6 +16,15 @@ export function ScheduleCard({ classData, periodName, scheduleType = 'personal' 
   const colors = Colors[colorScheme ?? 'light'];
   const scheduleColors = ScheduleColors[colorScheme ?? 'light'];
   const typeColor = ScheduleTypeColors[scheduleType];
+
+  // Function to check if the instructor field is a tutorial identifier
+  const isTutorialIdentifier = (instructor: string): boolean => {
+    if (!instructor || !instructor.trim()) return false;
+    
+    // Check for patterns like "7MET T014", "7MET L001", etc.
+    const tutorialPattern = /^\d+[A-Z]+\s+[A-Z]\d+$/;
+    return tutorialPattern.test(instructor.trim());
+  };
 
   const renderTypeSpecificInfo = () => {
     switch (scheduleType) {
@@ -82,11 +90,11 @@ export function ScheduleCard({ classData, periodName, scheduleType = 'personal' 
           {classData.courseCode}
         </Text>
       )}
-      {classData.instructor && (
+      {/* {classData.instructor && !isTutorialIdentifier(classData.instructor) && (
         <Text style={[styles.instructor, { color: colors.secondaryFont }]} numberOfLines={1}>
           {classData.instructor}
         </Text>
-      )}
+      )} */}
       {classData.room && (
         <View style={styles.roomContainer}>
           <Ionicons name="location-outline" size={14} color={colors.secondaryFont} />
@@ -94,11 +102,6 @@ export function ScheduleCard({ classData, periodName, scheduleType = 'personal' 
             {classData.room}
           </Text>
         </View>
-      )}
-      {classData.time && (
-        <Text style={[styles.time, { color: colors.secondaryFont }]} numberOfLines={1}>
-          🕐 {classData.time}
-        </Text>
       )}
       {renderTypeSpecificInfo()}
     </View>

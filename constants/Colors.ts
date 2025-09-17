@@ -23,6 +23,8 @@ export const Colors = {
     gradeAverage: '#FF9800',
     gradeBelowAverage: '#FF5722',
     gradeFailing: '#F44336',
+    // Course without grades color
+    noGrades: '#2196F3', // Blue
     // Error colors
     error: '#F44336',
     cardBackground: '#ffffff',
@@ -49,6 +51,8 @@ export const Colors = {
     gradeAverage: '#FF9800',
     gradeBelowAverage: '#FF5722',
     gradeFailing: '#F44336',
+    // Course without grades color (dark theme)
+    noGrades: '#64B5F6', // Light blue
     // Error colors (dark theme variants)
     error: '#F44336',
     cardBackground: '#2a2a2a',

@@ -4,9 +4,11 @@ import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useSchedule } from '@/hooks/useSchedule';
 import { AuthManager } from '@/utils/auth';
+import { GradeCache } from '@/utils/gradeCache';
+import { GUCAPIProxy } from '@/utils/gucApiProxy';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Animated,
     ScrollView,
@@ -24,6 +26,134 @@ export default function DashboardScreen() {
   const { isShiftedScheduleEnabled } = useShiftedSchedule();
   const { unreadCount, fetchNotifications } = useNotifications();
   const refreshRotation = useRef(new Animated.Value(0)).current;
+  
+  // State for course name mapping
+  const [courseNameMapping, setCourseNameMapping] = useState<{ [courseId: string]: string }>({});
+
+  // Load course name mapping on component mount
+  useEffect(() => {
+    const loadCourseNameMapping = async () => {
+      try {
+        // First try to get from cache
+        let mapping = await GradeCache.getCachedCourseIdToName();
+        
+        // If no mapping in cache, try to load available courses and create mapping
+        if (!mapping) {
+          console.log('No course mapping in cache, loading available courses...');
+          try {
+            const availableCourses = await GUCAPIProxy.getAvailableCourses();
+            
+            // Create course ID to name mapping
+            const courseIdToNameMapping: { [courseId: string]: string } = {};
+            availableCourses.forEach(course => {
+              courseIdToNameMapping[course.value] = course.text;
+            });
+            
+            // Cache the mapping
+            await GradeCache.setCachedCourseIdToName(courseIdToNameMapping);
+            mapping = courseIdToNameMapping;
+            console.log('Course mapping created and cached');
+          } catch (error) {
+            console.error('Error loading available courses for mapping:', error);
+          }
+        }
+        
+        if (mapping) {
+          setCourseNameMapping(mapping);
+        }
+      } catch (error) {
+        console.error('Error loading course name mapping:', error);
+      }
+    };
+    
+    loadCourseNameMapping();
+  }, []);
+
+  // Utility function to get course name by matching course names
+  const getCourseNameByMatching = (scheduleCourseName: string): string | null => {
+    if (!scheduleCourseName || Object.keys(courseNameMapping).length === 0) {
+      return null;
+    }
+    
+    // Try to find a match in the course mapping
+    // First, try exact match
+    for (const [courseId, courseName] of Object.entries(courseNameMapping)) {
+      if (courseName === scheduleCourseName) {
+        return courseName;
+      }
+    }
+    
+    // Try partial matching - look for course names that contain the schedule course name
+    for (const [courseId, courseName] of Object.entries(courseNameMapping)) {
+      if (courseName.toLowerCase().includes(scheduleCourseName.toLowerCase()) ||
+          scheduleCourseName.toLowerCase().includes(courseName.toLowerCase())) {
+        return courseName;
+      }
+    }
+    
+    // Try to match by extracting course code from both
+    const scheduleCourseCode = extractCourseCode(scheduleCourseName);
+    if (scheduleCourseCode) {
+      for (const [courseId, courseName] of Object.entries(courseNameMapping)) {
+        const mappedCourseCode = extractCourseCode(courseName);
+        if (mappedCourseCode && mappedCourseCode === scheduleCourseCode) {
+          return courseName;
+        }
+      }
+    }
+    
+    return null;
+  };
+
+  // Function to extract course title from full course name
+  // Example: "MET Computer Science 7th Semester - DMET502 Computer Graphics" -> "Computer Graphics"
+  const extractCourseTitle = (fullCourseName: string): string => {
+    if (!fullCourseName) return '';
+    
+    // Look for pattern: "something - COURSECODE Course Title"
+    const match = fullCourseName.match(/- ([A-Z]+\d+[A-Z]*)\s+(.+)$/);
+    if (match) {
+      return match[2].trim(); // Return the course title part
+    }
+    
+    // Look for pattern: "something - COURSECODE Course Title (Lab/Tutorial)"
+    const matchWithType = fullCourseName.match(/- ([A-Z]+\d+[A-Z]*)\s+(.+?)\s*\(?(lab|tutorial|tut|seminar|workshop|project|thesis|dissertation)\)?/i);
+    if (matchWithType) {
+      return matchWithType[2].trim();
+    }
+    
+    // Fallback: if no dash pattern, try to extract from end after course code
+    const courseCodeMatch = fullCourseName.match(/([A-Z]+\d+[A-Z]*)\s+(.+)$/);
+    if (courseCodeMatch) {
+      return courseCodeMatch[2].trim();
+    }
+    
+    // If no pattern matches, return the original name
+    return fullCourseName;
+  };
+
+  // Function to extract course code from course name (e.g., "CSEN 701" -> "CSEN701")
+  const extractCourseCode = (courseName: string): string => {
+    if (!courseName) return '';
+    
+    // Remove spaces and extract course code pattern
+    const match = courseName.match(/([A-Z]{2,4}[a-z]?)\s*(\d{3,4})/);
+    if (match) {
+      return match[1] + match[2]; // e.g., "CSEN" + "701" = "CSEN701"
+    }
+    
+    // Fallback: remove all spaces
+    return courseName.replace(/\s+/g, '');
+  };
+
+  // Function to check if the instructor field is a tutorial/lab identifier
+  const isTutorialIdentifier = (instructor: string): boolean => {
+    if (!instructor || !instructor.trim()) return false;
+    
+    // Check for patterns like "7MET T014", "7MET L001", etc.
+    const tutorialPattern = /^\d+[A-Z]+\s+[A-Z]\d+$/;
+    return tutorialPattern.test(instructor.trim());
+  };
 
   const loadNickname = useCallback(async () => {
     // First try to get stored nickname
@@ -371,14 +501,53 @@ export default function DashboardScreen() {
                         <View style={styles.periodContentRow}>
                           <View style={styles.periodContentLeft}>
                             <Text style={[styles.courseName, { color: colors.mainFont }]} numberOfLines={2}>
-                              {cleanCourseName(classData)}
+                              {(() => {
+                                // Try to get course name from mapping using matching
+                                const mappedCourseName = getCourseNameByMatching(classData.courseName);
+                                
+                                if (mappedCourseName) {
+                                  // Extract the course title from the mapped course name
+                                  const extractedTitle = extractCourseTitle(mappedCourseName);
+                                  // If extraction worked (title is different from full name), use it
+                                  if (extractedTitle !== mappedCourseName) {
+                                    return extractedTitle;
+                                  }
+                                  // Otherwise, use the mapped course name as is
+                                  return mappedCourseName;
+                                }
+                                
+                                // Fallback: try to extract course title from original course name
+                                const originalTitle = extractCourseTitle(classData.courseName);
+                                if (originalTitle !== classData.courseName) {
+                                  return originalTitle;
+                                }
+                                
+                                // Final fallback to original cleaned course name
+                                return cleanCourseName(classData);
+                              })()}
                             </Text>
-                            {getCourseCode(classData) && (
-                              <Text style={[styles.courseCode, { color: colors.secondaryFont }]} numberOfLines={1}>
-                                {getCourseCode(classData)}
-                              </Text>
-                            )}
-                            {classData.instructor && (
+                            {(() => {
+                              // Try to get course code from mapped course name first
+                              const mappedCourseName = getCourseNameByMatching(classData.courseName);
+                              let formattedCode = '';
+                              
+                              if (mappedCourseName) {
+                                formattedCode = extractCourseCode(mappedCourseName);
+                              }
+                              
+                              // Fallback: extract from original course name
+                              if (!formattedCode) {
+                                const originalCode = getCourseCode(classData);
+                                formattedCode = extractCourseCode(originalCode || classData.courseName);
+                              }
+                              
+                              return formattedCode ? (
+                                <Text style={[styles.courseCode, { color: colors.secondaryFont }]} numberOfLines={1}>
+                                  {formattedCode}
+                                </Text>
+                              ) : null;
+                            })()}
+                            {classData.instructor && classData.instructor.trim() && !isTutorialIdentifier(classData.instructor) && (
                               <Text style={[styles.instructor, { color: colors.secondaryFont }]} numberOfLines={1}>
                                 {classData.instructor}
                               </Text>
@@ -405,7 +574,7 @@ export default function DashboardScreen() {
                           borderWidth: 0,
                         }]}>
                           <Text style={[styles.courseName, { color: colors.secondaryFont, fontStyle: 'italic', textAlign: 'center' }]}>
-                            Free Slot
+                            Free
                           </Text>
                         </View>
                       )}
