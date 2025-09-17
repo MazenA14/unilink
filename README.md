@@ -69,9 +69,9 @@
 + Remove Pay button or make it redirect to the guc website and check the already implemented redirection
 + Move semester gpa to the top
 + Use saved username and password to log in automatically
++ Put course name in the schedule (Match it from grades or attendance)
 
 - Clear Course grades cache on pull to refresh and not be visibile while refreshing
 - ReApply All cache timings
 - Clear all cache on logout
 - Apply smart caching, fetch grades & attendance on loading dashboard
-- Put course name in the schedule (Match it from grades or attendance)
