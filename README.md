@@ -10,7 +10,7 @@
 + Student Schedule https://apps.guc.edu.eg/student_ext/Scheduling/GroupSchedule.aspx?v=825d1466-7884-412e-a97b-e8b49fe77839
 + Exam Seats https://apps.guc.edu.eg/student_ext/Exam/ViewExamSeat_01.aspx
 + Add slot timing shift for BI/Architecture/... in the settings page (Should change the slot timing in the schedule page)
-+ Notifications https://apps.guc.edu.eg/student_ext/Main/Notifications.aspx
++ Update alert + update Changelog
 
 - View Attendance https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx?v=NXM874921
 - Search for Staff https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx
@@ -18,8 +18,8 @@
 - Course Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
 - General Group Schedule https://apps.guc.edu.eg/student_ext/Scheduling/GeneralGroupSchedule.aspx
 - Add skeletons for everything that loads
-- Mobile Notifications
-- Update alert + update Changelog (Use a custom proxy server)
+- GUC Notifications https://apps.guc.edu.eg/student_ext/Main/Notifications.aspx
+- Mobile Notifications (Slot Reminder)
 - Empty Slots (Rooms) https://gucroomschedule.web.app/
 
 ## To-Do List (Optional)
@@ -46,7 +46,7 @@
 - Username, GUC-ID, Date Joined App, Last Opened Date, Number of Times Opened App, GPA, Joined Season (58), Major (MET)
 
 ### Table 2 (Feedback)
-- Username, Notes, Season Joined (58), Date
+- Username, Notes, Season Joined (58), Date, Version
 
 -------------------------- -------------------------- -------------------------- --------------------------
 
@@ -70,8 +70,20 @@
 + Move semester gpa to the top
 + Use saved username and password to log in automatically
 + Put course name in the schedule (Match it from grades or attendance)
++ Default screen isn't working
++ Update detection not working
 
 - Clear Course grades cache on pull to refresh and not be visibile while refreshing
 - ReApply All cache timings
 - Clear all cache on logout
-- Apply smart caching, fetch grades & attendance on loading dashboard
+- Apply smart fetching, fetch grades & attendance on loading dashboard (See if something else needs smart fetching)
+- Make notification cached and fetch on loading dashboard, on fetching don't remove the old notifications
+
+- When i click twice on a season in the previous grades screen it removes the courses and says 'No courses found for this season'
+- Previous grades page is broken
+- Make links in notifications be clickable and text be copyable
+- Adjust Colouring of transcript semester gpa
+- Add tutorial and lecture notifications by a variable time reminder (15min, 20 min...) time set in settings under preferences (Make the reminder optional, no lecture reminder)
+- See if guc notifications could be fetched while app is closed
+- On loading don't show loading state, show cached data and after fetching is complete, replace notifications
+- See how all aspects of the app works (Caching,...)

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Tabs } from 'expo-router';
-import { useMemo } from 'react';
+import { Tabs, useRouter } from 'expo-router';
+import { useEffect, useMemo } from 'react';
 import { Platform } from 'react-native';
 
 import { AuthGuard } from '@/components/AuthGuard';
@@ -15,6 +15,7 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { defaultScreen, isLoading } = useDefaultScreen();
+  const router = useRouter();
 
   // Memoize icon components to prevent re-creation and improve performance
   const tabIcons = useMemo(() => ({
@@ -25,10 +26,25 @@ export default function TabLayout() {
     settings: (color: string) => <Ionicons name="settings" size={28} color={color} />,
   }), []);
 
+  // Navigate to the default screen when it's loaded and different from dashboard
+  useEffect(() => {
+    if (!isLoading && defaultScreen && defaultScreen !== 'dashboard') {
+      // Use a small delay to ensure the tabs are fully mounted
+      const timer = setTimeout(() => {
+        router.replace(`/(tabs)/${defaultScreen}`);
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, defaultScreen, router]);
+
+  // Determine the initial route name - use defaultScreen if loaded, otherwise dashboard
+  const initialRouteName = isLoading ? "dashboard" : defaultScreen;
+
   return (
     <AuthGuard>
       <Tabs
-        initialRouteName={isLoading ? "dashboard" : defaultScreen}
+        initialRouteName={initialRouteName}
         screenOptions={{
           tabBarActiveTintColor: colors.tint,
           headerShown: false,

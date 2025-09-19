@@ -1,8 +1,12 @@
+import UpdateModal from '@/components/UpdateModal';
+import WhatsNewModal from '@/components/WhatsNewModal';
 import { Colors, ScheduleTypeColors } from '@/constants/Colors';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useSchedule } from '@/hooks/useSchedule';
+import { useVersionCheck } from '@/hooks/useVersionCheck';
+import { useWhatsNew } from '@/hooks/useWhatsNew';
 import { AuthManager } from '@/utils/auth';
 import { GradeCache } from '@/utils/gradeCache';
 import { GUCAPIProxy } from '@/utils/gucApiProxy';
@@ -26,6 +30,23 @@ export default function DashboardScreen() {
   const { isShiftedScheduleEnabled } = useShiftedSchedule();
   const { unreadCount, fetchNotifications } = useNotifications();
   const refreshRotation = useRef(new Animated.Value(0)).current;
+  
+  // Version check hook
+  const {
+    showUpdateModal,
+    checkForUpdates,
+    handleUpdateModalClose,
+    handleUpdateModalUpdate,
+  } = useVersionCheck();
+  
+  // What's New modal hook
+  const {
+    showModal: showWhatsNewModal,
+    features: whatsNewFeatures,
+    version: whatsNewVersion,
+    checkAndShowModal: checkWhatsNew,
+    handleCloseModal: handleWhatsNewClose,
+  } = useWhatsNew();
   
   // State for course name mapping
   const [courseNameMapping, setCourseNameMapping] = useState<{ [courseId: string]: string }>({});
@@ -356,7 +377,11 @@ export default function DashboardScreen() {
     loadNickname();
     // Fetch notifications when dashboard loads
     fetchNotifications();
-  }, [loadNickname, fetchNotifications]);
+    // Check for app updates when dashboard loads
+    checkForUpdates();
+    // Check if we should show What's New modal
+    checkWhatsNew();
+  }, [loadNickname, fetchNotifications, checkForUpdates, checkWhatsNew]);
 
   // Reload nickname when screen comes into focus (e.g., returning from settings)
   useFocusEffect(
@@ -367,6 +392,21 @@ export default function DashboardScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Version Check Modal */}
+      <UpdateModal
+        visible={showUpdateModal}
+        onClose={handleUpdateModalClose}
+        onUpdate={handleUpdateModalUpdate}
+      />
+      
+      {/* What's New Modal */}
+      <WhatsNewModal
+        visible={showWhatsNewModal}
+        onClose={handleWhatsNewClose}
+        features={whatsNewFeatures}
+        version={whatsNewVersion}
+      />
+      
       {/* Main Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
