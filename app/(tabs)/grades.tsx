@@ -1,10 +1,10 @@
 import {
-  CourseWithGrades,
-  CurrentGradesSection,
-  GradeType,
-  PreviousGradesSection,
-  Season,
-  YearGroup
+    CourseWithGrades,
+    CurrentGradesSection,
+    GradeType,
+    PreviousGradesSection,
+    Season,
+    YearGroup
 } from '@/components/grades';
 import { GradesMenu } from '@/components/GradesMenu';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
@@ -125,6 +125,9 @@ export default function GradesScreen() {
     try {
       setLoadingSeasons(true);
       
+      console.log('=== NEW PREVIOUS GRADES SYSTEM ===');
+      console.log('Loading seasons with new multi-step approach...');
+      
       // Try to load from cache first (unless forced refresh)
       if (!forceRefresh) {
         const cachedData = await GradeCache.getCachedSeasonsWithGrades();
@@ -132,43 +135,30 @@ export default function GradesScreen() {
           setSeasons(cachedData.seasons);
           setYearGroups(cachedData.yearGroups);
           setLoadingSeasons(false);
+          console.log('Using cached seasons data');
           return;
         }
       }
 
-      const fetchedSeasons = await GUCAPI.getAvailableSeasons();
+      // Use new efficient method to get all seasons with their data
+      const seasonsWithData = await GUCAPI.getAllSeasonsWithData();
       
-      // Check which seasons have grades and add year information
-      const seasonsWithGradeCheck = await Promise.all(
-        fetchedSeasons.map(async (season) => {
-          try {
-            const grades = await GUCAPI.getPreviousGrades(season.value);
-            const hasGrades = grades && grades.length > 0;
-            
-            // Extract year from season text (e.g., "Spring 2024" -> "2024")
-            const yearMatch = season.text.match(/(\d{4})/);
-            const year = yearMatch ? yearMatch[1] : 'Unknown';
-            
-            return {
-              ...season,
-              hasGrades,
-              year
-            };
-          } catch (error) {
-            // If we can't check grades, assume it has them to avoid hiding valid seasons
-            const yearMatch = season.text.match(/(\d{4})/);
-            const year = yearMatch ? yearMatch[1] : 'Unknown';
-            return {
-              ...season,
-              hasGrades: true,
-              year
-            };
-          }
-        })
-      );
-      
-      // Filter out seasons with no grades
-      const seasonsWithGrades = seasonsWithGradeCheck.filter(season => season.hasGrades);
+      // Convert to the format expected by the UI
+      const seasonsWithGrades = seasonsWithData.map(seasonData => {
+        // Extract year from season name (e.g., "Spring 2024" -> "2024")
+        const yearMatch = seasonData.seasonName.match(/(\d{4})/);
+        const year = yearMatch ? yearMatch[1] : 'Unknown';
+        
+        return {
+          value: seasonData.seasonId,
+          text: seasonData.seasonName,
+          hasGrades: seasonData.midtermGrades.length > 0,
+          year,
+          // Store additional data for later use
+          _courses: seasonData.courses,
+          _midtermGrades: seasonData.midtermGrades
+        };
+      });
       
       // Group seasons by year
       const yearGroupsMap = new Map<string, Season[]>();
@@ -201,6 +191,8 @@ export default function GradesScreen() {
       // Cache the results
       await GradeCache.setCachedSeasonsWithGrades(seasonsWithGrades, groupedYears);
       
+      console.log(`Loaded ${seasonsWithGrades.length} seasons with grades`);
+      
     } catch (error: any) {
       
       const errorMessage = error?.message || 'Unknown error occurred';
@@ -231,77 +223,141 @@ export default function GradesScreen() {
     }
   };
 
+  // Helper function to check if courses match grades
+  const coursesMatchGrades = (courses: {value: string, text: string}[], grades: GradeData[]): boolean => {
+    if (courses.length === 0 || grades.length === 0) return false;
+    
+    // Check if any course matches any grade
+    const extractCourseCode = (text: string) => {
+      const match = text.match(/([A-Z]{2,4}[a-z]?\d{3,4})/);
+      return match ? match[1] : '';
+    };
+    
+    for (const course of courses) {
+      const courseCode = extractCourseCode(course.text);
+      for (const grade of grades) {
+        const gradeCode = extractCourseCode(grade.course);
+        if (courseCode && gradeCode && courseCode === gradeCode) {
+          return true; // Found at least one match
+        }
+      }
+    }
+    
+    return false; // No matches found
+  };
+
   const loadCoursesWithGrades = async (seasonId: string) => {
     try {
       setLoadingCourses(true);
       setLoadingGrades(true);
       
-      // Try to load from cache first
-      const [cachedCourses, cachedMidtermGrades] = await Promise.all([
-        GradeCache.getCachedCourses(seasonId),
-        GradeCache.getCachedMidtermGrades(seasonId)
-      ]);
+      console.log(`=== LOADING COURSES FOR SEASON ${seasonId} (NEW SYSTEM) ===`);
       
-      let fetchedCourses, midtermGrades;
+      // Find the selected season in our seasons data to get courses and midterm grades
+      const foundSeason = [...yearGroups.flatMap(yg => yg.seasons)].find(season => season.value === seasonId);
       
-      if (cachedCourses && cachedMidtermGrades) {
-        // Use cached data
-        fetchedCourses = cachedCourses;
-        midtermGrades = cachedMidtermGrades;
+      console.log(`Looking for season ${seasonId} in ${yearGroups.length} year groups`);
+      console.log(`Found season:`, foundSeason ? 'YES' : 'NO');
+      if (foundSeason) {
+        console.log(`Season has _courses:`, foundSeason._courses ? 'YES' : 'NO');
+        console.log(`Season has _midtermGrades:`, foundSeason._midtermGrades ? 'YES' : 'NO');
+        if (foundSeason._courses) console.log(`_courses length:`, foundSeason._courses.length);
+        if (foundSeason._midtermGrades) console.log(`_midtermGrades length:`, foundSeason._midtermGrades.length);
+      }
+      
+      if (foundSeason && foundSeason._courses && foundSeason._midtermGrades) {
+        console.log('Using pre-loaded season data');
+        console.log(`Found ${foundSeason._courses.length} courses and ${foundSeason._midtermGrades.length} midterm grades`);
+        
+        const fetchedCourses = foundSeason._courses;
+        const midtermGrades = foundSeason._midtermGrades;
+        
+        setGrades(midtermGrades);
+        
+        // Create courses with their midterm grades
+        const coursesWithGradesData: CourseWithGrades[] = fetchedCourses.map(course => {
+          // Find matching midterm grade for this course
+          const extractCourseCode = (text: string) => {
+            const match = text.match(/([A-Z]{2,4}[a-z]?\d{3,4})/);
+            return match ? match[1] : '';
+          };
+          
+          const courseCode = extractCourseCode(course.text);
+          
+          const midtermGrade = midtermGrades.find(grade => {
+            const gradeCode = extractCourseCode(grade.course);
+            
+            const exactMatch = grade.course === course.text;
+            const containsMatch1 = grade.course.toLowerCase().includes(course.text.toLowerCase());
+            const containsMatch2 = course.text.toLowerCase().includes(grade.course.toLowerCase());
+            const codeMatch = courseCode && gradeCode && courseCode === gradeCode;
+            
+            return exactMatch || containsMatch1 || containsMatch2 || codeMatch;
+          });
+          
+          return {
+            ...course,
+            midtermGrade,
+            isExpanded: false,
+            isLoadingDetails: false,
+          };
+        });
+        
+        console.log(`Matched ${coursesWithGradesData.filter(c => c.midtermGrade).length}/${coursesWithGradesData.length} courses with grades`);
+        setCoursesWithGrades(coursesWithGradesData);
+        
       } else {
-        // Load from API
+        // Fallback to old method if season data not found
+        console.log('Season data not found in pre-loaded data, falling back to API...');
+        
         const [apiCourses, apiMidtermGrades] = await Promise.all([
           GUCAPI.getAvailableCourses(seasonId),
           GUCAPI.getPreviousGrades(seasonId)
         ]);
         
-        fetchedCourses = apiCourses;
-        midtermGrades = apiMidtermGrades;
+        // If we have grades but no courses, create courses from grades
+        let fetchedCourses = apiCourses;
+        if (apiMidtermGrades.length > 0 && apiCourses.length === 0) {
+          fetchedCourses = apiMidtermGrades.map((grade, index) => ({
+            value: `grade_${index}`,
+            text: grade.course
+          }));
+        }
         
-        // Cache the results
-        await Promise.all([
-          GradeCache.setCachedCourses(seasonId, fetchedCourses),
-          GradeCache.setCachedMidtermGrades(seasonId, midtermGrades)
-        ]);
-      }
-      
-      setGrades(midtermGrades);
-      
-      // Create courses with their midterm grades
-      
-      const coursesWithGradesData: CourseWithGrades[] = fetchedCourses.map(course => {
-        // Find matching midterm grade for this course
-        // Extract course code from both strings to match them properly
-        const extractCourseCode = (text: string) => {
-          const match = text.match(/([A-Z]{2,4}[a-z]?\d{3,4})/);
-          return match ? match[1] : '';
-        };
+        setGrades(apiMidtermGrades);
         
-        const courseCode = extractCourseCode(course.text);
-        
-        const midtermGrade = midtermGrades.find(grade => {
-          const gradeCode = extractCourseCode(grade.course);
+        const coursesWithGradesData: CourseWithGrades[] = fetchedCourses.map(course => {
+          const extractCourseCode = (text: string) => {
+            const match = text.match(/([A-Z]{2,4}[a-z]?\d{3,4})/);
+            return match ? match[1] : '';
+          };
           
-          return (
-            grade.course === course.text ||
-            grade.course.toLowerCase().includes(course.text.toLowerCase()) ||
-            course.text.toLowerCase().includes(grade.course.toLowerCase()) ||
-            (courseCode && gradeCode && courseCode === gradeCode)
-          );
+          const courseCode = extractCourseCode(course.text);
+          
+          const midtermGrade = apiMidtermGrades.find(grade => {
+            const gradeCode = extractCourseCode(grade.course);
+            
+            const exactMatch = grade.course === course.text;
+            const containsMatch1 = grade.course.toLowerCase().includes(course.text.toLowerCase());
+            const containsMatch2 = course.text.toLowerCase().includes(grade.course.toLowerCase());
+            const codeMatch = courseCode && gradeCode && courseCode === gradeCode;
+            
+            return exactMatch || containsMatch1 || containsMatch2 || codeMatch;
+          });
+          
+          return {
+            ...course,
+            midtermGrade,
+            isExpanded: false,
+            isLoadingDetails: false,
+          };
         });
         
-        
-        return {
-          ...course,
-          midtermGrade,
-          isExpanded: false,
-          isLoadingDetails: false,
-        };
-      });
+        setCoursesWithGrades(coursesWithGradesData);
+      }
       
-      
-      setCoursesWithGrades(coursesWithGradesData);
     } catch (error) {
+      console.log('Error loading courses with grades:', error);
       Alert.alert(
         'Error',
         'Failed to load courses and grades. Please try again.',
@@ -315,40 +371,26 @@ export default function GradesScreen() {
 
   const loadDetailedCourseGrades = async (seasonId: string, courseId: string, courseName: string): Promise<GradeData[]> => {
     try {
+      console.log(`=== LOADING DETAILED GRADES (NEW SYSTEM) ===`);
+      console.log(`Season: ${seasonId}, CourseId: ${courseId}, CourseName: ${courseName}`);
+      
       // Check cache first
       const cachedGrades = await GradeCache.getCachedDetailedGrades(seasonId, courseId);
       if (cachedGrades) {
+        console.log(`Found cached detailed grades: ${cachedGrades.length} grades`);
         return cachedGrades;
       }
       
-      // Check if courseId is a fallback ID (starts with 'course_')
-      if (courseId.startsWith('course_')) {
-        // For fallback courses, filter existing grades by course name
-        
-        if (courseName && grades.length > 0) {
-          // Try exact match first
-          let filteredGrades = grades.filter(grade => grade.course === courseName);
-          
-          // If no exact match, try partial matching
-          if (filteredGrades.length === 0) {
-            filteredGrades = grades.filter(grade => 
-              grade.course.toLowerCase().includes(courseName.toLowerCase()) ||
-              courseName.toLowerCase().includes(grade.course.toLowerCase())
-            );
-          }
-          
-          // Cache the results
-          await GradeCache.setCachedDetailedGrades(seasonId, courseId, filteredGrades);
-          return filteredGrades;
-        }
-        return [];
-      } else {
-        // For real course IDs, make API call
-        const fetchedGrades = await GUCAPI.getPreviousGrades(seasonId, courseId);
-        await GradeCache.setCachedDetailedGrades(seasonId, courseId, fetchedGrades);
-        return fetchedGrades;
-      }
+      // Use the new detailed grades API method
+      const detailedGrades = await GUCAPI.getDetailedCourseGrades(seasonId, courseId);
+      console.log(`New API returned ${detailedGrades.length} detailed grades`);
+      
+      // Cache the results
+      await GradeCache.setCachedDetailedGrades(seasonId, courseId, detailedGrades);
+      
+      return detailedGrades;
     } catch (error) {
+      console.log('Error loading detailed course grades:', error);
       return [];
     }
   };
@@ -380,19 +422,28 @@ export default function GradesScreen() {
   // (Development helpers removed)
 
   const handleSeasonSelect = (season: Season) => {
-    setSelectedSeason(season);
-    setCoursesWithGrades([]);
-    setGrades([]);
+    // Only clear courses if selecting a different season and not currently loading
+    if (selectedSeason?.value !== season.value && !loadingCourses && !loadingGrades) {
+      setSelectedSeason(season);
+      setCoursesWithGrades([]);
+      setGrades([]);
+    }
   };
 
   const handleCourseToggle = async (courseIndex: number) => {
     const updatedCourses = [...coursesWithGrades];
     const course = updatedCourses[courseIndex];
     
+    console.log(`=== COURSE TOGGLE ===`);
+    console.log(`Course: ${course.text} (${course.value})`);
+    console.log(`Currently expanded: ${course.isExpanded}`);
+    console.log(`Has detailed grades: ${course.detailedGrades ? course.detailedGrades.length : 0}`);
+    
     if (!course.isExpanded) {
       // Expanding - show loading and load detailed grades if not already loaded
       course.isExpanded = true;
       if (!course.detailedGrades && selectedSeason) {
+        console.log(`Loading detailed grades for course: ${course.text}`);
         course.isLoadingDetails = true;
         setCoursesWithGrades([...updatedCourses]);
         
@@ -410,15 +461,20 @@ export default function GradesScreen() {
           course.value,
           course.text
         );
+        console.log(`Loaded ${detailedGrades.length} detailed grades`);
         course.detailedGrades = detailedGrades;
         course.isLoadingDetails = false;
+      } else {
+        console.log(`Course already has detailed grades or no season selected`);
       }
     } else {
       // Collapsing
+      console.log(`Collapsing course`);
       course.isExpanded = false;
     }
     
     setCoursesWithGrades([...updatedCourses]);
+    console.log(`Course toggle completed`);
   };
 
   const getGradeColor = (percentage: number) => {

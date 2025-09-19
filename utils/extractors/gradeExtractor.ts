@@ -23,13 +23,13 @@ export function extractViewState(html: string): ViewStateData {
       result[key as keyof ViewStateData] = value;
       
       if (!value) {
-(`Failed to extract ${key} from HTML`);
+        console.log(`Failed to extract ${key} from HTML`);
       }
     }
     
     return result;
   } catch (error) {
-('Error extracting view state:', error);
+    console.log('Error extracting view state:', error);
     return {
       __VIEWSTATE: '',
       __VIEWSTATEGENERATOR: '',
@@ -45,64 +45,104 @@ export function extractGradeData(html: string): GradeData[] {
   try {
     const grades: GradeData[] = [];
     
-('=== GRADE EXTRACTION DEBUG ===');
-('HTML length:', html.length);
-('Contains "Mid-Term Results":', html.includes('Mid-Term Results'));
-('Contains "midDg":', html.includes('midDg'));
+    console.log('=== GRADE EXTRACTION DEBUG ===');
+    console.log('HTML length:', html.length);
+    console.log('Contains "Mid-Term Results":', html.includes('Mid-Term Results'));
+    console.log('Contains "midDg":', html.includes('midDg'));
     
     // Look for the actual table structure
     const midTableMatch = html.match(/<table[^>]*id="[^"]*midDg[^"]*"[^>]*>([\s\S]*?)<\/table>/i);
     if (midTableMatch) {
-('Found midDg table, first 500 chars:', midTableMatch[1].substring(0, 500));
+      console.log('Found midDg table, first 500 chars:', midTableMatch[1].substring(0, 500));
+      
+      // Debug: Let's see all table rows
+      const allRows = midTableMatch[1].match(/<tr[^>]*>[\s\S]*?<\/tr>/gi);
+      if (allRows) {
+        console.log(`Found ${allRows.length} table rows`);
+        allRows.forEach((row, index) => {
+          console.log(`Row ${index + 1}:`, row.substring(0, 200));
+        });
+      }
       
       // Try to extract directly from the table content only
       const tableContent = midTableMatch[1];
       
-      // More precise extraction from just the table content
-      const tableRowPattern = /<tr[^>]*>\s*<td[^>]*>([^<]+)<\/td>\s*<td[^>]*style="font-weight:bold;"[^>]*>([0-9.]+)<\/td>\s*<\/tr>/gi;
+      // More flexible patterns to match the actual HTML structure
+      const tableRowPatterns = [
+        // Pattern 1: Exact structure from the HTML example
+        /<tr[^>]*>\s*<td[^>]*>([^<]+)<\/td>\s*<td[^>]*style="font-weight:bold;"[^>]*>([0-9.]+)<\/td>\s*<\/tr>/gi,
+        // Pattern 2: More flexible spacing
+        /<tr[^>]*>[\s\S]*?<td[^>]*>([^<]+)<\/td>[\s\S]*?<td[^>]*style="font-weight:bold;"[^>]*>([0-9.]+)<\/td>[\s\S]*?<\/tr>/gi,
+        // Pattern 3: Without style attribute
+        /<tr[^>]*>[\s\S]*?<td[^>]*>([^<]+)<\/td>[\s\S]*?<td[^>]*>([0-9.]+)<\/td>[\s\S]*?<\/tr>/gi,
+        // Pattern 4: Very simple pattern
+        /<tr[^>]*>[\s\S]*?<td[^>]*>([^<]+)<\/td>[\s\S]*?<td[^>]*>([0-9.]+)<\/td>[\s\S]*?<\/tr>/gi
+      ];
       
-      let tableMatch;
-      const tableGrades: GradeData[] = [];
+      let tableGrades: GradeData[] = [];
       
-      while ((tableMatch = tableRowPattern.exec(tableContent)) !== null) {
-        const course = tableMatch[1].trim();
-        const percentageStr = tableMatch[2].trim();
+      for (let i = 0; i < tableRowPatterns.length; i++) {
+        const pattern = tableRowPatterns[i];
+        pattern.lastIndex = 0;
         
-(`Table extraction found:`, { course: course.substring(0, 50), percentage: percentageStr });
+        let tableMatch;
+        const tempGrades: GradeData[] = [];
         
-        // Filter out header rows
-        if (course.toLowerCase() !== 'course' && (!course.toLowerCase().includes('course') || course.length > 20)) {
-          const percentage = parseFloat(percentageStr);
-          if (!isNaN(percentage) && percentage >= 0 && percentage <= 100) {
-            tableGrades.push({ course, percentage });
-(`Added table grade: ${course.substring(0, 30)}... -> ${percentage}%`);
+        while ((tableMatch = pattern.exec(tableContent)) !== null) {
+          const course = tableMatch[1].trim();
+          const percentageStr = tableMatch[2].trim();
+          
+          console.log(`Table pattern ${i + 1} found:`, { course: course.substring(0, 50), percentage: percentageStr });
+          
+          // Filter out header rows
+          const isHeaderRow = course.toLowerCase() === 'course' || 
+                             percentageStr.toLowerCase() === 'percentage' ||
+                             (course.toLowerCase().includes('course') && course.length < 20);
+          
+          if (!isHeaderRow) {
+            const percentage = parseFloat(percentageStr);
+            if (!isNaN(percentage) && percentage >= 0 && percentage <= 100) {
+              tempGrades.push({ course, percentage });
+              console.log(`Added table grade: ${course.substring(0, 30)}... -> ${percentage}%`);
+            }
+          } else {
+            console.log(`Skipped header row: ${course} -> ${percentageStr}`);
           }
+        }
+        
+        if (tempGrades.length > 0) {
+          tableGrades = tempGrades;
+          console.log(`Table pattern ${i + 1} succeeded with ${tempGrades.length} grades`);
+          break;
         }
       }
       
       if (tableGrades.length > 0) {
-(`Table extraction succeeded with ${tableGrades.length} grades`);
-(`Final: ${tableGrades.length} grades extracted`);
-('=============================');
+        console.log(`Table extraction succeeded with ${tableGrades.length} grades`);
+        console.log(`Final: ${tableGrades.length} grades extracted`);
+        console.log('=============================');
         return tableGrades;
       }
     }
     
-    // Multiple patterns to try
+    // Multiple patterns to try (fallback if table-specific extraction failed)
     const patterns = [
-      // More precise pattern that looks for the exact structure we see in logs
-      /<tr[^>]*>\s*<td[^>]*>([^<]+)<\/td><td[^>]*style="font-weight:bold;"[^>]*>([0-9.]+)<\/td>\s*<\/tr>/gi,
+      // Pattern 1: Exact structure from HTML example
+      /<tr[^>]*>\s*<td[^>]*>([^<]+)<\/td>\s*<td[^>]*style="font-weight:bold;"[^>]*>([0-9.]+)<\/td>\s*<\/tr>/gi,
       
-      // Alternative pattern with more flexible spacing
-      /<tr[^>]*>[\s]*<td[^>]*>([^<]+)<\/td>[\s]*<td[^>]*style="font-weight:bold;"[^>]*>([0-9.]+)<\/td>[\s]*<\/tr>/gi,
+      // Pattern 2: More flexible spacing with style
+      /<tr[^>]*>[\s\S]*?<td[^>]*>([^<]+)<\/td>[\s\S]*?<td[^>]*style="font-weight:bold;"[^>]*>([0-9.]+)<\/td>[\s\S]*?<\/tr>/gi,
       
-      // Font-based pattern (likely for ASP.NET)
+      // Pattern 3: Without style attribute
+      /<tr[^>]*>[\s\S]*?<td[^>]*>([^<]+)<\/td>[\s\S]*?<td[^>]*>([0-9.]+)<\/td>[\s\S]*?<\/tr>/gi,
+      
+      // Pattern 4: Font-based pattern (ASP.NET)
       /<tr[^>]*>[\s\S]*?<td[^>]*><font[^>]*>([^<]+)<\/font><\/td>[\s\S]*?<td[^>]*><font[^>]*><b>([^<]+)<\/b><\/font><\/td>[\s\S]*?<\/tr>/gi,
       
-      // Original pattern
+      // Pattern 5: Bold text pattern
       /<tr[^>]*>[\s\S]*?<td[^>]*>([^<]+)<\/td>[\s\S]*?<td[^>]*><[^>]*><b>([^<]+)<\/b><\/[^>]*><\/td>[\s\S]*?<\/tr>/gi,
       
-      // Simpler fallback pattern
+      // Pattern 6: Very simple pattern (last resort)
       /<tr[^>]*>[\s\S]*?<td[^>]*>([^<]+)<\/td>[\s\S]*?<td[^>]*>([0-9.]+)<\/td>[\s\S]*?<\/tr>/gi
     ];
     
@@ -117,7 +157,7 @@ export function extractGradeData(html: string): GradeData[] {
         const course = match[1].trim();
         const percentageStr = match[2].trim();
         
-(`Pattern ${i + 1} found:`, { course: course.substring(0, 50), percentage: percentageStr });
+console.log(`Pattern ${i + 1} found:`, { course: course.substring(0, 50), percentage: percentageStr });
         
         // Filter out header rows and invalid entries
         const isHeaderRow = course.toLowerCase() === 'course' || 
@@ -128,26 +168,26 @@ export function extractGradeData(html: string): GradeData[] {
           const percentage = parseFloat(percentageStr);
           if (!isNaN(percentage) && percentage >= 0 && percentage <= 100) {
             tempGrades.push({ course, percentage });
-(`Added grade: ${course.substring(0, 30)}... -> ${percentage}%`);
+console.log(`Added grade: ${course.substring(0, 30)}... -> ${percentage}%`);
           }
         } else {
-(`Skipped header/invalid row: ${course} -> ${percentageStr}`);
+console.log(`Skipped header/invalid row: ${course} -> ${percentageStr}`);
         }
       }
       
       if (tempGrades.length > 0) {
         grades.push(...tempGrades);
-(`Pattern ${i + 1} succeeded with ${tempGrades.length} grades`);
+        console.log(`Pattern ${i + 1} succeeded with ${tempGrades.length} grades`);
         break;
       }
     }
     
-(`Final: ${grades.length} grades extracted`);
-('=============================');
+    console.log(`Final: ${grades.length} grades extracted`);
+    console.log('=============================');
     
     return grades;
   } catch (error) {
-('Error extracting grade data:', error);
+    console.log('Error extracting grade data:', error);
     return [];
   }
 }
@@ -159,8 +199,8 @@ export function extractCourseGradeData(html: string): GradeData[] {
   try {
     const items: GradeData[] = [];
 
-('=== COURSE-GRADE EXTRACTION DEBUG ===');
-('Contains "Quiz/Assignment":', /Quiz\/?Assignment/i.test(html));
+    console.log('=== COURSE-GRADE EXTRACTION DEBUG ===');
+    console.log('Contains "Quiz/Assignment":', /Quiz\/?Assignment/i.test(html));
 
     // Match rows belonging to the rptrNtt repeater (course items)
     const rowPattern = /<tr[^>]*id="[^"]*rptrNtt[^"]*"[^>]*>[\s\S]*?<span[^>]*id="[^"]*rptrNtt_evalMethLbl_[^"]+"[^>]*>([^<]+)<\/span>[\s\S]*?<td>\s*([^<]+?)\s*<\/td>[\s\S]*?<td>\s*([0-9.]+)\s*\/\s*([0-9.]+)\s*<\/td>[\s\S]*?<td>\s*([^<]+?)\s*<\/td>[\s\S]*?<\/tr>/gi;
@@ -179,11 +219,11 @@ export function extractCourseGradeData(html: string): GradeData[] {
       }
     }
 
-(`Extracted ${items.length} course grade items`);
-('=====================================');
+    console.log(`Extracted ${items.length} course grade items`);
+    console.log('=====================================');
     return items;
   } catch (error) {
-('Error extracting course grade data:', error);
+    console.log('Error extracting course grade data:', error);
     return [];
   }
 }
@@ -195,10 +235,10 @@ export function extractCourses(html: string): {value: string, text: string}[] {
   try {
     const courses: {value: string, text: string}[] = [];
     
-('=== COURSE EXTRACTION DEBUG ===');
-('HTML length:', html.length);
-('Contains "course":', html.includes('course'));
-('Contains "Course":', html.includes('Course'));
+console.log('=== COURSE EXTRACTION DEBUG ===');
+console.log('HTML length:', html.length);
+console.log('Contains "course":', html.includes('course'));
+console.log('Contains "Course":', html.includes('Course'));
     
     // Try patterns targeting the correct course dropdown (smCrsLst)
     const patterns = [
@@ -213,14 +253,14 @@ export function extractCourses(html: string): {value: string, text: string}[] {
     for (let i = 0; i < patterns.length; i++) {
       courseDropdownMatch = html.match(patterns[i]);
       if (courseDropdownMatch) {
-(`Found dropdown using pattern ${i + 1}`);
+console.log(`Found dropdown using pattern ${i + 1}`);
         break;
       }
     }
     
     if (courseDropdownMatch) {
       const optionsHtml = courseDropdownMatch[1];
-('Options HTML (first 500 chars):', optionsHtml.substring(0, 500));
+console.log('Options HTML (first 500 chars):', optionsHtml.substring(0, 500));
       
       const optionPattern = /<option[^>]*value="([^"]*)"[^>]*>([^<]*)<\/option>/gi;
       
@@ -231,7 +271,7 @@ export function extractCourses(html: string): {value: string, text: string}[] {
         const value = match[1].trim();
         const text = match[2].trim();
         
-(`Option ${totalOptions}: value="${value}", text="${text}"`);
+console.log(`Option ${totalOptions}: value="${value}", text="${text}"`);
         
         // Skip empty or placeholder options (e.g., "Choose a Course")
         if (value && text && value !== '' && !/choose/i.test(text)) {
@@ -239,25 +279,25 @@ export function extractCourses(html: string): {value: string, text: string}[] {
         }
       }
       
-(`Found ${totalOptions} total options, ${courses.length} valid courses`);
+console.log(`Found ${totalOptions} total options, ${courses.length} valid courses`);
     } else {
-('Course dropdown not found in HTML');
+console.log('Course dropdown not found in HTML');
       // Let's see what select elements exist
       const allSelects = html.match(/<select[^>]*>/gi);
-('All select elements found:', allSelects?.length || 0);
+console.log('All select elements found:', allSelects?.length || 0);
       if (allSelects) {
         allSelects.forEach((select, index) => {
-(`Select ${index + 1}:`, select);
+console.log(`Select ${index + 1}:`, select);
         });
       }
     }
     
-(`Final result: ${courses.length} courses extracted`);
-('=============================');
+console.log(`Final result: ${courses.length} courses extracted`);
+console.log('=============================');
     
     return courses;
   } catch (error) {
-('Error extracting courses:', error);
+console.log('Error extracting courses:', error);
     return [];
   }
 }

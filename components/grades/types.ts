@@ -3,6 +3,9 @@ export interface Season {
   text: string;
   hasGrades?: boolean;
   year?: string;
+  // Additional data for new system
+  _courses?: Course[];
+  _midtermGrades?: GradeData[];
 }
 
 export interface YearGroup {

@@ -71,7 +71,7 @@ export class GUCAPIProxy {
    */
   static async getAvailableSeasons(): Promise<{value: string, text: string}[]> {
     try {
-('Fetching seasons through proxy...');
+      console.log('Fetching seasons through proxy...');
       
       const data = await this.makeProxyRequest(
         'https://apps.guc.edu.eg/student_ext/Grade/CheckGradePerviousSemester_01.aspx'
@@ -98,10 +98,136 @@ export class GUCAPIProxy {
         }
       }
 
-(`Found ${seasons.length} seasons`);
+console.log(`Found ${seasons.length} seasons`);
       return seasons;
     } catch (error) {
-('Error fetching available seasons:', error);
+      console.log('Error fetching available seasons:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get season data with courses and midterm grades (new multi-step approach)
+   */
+  static async getSeasonWithCoursesAndGrades(seasonId: string): Promise<{
+    seasonId: string,
+    courses: {value: string, text: string}[],
+    midtermGrades: GradeData[]
+  } | null> {
+    try {
+      console.log(`=== PROCESSING SEASON ${seasonId} ===`);
+      
+      // Step 1: Get initial page to extract view state
+      const initialData = await this.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/Grade/CheckGradePerviousSemester_01.aspx'
+      );
+
+      const initialHtml = initialData.html || initialData.body;
+      const viewStateData = extractViewState(initialHtml);
+
+      if (!viewStateData.__VIEWSTATE || !viewStateData.__VIEWSTATEGENERATOR || !viewStateData.__EVENTVALIDATION) {
+        throw new Error('Failed to extract required view state data');
+      }
+
+      // Step 2: Select the season to get courses and midterm grades
+      const formBody = new URLSearchParams({
+        ...viewStateData,
+        'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$Dropdownlistseason': seasonId,
+        '__EVENTTARGET': 'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$Dropdownlistseason',
+        '__EVENTARGUMENT': '',
+      });
+
+      const responseData = await this.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/Grade/CheckGradePerviousSemester_01.aspx',
+        'POST',
+        formBody.toString()
+      );
+
+      const html = responseData.html || responseData.body;
+      
+      // Step 3: Extract courses from dropdown
+      const courses = extractCourses(html);
+      console.log(`Found ${courses.length} courses for season ${seasonId}`);
+      
+      // Step 4: Extract midterm grades from the midterm table
+      const midtermGrades = extractGradeData(html);
+      console.log(`Found ${midtermGrades.length} midterm grades for season ${seasonId}`);
+      
+      // If no courses found but have midterm grades, create courses from grades
+      let finalCourses = courses;
+      if (courses.length === 0 && midtermGrades.length > 0) {
+        console.log('No courses in dropdown, creating from midterm grades...');
+        finalCourses = midtermGrades.map((grade, index) => ({
+          value: `grade_${index}`,
+          text: grade.course
+        }));
+      }
+      
+      // Only return season data if it has courses (and potentially grades)
+      if (finalCourses.length === 0) {
+        console.log(`Season ${seasonId} has no courses, skipping...`);
+        return null;
+      }
+      
+      console.log(`Season ${seasonId}: ${finalCourses.length} courses, ${midtermGrades.length} midterm grades`);
+      return {
+        seasonId,
+        courses: finalCourses,
+        midtermGrades
+      };
+      
+    } catch (error) {
+      console.log(`Error processing season ${seasonId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get all seasons with their courses and midterm grades (new efficient approach)
+   */
+  static async getAllSeasonsWithData(): Promise<{
+    seasonId: string,
+    seasonName: string,
+    courses: {value: string, text: string}[],
+    midtermGrades: GradeData[]
+  }[]> {
+    try {
+      console.log('=== FETCHING ALL SEASONS WITH DATA ===');
+      
+      // Step 1: Get all available seasons
+      const allSeasons = await this.getAvailableSeasons();
+      console.log(`Found ${allSeasons.length} seasons to process`);
+      
+      // Step 2: Process each season to get courses and grades
+      const seasonsWithData: {
+        seasonId: string,
+        seasonName: string,
+        courses: {value: string, text: string}[],
+        midtermGrades: GradeData[]
+      }[] = [];
+      
+      for (const season of allSeasons) {
+        console.log(`Processing season: ${season.text} (${season.value})`);
+        
+        const seasonData = await this.getSeasonWithCoursesAndGrades(season.value);
+        
+        if (seasonData) {
+          seasonsWithData.push({
+            seasonId: seasonData.seasonId,
+            seasonName: season.text,
+            courses: seasonData.courses,
+            midtermGrades: seasonData.midtermGrades
+          });
+          console.log(`✅ Added season: ${season.text} with ${seasonData.courses.length} courses`);
+        } else {
+          console.log(`❌ Skipped season: ${season.text} (no courses)`);
+        }
+      }
+      
+      console.log(`=== COMPLETED: ${seasonsWithData.length}/${allSeasons.length} seasons have data ===`);
+      return seasonsWithData;
+    } catch (error) {
+      console.log('Error fetching all seasons with data:', error);
       throw error;
     }
   }
@@ -111,7 +237,7 @@ export class GUCAPIProxy {
    */
   static async getAvailableCourses(seasonId: string): Promise<{value: string, text: string}[]> {
     try {
-(`Fetching courses for season ${seasonId}...`);
+      console.log(`Fetching courses for season ${seasonId}...`);
 
       // Step 1: Get initial page to extract view state
       const initialData = await this.makeProxyRequest(
@@ -119,7 +245,7 @@ export class GUCAPIProxy {
       );
 
       const initialHtml = initialData.html || initialData.body;
-('Initial HTML length:', initialHtml.length);
+console.log('Initial HTML length:', initialHtml.length);
       
       const viewStateData = extractViewState(initialHtml);
 
@@ -128,6 +254,7 @@ export class GUCAPIProxy {
       }
 
       // Step 2: Make POST request to get courses for the season
+      console.log(`Setting season to ${seasonId} for course extraction`);
       const formBody = new URLSearchParams({
         ...viewStateData,
         'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$Dropdownlistseason': seasonId,
@@ -135,7 +262,7 @@ export class GUCAPIProxy {
         '__EVENTARGUMENT': '',
       });
 
-('Making POST request for courses...');
+console.log('Making POST request for courses...');
       const responseData = await this.makeProxyRequest(
         'https://apps.guc.edu.eg/student_ext/Grade/CheckGradePerviousSemester_01.aspx',
         'POST',
@@ -143,14 +270,14 @@ export class GUCAPIProxy {
       );
 
       const html = responseData.html || responseData.body;
-('Response HTML length:', html.length);
+console.log('Response HTML length:', html.length);
       
       // Try to extract courses
       const courses = extractCourses(html);
       
       // Fallback: If no course dropdown found, extract course names from grade data
       if (courses.length === 0) {
-('No courses found in dropdown, trying to extract from grade data...');
+console.log('No courses found in dropdown, trying to extract from grade data...');
         const grades = extractGradeData(html);
         const courseMap = new Map<string, string>();
         
@@ -168,14 +295,79 @@ export class GUCAPIProxy {
           text: courseName
         }));
         
-(`Fallback: extracted ${fallbackCourses.length} courses from grade data`);
+console.log(`Fallback: extracted ${fallbackCourses.length} courses from grade data`);
         return fallbackCourses;
       }
       
       return courses;
     } catch (error) {
-('Error fetching courses:', error);
+console.log('Error fetching courses:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Get detailed grades for a specific course in a season (new implementation)
+   */
+  static async getDetailedCourseGrades(seasonId: string, courseId: string): Promise<GradeData[]> {
+    try {
+      console.log(`=== FETCHING DETAILED GRADES ===`);
+      console.log(`Season: ${seasonId}, Course: ${courseId}`);
+      
+      // Step 1: Get initial page to extract view state
+      const initialData = await this.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/Grade/CheckGradePerviousSemester_01.aspx'
+      );
+
+      const initialHtml = initialData.html || initialData.body;
+      const viewStateData = extractViewState(initialHtml);
+
+      if (!viewStateData.__VIEWSTATE || !viewStateData.__VIEWSTATEGENERATOR || !viewStateData.__EVENTVALIDATION) {
+        throw new Error('Failed to extract required view state data');
+      }
+
+      // Step 2: Select the season first
+      const seasonFormBody = new URLSearchParams({
+        ...viewStateData,
+        'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$Dropdownlistseason': seasonId,
+        '__EVENTTARGET': 'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$Dropdownlistseason',
+        '__EVENTARGUMENT': '',
+      });
+
+      const seasonResponse = await this.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/Grade/CheckGradePerviousSemester_01.aspx',
+        'POST',
+        seasonFormBody.toString()
+      );
+
+      const seasonHtml = seasonResponse.html || seasonResponse.body;
+      const updatedViewState = extractViewState(seasonHtml);
+
+      // Step 3: Select the specific course
+      const courseFormBody = new URLSearchParams({
+        ...updatedViewState,
+        'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$Dropdownlistseason': seasonId,
+        'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$smCrsLst': courseId,
+        '__EVENTTARGET': 'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$smCrsLst',
+        '__EVENTARGUMENT': '',
+      });
+
+      const courseResponse = await this.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/Grade/CheckGradePerviousSemester_01.aspx',
+        'POST',
+        courseFormBody.toString()
+      );
+
+      const courseHtml = courseResponse.html || courseResponse.body;
+      
+      // Step 4: Extract detailed course grades from Quiz/Assignment table
+      const detailedGrades = extractCourseGradeData(courseHtml);
+      console.log(`Found ${detailedGrades.length} detailed grades for course ${courseId}`);
+      
+      return detailedGrades;
+    } catch (error) {
+      console.log('Error fetching detailed course grades:', error);
+      return [];
     }
   }
 
@@ -184,7 +376,7 @@ export class GUCAPIProxy {
    */
   static async getPreviousGrades(seasonId: string, courseId?: string): Promise<GradeData[]> {
     try {
-(`Fetching grades for season ${seasonId}${courseId ? ` and course ${courseId}` : ''}...`);
+      console.log(`Fetching grades for season ${seasonId}${courseId ? ` and course ${courseId}` : ''}...`);
 
       // Step 1: Get initial page to extract view state
       const initialData = await this.makeProxyRequest(
@@ -217,16 +409,16 @@ export class GUCAPIProxy {
 
       // If no specific course requested, return mid-term (season) results
       if (!courseId) {
-('=== DEBUGGING MIDTERM GRADE EXTRACTION ===');
-('Season HTML length:', seasonHtml.length);
-('Contains "Mid-Term":', seasonHtml.includes('Mid-Term'));
-('Contains "midDg":', seasonHtml.includes('midDg'));
+      console.log('=== DEBUGGING MIDTERM GRADE EXTRACTION ===');
+      console.log('Season HTML length:', seasonHtml.length);
+      console.log('Contains "Mid-Term":', seasonHtml.includes('Mid-Term'));
+      console.log('Contains "midDg":', seasonHtml.includes('midDg'));
         const seasonGrades = extractGradeData(seasonHtml);
-(`Found ${seasonGrades.length} grades for season ${seasonId}`);
+        console.log(`Found ${seasonGrades.length} grades for season ${seasonId}`);
         if (seasonGrades.length > 0) {
-('Sample grades:', seasonGrades.slice(0, 3));
+        console.log('Sample grades:', seasonGrades.slice(0, 3));
         }
-('==========================================');
+        console.log('==========================================');
         return seasonGrades;
       }
 
@@ -251,16 +443,16 @@ export class GUCAPIProxy {
       const courseHtml = coursePost.html || coursePost.body;
       // Only extract course-specific items (Quiz/Assignment table). Don't fallback to mid-term table.
       const courseSpecific = extractCourseGradeData(courseHtml);
-(`Found ${courseSpecific.length} course-specific grades for course ${courseId} in season ${seasonId}`);
+console.log(`Found ${courseSpecific.length} course-specific grades for course ${courseId} in season ${seasonId}`);
       
       // If no course-specific grades found, return empty array instead of falling back to midterm grades
       if (courseSpecific.length === 0) {
-(`No detailed grades available for course ${courseId}, returning empty array`);
+console.log(`No detailed grades available for course ${courseId}, returning empty array`);
       }
       
       return courseSpecific;
     } catch (error) {
-('Error fetching previous grades:', error);
+console.log('Error fetching previous grades:', error);
       throw error;
     }
   }
@@ -402,7 +594,7 @@ export class GUCAPIProxy {
    */
   static async getCurrentGrades(): Promise<GradeData[]> {
     try {
-('Fetching current grades...');
+      console.log('Fetching current grades...');
       
       const data = await this.makeProxyRequest(
         'https://apps.guc.edu.eg/student_ext/Grade/CheckGrade_01.aspx'
@@ -414,21 +606,21 @@ export class GUCAPIProxy {
         throw new Error('No HTML content received from proxy');
       }
 
-('=== CURRENT GRADES EXTRACTION DEBUG ===');
-('HTML length:', html.length);
-('Contains "Mid-Term Results":', html.includes('Mid-Term Results'));
-('Contains "midDg":', html.includes('midDg'));
+      console.log('=== CURRENT GRADES EXTRACTION DEBUG ===');
+      console.log('HTML length:', html.length);
+      console.log('Contains "Mid-Term Results":', html.includes('Mid-Term Results'));
+      console.log('Contains "midDg":', html.includes('midDg'));
       
       const grades = extractGradeData(html);
-(`Found ${grades.length} current grades`);
+      console.log(`Found ${grades.length} current grades`);
       if (grades.length > 0) {
-('Sample grades:', grades.slice(0, 3));
+      console.log('Sample grades:', grades.slice(0, 3));
       }
-('==========================================');
+      console.log('==========================================');
       
       return grades;
     } catch (error) {
-('Error fetching current grades:', error);
+      console.log('Error fetching current grades:', error);
       throw error;
     }
   }
@@ -455,7 +647,7 @@ export class GUCAPIProxy {
 
       return null;
     } catch (e) {
-('Error fetching user id:', e);
+console.log('Error fetching user id:', e);
       return null;
     }
   }

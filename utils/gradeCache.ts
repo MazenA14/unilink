@@ -2,6 +2,12 @@ import { StudyYear, TranscriptData } from '@/components/transcript/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GradeData, ScheduleData } from './gucApiProxy';
 
+// Course interface
+interface Course {
+  value: string;
+  text: string;
+}
+
 // Cache configuration
 const CACHE_EXPIRY_DAYS = 30;
 const CACHE_EXPIRY_MS = CACHE_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
@@ -38,6 +44,9 @@ interface Season {
   text: string;
   hasGrades?: boolean;
   year?: string;
+  // Additional data for new system
+  _courses?: Course[];
+  _midtermGrades?: GradeData[];
 }
 
 interface YearGroup {

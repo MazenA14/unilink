@@ -72,6 +72,7 @@
 + Put course name in the schedule (Match it from grades or attendance)
 + Default screen isn't working
 + Update detection not working
++ When i click twice on a season in the previous grades screen it removes the courses and says 'No courses found for this season'
 
 - Clear Course grades cache on pull to refresh and not be visibile while refreshing
 - ReApply All cache timings
@@ -79,7 +80,6 @@
 - Apply smart fetching, fetch grades & attendance on loading dashboard (See if something else needs smart fetching)
 - Make notification cached and fetch on loading dashboard, on fetching don't remove the old notifications
 
-- When i click twice on a season in the previous grades screen it removes the courses and says 'No courses found for this season'
 - Previous grades page is broken
 - Make links in notifications be clickable and text be copyable
 - Adjust Colouring of transcript semester gpa
@@ -87,3 +87,4 @@
 - See if guc notifications could be fetched while app is closed
 - On loading don't show loading state, show cached data and after fetching is complete, replace notifications
 - See how all aspects of the app works (Caching,...)
+- Make the current/previous grades screens not show percentage but the actual mark (9/10)
