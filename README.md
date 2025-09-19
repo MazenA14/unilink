@@ -73,6 +73,10 @@
 
 - See how all aspects of the app works (Caching,...)
 
+- Wraping up the app
+    - Make it more efficient
+    - Remove the unneeded dependencies (Smaller file size) 
+
 + Remove the effect that occurs on pressing on the tabs at the bottom
 + Change animation for the hamburger menu to Fade in
 + Unify the formating of the personal schedule
