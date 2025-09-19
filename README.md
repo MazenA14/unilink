@@ -82,7 +82,7 @@
 
 - Previous grades page is broken
 - Make links in notifications be clickable and text be copyable
-- Adjust Colouring of transcript semester gpa
+- Adjust Colouring of transcript semester gpa (All grade colour ranges)
 - Add tutorial and lecture notifications by a variable time reminder (15min, 20 min...) time set in settings under preferences (Make the reminder optional, no lecture reminder)
 - See if guc notifications could be fetched while app is closed
 - On loading don't show loading state, show cached data and after fetching is complete, replace notifications

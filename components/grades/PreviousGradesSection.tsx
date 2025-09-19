@@ -1,6 +1,5 @@
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import CourseGrid from './CourseGrid';
 import SeasonSelector from './SeasonSelector';
@@ -19,6 +18,7 @@ interface PreviousGradesSectionProps {
   getGradeColor: (percentage: number) => string;
   formatCourseName: (courseText: string) => string;
   getCourseCodeParts: (courseText: string) => { code: string; number: string };
+  formatGradeDisplay: (grade: any) => string;
   calculateAverage: () => number;
 }
 
@@ -35,6 +35,7 @@ export default function PreviousGradesSection({
   getGradeColor,
   formatCourseName,
   getCourseCodeParts,
+  formatGradeDisplay,
   calculateAverage,
 }: PreviousGradesSectionProps) {
   const colorScheme = useColorScheme();
@@ -80,6 +81,7 @@ export default function PreviousGradesSection({
               getGradeColor={getGradeColor}
               formatCourseName={formatCourseName}
               getCourseCodeParts={getCourseCodeParts}
+              formatGradeDisplay={formatGradeDisplay}
               calculateAverage={calculateAverage}
             />
           </View>

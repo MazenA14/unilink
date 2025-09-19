@@ -24,6 +24,7 @@ interface CurrentGradesSectionProps {
   formatCourseName: (courseText: string) => string;
   getCourseCodeParts: (courseText: string) => { code: string; number: string };
   onRefresh?: () => Promise<void>;
+  refreshTrigger?: number; // Add refresh trigger prop
 }
 
 export default function CurrentGradesSection({
@@ -31,6 +32,7 @@ export default function CurrentGradesSection({
   formatCourseName,
   getCourseCodeParts,
   onRefresh,
+  refreshTrigger,
 }: CurrentGradesSectionProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -45,6 +47,13 @@ export default function CurrentGradesSection({
   useEffect(() => {
     loadAvailableCourses();
   }, []);
+
+  // Reload courses when refreshTrigger changes
+  useEffect(() => {
+    if (refreshTrigger && refreshTrigger > 0) {
+      loadAvailableCourses(true); // Force refresh
+    }
+  }, [refreshTrigger]);
 
   // Utility function to get course name by ID using cache
   const getCourseNameById = async (courseId: string): Promise<string | null> => {

@@ -37,6 +37,9 @@ export default function GradesScreen() {
   
   // Menu state
   const [menuVisible, setMenuVisible] = useState(false);
+  
+  // Refresh trigger for current grades
+  const [currentGradesRefreshTrigger, setCurrentGradesRefreshTrigger] = useState(0);
 
   // Load data when grade type changes
   useEffect(() => {
@@ -408,15 +411,35 @@ export default function GradesScreen() {
         await loadCoursesWithGrades(selectedSeason.value);
       }
     } else {
+      // Clear current grades related caches to ensure fresh data
+      await GradeCache.clearCurrentGradesCache();
+      await GradeCache.clearCurrentCoursesCache();
+      await GradeCache.clearCurrentCourseGradesCache();
+      await GradeCache.clearCourseIdToNameCache();
+      
       // Force refresh current grades from API (bypass cache)
       await loadCurrentGrades(true);
+      // Trigger refresh of courses in CurrentGradesSection
+      setCurrentGradesRefreshTrigger(prev => prev + 1);
     }
     setRefreshing(false);
   }, [selectedSeason, gradeType]);
 
   const handleCurrentGradesRefresh = useCallback(async () => {
-    // This will be called by the CurrentGradesSection component
-    // We can add any additional refresh logic here if needed
+    try {
+      // Clear current grades related caches to ensure fresh data
+      await GradeCache.clearCurrentGradesCache();
+      await GradeCache.clearCurrentCoursesCache();
+      await GradeCache.clearCurrentCourseGradesCache();
+      await GradeCache.clearCourseIdToNameCache();
+      
+      // Force refresh current grades from API (bypass cache)
+      await loadCurrentGrades(true);
+      // Trigger refresh of courses in CurrentGradesSection
+      setCurrentGradesRefreshTrigger(prev => prev + 1);
+    } catch (error) {
+      console.error('Error refreshing current grades:', error);
+    }
   }, []);
 
   // (Development helpers removed)
@@ -483,6 +506,19 @@ export default function GradesScreen() {
     if (percentage >= 65) return colors.gradeAverage;
     if (percentage >= 40) return colors.gradeBelowAverage;
     return colors.gradeFailing;
+  };
+
+  // Format grade display to show actual marks instead of percentage
+  const formatGradeDisplay = (grade: GradeData) => {
+    if (grade.obtained !== undefined && grade.total !== undefined) {
+      // Only show decimals if they exist (not .00)
+      const obtainedStr = grade.obtained % 1 === 0 ? grade.obtained.toString() : grade.obtained.toFixed(2);
+      const totalStr = grade.total % 1 === 0 ? grade.total.toString() : grade.total.toFixed(2);
+      return `${obtainedStr}/${totalStr}`;
+    }
+    // Only show decimals if they exist for percentage
+    const percentageStr = grade.percentage % 1 === 0 ? grade.percentage.toString() : grade.percentage.toFixed(2);
+    return `${percentageStr}%`;
   };
 
   // Extract course code and number for the bubble (e.g., "CSEN" and "601" from "CSEN601")
@@ -583,6 +619,7 @@ export default function GradesScreen() {
             formatCourseName={formatCourseName}
             getCourseCodeParts={getCourseCodeParts}
             onRefresh={handleCurrentGradesRefresh}
+            refreshTrigger={currentGradesRefreshTrigger}
           />
         )}
 
@@ -601,6 +638,7 @@ export default function GradesScreen() {
             getGradeColor={getGradeColor}
             formatCourseName={formatCourseName}
             getCourseCodeParts={getCourseCodeParts}
+            formatGradeDisplay={formatGradeDisplay}
             calculateAverage={calculateAverage}
           />
         )}

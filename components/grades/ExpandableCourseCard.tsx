@@ -10,6 +10,7 @@ interface ExpandableCourseCardProps {
   getGradeColor: (percentage: number) => string;
   formatCourseName: (courseText: string) => string;
   getCourseCodeParts: (courseText: string) => { code: string; number: string };
+  formatGradeDisplay: (grade: any) => string;
 }
 
 export default function ExpandableCourseCard({
@@ -18,6 +19,7 @@ export default function ExpandableCourseCard({
   getGradeColor,
   formatCourseName,
   getCourseCodeParts,
+  formatGradeDisplay,
 }: ExpandableCourseCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -97,7 +99,7 @@ export default function ExpandableCourseCard({
                       { color: getGradeColor(course.midtermGrade.percentage) }
                     ]}
                   >
-                    {course.midtermGrade.percentage.toFixed(1)}%
+                    {formatGradeDisplay(course.midtermGrade)}
                   </Text>
                 )}
               </View>
@@ -157,7 +159,7 @@ export default function ExpandableCourseCard({
                         { color: getGradeColor(grade.percentage) },
                       ]}
                     >
-                      {grade.percentage.toFixed(1)}%
+                      {formatGradeDisplay(grade)}
                     </Text>
                   </View>
                 </View>
@@ -168,7 +170,7 @@ export default function ExpandableCourseCard({
               {course.midtermGrade && (
                 <View style={styles.expandedHeader}>
                   <Text style={[styles.expandedTitle, { color: colors.text }]}>
-                    Midterm Grade: {course.midtermGrade.percentage.toFixed(1)}%
+                    Midterm Grade: {formatGradeDisplay(course.midtermGrade)}
                   </Text>
                 </View>
               )}

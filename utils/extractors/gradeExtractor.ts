@@ -202,11 +202,11 @@ export function extractCourseGradeData(html: string): GradeData[] {
     console.log('=== COURSE-GRADE EXTRACTION DEBUG ===');
     console.log('Contains "Quiz/Assignment":', /Quiz\/?Assignment/i.test(html));
 
-    // Match rows belonging to the rptrNtt repeater (course items)
-    const rowPattern = /<tr[^>]*id="[^"]*rptrNtt[^"]*"[^>]*>[\s\S]*?<span[^>]*id="[^"]*rptrNtt_evalMethLbl_[^"]+"[^>]*>([^<]+)<\/span>[\s\S]*?<td>\s*([^<]+?)\s*<\/td>[\s\S]*?<td>\s*([0-9.]+)\s*\/\s*([0-9.]+)\s*<\/td>[\s\S]*?<td>\s*([^<]+?)\s*<\/td>[\s\S]*?<\/tr>/gi;
+    // Pattern 1: Rows with Quiz/Assignment name (span with evalMethLbl)
+    const rowPatternWithTitle = /<tr[^>]*id="[^"]*rptrNtt[^"]*"[^>]*>[\s\S]*?<span[^>]*id="[^"]*rptrNtt_evalMethLbl_[^"]+"[^>]*>([^<]+)<\/span>[\s\S]*?<td>\s*([^<]+?)\s*<\/td>[\s\S]*?<td>\s*([0-9.]+)\s*\/\s*([0-9.]+)\s*<\/td>[\s\S]*?<td>\s*([^<]+?)\s*<\/td>[\s\S]*?<\/tr>/gi;
 
     let match: RegExpExecArray | null;
-    while ((match = rowPattern.exec(html)) !== null) {
+    while ((match = rowPatternWithTitle.exec(html)) !== null) {
       const title = match[1].trim();
       const elementName = match[2].trim();
       const obtained = parseFloat(match[3]);
@@ -215,11 +215,42 @@ export function extractCourseGradeData(html: string): GradeData[] {
 
       if (!isNaN(obtained) && !isNaN(total) && total > 0) {
         const percentage = (obtained / total) * 100;
-        items.push({ course: `${title} - ${elementName}`, percentage });
+        items.push({ 
+          course: `${title} - ${elementName}`, 
+          percentage,
+          obtained,
+          total
+        });
+        console.log(`Extracted with title: ${title} - ${elementName} (${obtained}/${total} = ${percentage.toFixed(1)}%)`);
       }
     }
 
-    console.log(`Extracted ${items.length} course grade items`);
+    // Pattern 2: Rows without Quiz/Assignment name (only hidden input, but has element name and grade)
+    const rowPatternWithoutTitle = /<tr[^>]*id="[^"]*rptrNtt[^"]*"[^>]*>[\s\S]*?<td[^>]*>[\s\S]*?<input[^>]*type="hidden"[^>]*>[\s\S]*?<\/td>[\s\S]*?<td>\s*([^<]+?)\s*<\/td>[\s\S]*?<td>\s*([0-9.]+)\s*\/\s*([0-9.]+)\s*<\/td>[\s\S]*?<td>\s*([^<]+?)\s*<\/td>[\s\S]*?<\/tr>/gi;
+
+    // Reset regex lastIndex
+    rowPatternWithoutTitle.lastIndex = 0;
+    
+    while ((match = rowPatternWithoutTitle.exec(html)) !== null) {
+      const elementName = match[1].trim();
+      const obtained = parseFloat(match[2]);
+      const total = parseFloat(match[3]);
+      // const instructor = match[4].trim(); // currently unused in UI
+
+      if (!isNaN(obtained) && !isNaN(total) && total > 0 && elementName) {
+        const percentage = (obtained / total) * 100;
+        // Use just the element name since there's no Quiz/Assignment title
+        items.push({ 
+          course: elementName, 
+          percentage,
+          obtained,
+          total
+        });
+        console.log(`Extracted without title: ${elementName} (${obtained}/${total} = ${percentage.toFixed(1)}%)`);
+      }
+    }
+
+    console.log(`Extracted ${items.length} course grade items total`);
     console.log('=====================================');
     return items;
   } catch (error) {

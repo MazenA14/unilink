@@ -7,6 +7,9 @@ export interface ViewStateData {
 export interface GradeData {
   course: string;
   percentage: number;
+  // Optional fields for actual marks
+  obtained?: number;
+  total?: number;
 }
 
 export interface PaymentItem {
