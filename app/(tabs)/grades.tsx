@@ -11,6 +11,7 @@ import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { GradeCache } from '@/utils/gradeCache';
+import { getGradeColor } from '@/utils/gradingColors';
 import { GUCAPIProxy as GUCAPI, GradeData } from '@/utils/gucApiProxy';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
@@ -500,13 +501,8 @@ export default function GradesScreen() {
     console.log(`Course toggle completed`);
   };
 
-  const getGradeColor = (percentage: number) => {
-    if (percentage >= 85) return colors.gradeExcellent;
-    if (percentage >= 75) return colors.gradeGood;
-    if (percentage >= 65) return colors.gradeAverage;
-    if (percentage >= 40) return colors.gradeBelowAverage;
-    return colors.gradeFailing;
-  };
+  // Use unified grading color function
+  const getGradeColorForComponent = (percentage: number) => getGradeColor(percentage, colors);
 
   // Format grade display to show actual marks instead of percentage
   const formatGradeDisplay = (grade: GradeData) => {
@@ -624,7 +620,7 @@ export default function GradesScreen() {
         {/* Current Grades Content */}
         {gradeType === 'current' && (
           <CurrentGradesSection
-            getGradeColor={getGradeColor}
+            getGradeColor={getGradeColorForComponent}
             formatCourseName={formatCourseName}
             getCourseCodeParts={getCourseCodeParts}
             onRefresh={handleCurrentGradesRefresh}
@@ -644,7 +640,7 @@ export default function GradesScreen() {
             refreshing={refreshing}
             onSeasonSelect={handleSeasonSelect}
             onCourseToggle={handleCourseToggle}
-            getGradeColor={getGradeColor}
+            getGradeColor={getGradeColorForComponent}
             formatCourseName={formatCourseName}
             getCourseCodeParts={getCourseCodeParts}
             formatGradeDisplay={formatGradeDisplay}

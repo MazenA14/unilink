@@ -4,12 +4,15 @@ import {
   SemesterTable,
   YearSelector,
 } from '@/components/transcript';
+import GradingInfoModal from '@/components/transcript/GradingInfoModal';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTranscript } from '@/hooks/useTranscript';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { getCumulativeGPAColor } from '@/utils/gradingColors';
+import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // Utility function to format year text to "23/24" format
 const formatYearToShort = (yearText: string): string => {
@@ -39,6 +42,7 @@ const formatYearToShort = (yearText: string): string => {
 export default function TranscriptScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const [showGradingInfo, setShowGradingInfo] = useState(false);
   
   const {
     studyYears,
@@ -98,8 +102,16 @@ export default function TranscriptScreen() {
               )}
             </View>
             <View style={styles.gpaContainer}>
-              <View style={[styles.gpaCard, { backgroundColor: colors.tabColor }]}>
-                <Text style={[styles.gpaLabel, { color: '#FFFFFF' }]}>Cumulative GPA</Text>
+              <View style={[styles.gpaCard, { backgroundColor: parsedTranscript?.cumulativeGPA ? getCumulativeGPAColor(parsedTranscript.cumulativeGPA, colors) : colors.tabColor }]}>
+                <View style={styles.gpaHeader}>
+                  <Text style={[styles.gpaLabel, { color: '#FFFFFF' }]}>Cumulative GPA</Text>
+                  <TouchableOpacity 
+                    onPress={() => setShowGradingInfo(true)}
+                    style={styles.infoButton}
+                  >
+                    <Ionicons name="information-circle-outline" size={18} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
                 <Text style={[styles.gpaValue, { color: '#FFFFFF' }]}>
                   {parsedTranscript?.cumulativeGPA || '--'}
                 </Text>
@@ -137,6 +149,11 @@ export default function TranscriptScreen() {
           </Text>
         </View>
       )}
+      
+      <GradingInfoModal 
+        visible={showGradingInfo} 
+        onClose={() => setShowGradingInfo(false)} 
+      />
     </ScrollView>
   );
 }
@@ -231,12 +248,20 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  gpaHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   gpaLabel: {
     fontSize: 11,
     fontWeight: '600',
-    marginBottom: 4,
     opacity: 0.9,
     textAlign: 'center',
+  },
+  infoButton: {
+    marginLeft: 4,
+    padding: 2,
   },
   gpaValue: {
     fontSize: 20,

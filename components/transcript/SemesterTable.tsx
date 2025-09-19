@@ -1,5 +1,6 @@
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { getGPAColor, getLetterGradeColor } from '@/utils/gradingColors';
 import { StyleSheet, Text, View } from 'react-native';
 import { Course, Semester } from './types';
 
@@ -12,49 +13,9 @@ export default function SemesterTable({ semester, index }: SemesterTableProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   
-  const getGradeColor = (letterGrade: string): string => {
-    const grade = letterGrade.toUpperCase().trim();
-    
-    switch (grade) {
-      case 'A':
-      case 'A+':
-      case 'A-':
-        return colors.gradeExcellent; // Green for A grades
-      case 'B':
-      case 'B+':
-      case 'B-':
-        return colors.gradeGood; // Light Green for B grades
-      case 'C':
-      case 'C+':
-      case 'C-':
-        return colors.gradeAverage; // Orange for C grades
-      case 'D':
-      case 'D+':
-        return colors.gradeBelowAverage; // Red Orange for D grades
-      case 'F':
-        return colors.gradeFailing; // Red for F grades
-      default:
-        return colors.secondaryFont; // Default color for unknown grades
-    }
-  };
-
-  const getSemesterGPAColor = (gpa: string): string => {
-    const numericGPA = parseFloat(gpa);
-    
-    // GPA range: 0.7 (best) to 5 (worst)
-    // Divide into 5 color ranges
-    if (numericGPA <= 1.5) {
-      return colors.gradeExcellent; // Best range: 0.7 - 1.5 (A equivalent)
-    } else if (numericGPA <= 2.2) {
-      return colors.gradeGood; // Good range: 1.5 - 2.2 (B equivalent)
-    } else if (numericGPA <= 2.8) {
-      return colors.gradeAverage; // Average range: 2.2 - 2.8 (C equivalent)
-    } else if (numericGPA <= 3.5) {
-      return colors.gradeBelowAverage; // Below average range: 2.8 - 3.5 (D equivalent)
-    } else {
-      return colors.gradeFailing; // Worst range: 3.5 - 5.0 (F equivalent)
-    }
-  };
+  // Use unified grading color functions
+  const getGradeColorForComponent = (letterGrade: string) => getLetterGradeColor(letterGrade, colors);
+  const getSemesterGPAColorForComponent = (gpa: string) => getGPAColor(gpa, colors);
 
   const renderCourseRow = (course: Course, courseIndex: number) => (
     <View key={courseIndex} style={[styles.courseRow, { borderBottomColor: colors.border }]}>
@@ -65,10 +26,10 @@ export default function SemesterTable({ semester, index }: SemesterTableProps) {
         <Text style={[styles.courseText, { color: colors.mainFont }]}>{course.courseName}</Text>
       </View>
       <View style={styles.courseNumeric}>
-        <Text style={[styles.courseText, styles.boldText, { color: getGradeColor(course.letterGrade) }]}>{course.numericGrade}</Text>
+        <Text style={[styles.courseText, styles.boldText, { color: getGradeColorForComponent(course.letterGrade) }]}>{course.numericGrade}</Text>
       </View>
       <View style={styles.courseGrade}>
-        <View style={[styles.gradeBadge, { backgroundColor: getGradeColor(course.letterGrade) }]}>
+        <View style={[styles.gradeBadge, { backgroundColor: getGradeColorForComponent(course.letterGrade) }]}>
           <Text style={[styles.gradeText, { color: '#FFFFFF' }]}>{course.letterGrade}</Text>
         </View>
       </View>
@@ -83,7 +44,7 @@ export default function SemesterTable({ semester, index }: SemesterTableProps) {
       <View style={[styles.semesterHeader, { backgroundColor: colors.tabColor }]}>
         <View style={styles.semesterHeaderContent}>
           <Text style={[styles.semesterTitle, { color: '#FFFFFF' }]}>{semester.name}</Text>
-          <View style={[styles.semesterGpaBadge, { backgroundColor: getSemesterGPAColor(semester.semesterGPA) }]}>
+          <View style={[styles.semesterGpaBadge, { backgroundColor: getSemesterGPAColorForComponent(semester.semesterGPA) }]}>
             <Text style={[styles.semesterGpaLabel, { color: '#FFFFFF' }]}>GPA</Text>
             <Text style={[styles.semesterGpaValue, { color: '#FFFFFF' }]}>{semester.semesterGPA}</Text>
           </View>
