@@ -1,10 +1,10 @@
 import {
-    CourseWithGrades,
-    CurrentGradesSection,
-    GradeType,
-    PreviousGradesSection,
-    Season,
-    YearGroup
+  CourseWithGrades,
+  CurrentGradesSection,
+  GradeType,
+  PreviousGradesSection,
+  Season,
+  YearGroup
 } from '@/components/grades';
 import { GradesMenu } from '@/components/GradesMenu';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
@@ -612,6 +612,15 @@ export default function GradesScreen() {
           </View>
         </View>
 
+        {/* Custom refresh message for previous grades */}
+        {refreshing && gradeType === 'previous' && (
+          <View style={[styles.refreshMessageContainer, { backgroundColor: colors.tabColor + '10' }]}>
+            <Text style={[styles.refreshMessage, { color: colors.tabColor }]}>
+              This might take a minute
+            </Text>
+          </View>
+        )}
+
         {/* Current Grades Content */}
         {gradeType === 'current' && (
           <CurrentGradesSection
@@ -689,5 +698,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  refreshMessageContainer: {
+    marginHorizontal: 20,
+    marginVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  refreshMessage: {
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });
