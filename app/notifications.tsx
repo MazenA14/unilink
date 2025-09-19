@@ -1,23 +1,24 @@
+import SelectableText from '@/components/ui/SelectableText';
 import { Colors } from '@/constants/Colors';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Notification } from '@/utils/types/notificationTypes';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Animated,
-  Dimensions,
-  FlatList,
-  Modal,
-  PanResponder,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Animated,
+    Dimensions,
+    FlatList,
+    Modal,
+    PanResponder,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function NotificationsScreen() {
@@ -470,9 +471,11 @@ export default function NotificationsScreen() {
                     {/* <Text style={[styles.modalBodyTitle, { color: colors.mainFont }]}>
                       Message
                     </Text> */}
-                      <Text style={[styles.modalBodyText, { color: colors.secondaryFont, opacity: 1 }]}>
+                      <SelectableText 
+                        style={[styles.modalBodyText, { color: colors.secondaryFont, opacity: 1 }]}
+                      >
                         {selectedNotification.body}
-                      </Text>
+                      </SelectableText>
                   </View>
                 </>
               )}
