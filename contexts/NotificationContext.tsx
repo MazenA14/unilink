@@ -121,7 +121,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         dispatch({ type: 'SET_PUSH_TOKEN', payload: null });
       }
     } catch (error) {
-      console.error('Error checking permission status:', error);
+      // Error checking permission status
     }
   }, []);
 
@@ -153,7 +153,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         }
       }
     } catch (error) {
-      console.warn('Error loading cached notifications:', error);
+      // Error loading cached notifications
     }
   }, []);
 
@@ -168,7 +168,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       try {
         // Check if running in Expo Go
         if (pushNotificationService.isExpoGo()) {
-          console.warn(pushNotificationService.getExpoGoWarning());
           // Still allow local notifications in Expo Go
           dispatch({ type: 'SET_PUSH_PERMISSION', payload: true });
           dispatch({ type: 'SET_PUSH_TOKEN', payload: null });
@@ -185,7 +184,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         const cleanup = pushNotificationService.setupNotificationListeners();
         return cleanup;
       } catch (error) {
-        console.error('Error initializing push notifications:', error);
+        // Error initializing push notifications
       }
     };
 
@@ -227,7 +226,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       
       await AsyncStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(cacheEntry));
     } catch (error) {
-      console.warn('Error saving notifications to cache:', error);
+      // Error saving notifications to cache
     }
   }, []);
 
@@ -241,7 +240,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       
       await AsyncStorage.setItem(NOTIFICATIONS_READ_STATUS_KEY, JSON.stringify(readStatus));
     } catch (error) {
-      console.warn('Error saving read status to cache:', error);
+      // Error saving read status to cache
     }
   }, []);
 
@@ -283,7 +282,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       dispatch({ type: 'SET_ERROR', payload: errorMessage });
-      console.error('Error fetching notifications:', error);
     }
   }, [saveNotificationsToCache]);
 
@@ -333,9 +331,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       dispatch({ type: 'SET_LAST_FETCHED', payload: '' });
       dispatch({ type: 'CLEAR_ERROR' });
       
-      console.log('Notifications cache cleared successfully');
+      // Notifications cache cleared successfully
     } catch (error) {
-      console.error('Error clearing notifications cache:', error);
+      // Error clearing notifications cache
     }
   }, []);
 
@@ -358,7 +356,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       }
       return null;
     } catch (error) {
-      console.error('Error requesting push permissions:', error);
+      // Error requesting push permissions
       return null;
     }
   }, []);
@@ -368,7 +366,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     try {
       await pushNotificationService.scheduleGUCNotification(notification);
     } catch (error) {
-      console.error('Error sending local notification:', error);
+      // Error sending local notification
     }
   }, []);
 
@@ -393,7 +391,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       const allIds = new Set([...seenIds, ...newNotifications.map(n => n.id)]);
       await AsyncStorage.setItem('seen_notification_ids', JSON.stringify([...allIds]));
     } catch (error) {
-      console.error('Error checking for new notifications:', error);
+      // Error checking for new notifications
     }
   }, [sendLocalNotification]);
 

@@ -30,7 +30,6 @@ export function DefaultScreenProvider({ children }: DefaultScreenProviderProps) 
         setDefaultScreenState(stored as DefaultScreenType);
       }
     } catch (error) {
-      console.error('Error loading default screen:', error);
     } finally {
       setIsLoading(false);
     }
@@ -41,7 +40,6 @@ export function DefaultScreenProvider({ children }: DefaultScreenProviderProps) 
       await AuthManager.storeDefaultScreen(screen);
       setDefaultScreenState(screen);
     } catch (error) {
-      console.error('Error saving default screen:', error);
     }
   };
 

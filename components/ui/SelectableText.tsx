@@ -45,7 +45,6 @@ export default function SelectableText({
         }
       }
     } catch (error) {
-      console.error('Error opening link:', error);
       Alert.alert('Error', 'Failed to open link');
     }
   };

@@ -118,7 +118,6 @@ export function extractOutstandingPayments(html: string): PaymentItem[] {
 
     return payments;
   } catch (error) {
-    console.log('Error extracting outstanding payments:', error);
     return [];
   }
 }
@@ -139,7 +138,6 @@ export async function getOutstandingPayments(): Promise<PaymentItem[]> {
 
     return extractOutstandingPayments(html);
   } catch (error) {
-    console.log('Error fetching outstanding payments:', error);
     throw error;
   }
 }
@@ -187,7 +185,6 @@ export async function payOutstanding(eventTarget: string): Promise<string | null
 
     return null;
   } catch (e) {
-    console.log('Error initiating payment postback:', e);
     throw e;
   }
 }

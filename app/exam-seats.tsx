@@ -5,7 +5,7 @@ import { GUCAPIProxy } from '@/utils/gucApiProxy';
 import { ExamSeat, formatExamDate, getExamTypeColor, parseExamSeatsHTML } from '@/utils/parsers/examSeatsParser';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -43,7 +43,6 @@ export default function ExamSeatsScreen() {
       setExamSeats(parsedSeats);
       // setStudentName(parsedName);
     } catch (error) {
-      console.error('Error loading exam seats:', error);
       Alert.alert('Error', 'Failed to load exam seats. Please try again.');
     } finally {
       if (isRefresh) {

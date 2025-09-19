@@ -17,7 +17,6 @@ export interface VersionCheckError {
  */
 export async function checkAppVersion(): Promise<VersionCheckResponse | VersionCheckError> {
   try {
-    console.log(`Checking version: ${APP_VERSION} against ${VERSION_CHECK_ENDPOINT}`);
     
     // Create a timeout promise for React Native compatibility
     let timeoutId: NodeJS.Timeout;
@@ -47,7 +46,6 @@ export async function checkAppVersion(): Promise<VersionCheckResponse | VersionC
     }
 
     const data = await response.json();
-    console.log('Version check response:', data);
     
     // Handle the response based on the API contract
     if (typeof data === 'boolean') {
@@ -64,7 +62,6 @@ export async function checkAppVersion(): Promise<VersionCheckResponse | VersionC
       latestVersion: data.latestVersion || data.version,
     };
   } catch (error) {
-    console.error('Version check failed:', error);
     
     // Clear timeout if it exists (in case of error)
     if (typeof timeoutId !== 'undefined') {
@@ -87,7 +84,6 @@ export async function isUpdateNeeded(): Promise<boolean> {
   
   if ('error' in result) {
     // If version check fails, assume no update is needed to avoid blocking users
-    console.warn('Version check failed, assuming no update needed:', result.message);
     return false;
   }
   

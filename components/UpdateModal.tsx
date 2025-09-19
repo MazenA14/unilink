@@ -45,7 +45,6 @@ export default function UpdateModal({ visible, onClose, onUpdate }: UpdateModalP
         );
       }
     } catch (error) {
-      console.error('Failed to open update link:', error);
       Alert.alert(
         'Error',
         'Failed to open the download link. Please try again later.',

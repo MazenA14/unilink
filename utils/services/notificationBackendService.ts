@@ -53,17 +53,16 @@ export class NotificationBackendService {
 
       if (!response.ok) {
         if (response.status === 404) {
-          console.warn('Push token registration endpoint not found. Backend may not be configured for push notifications yet.');
+          // Push token registration endpoint not found. Backend may not be configured for push notifications yet.
           return false;
         }
         throw new Error(`Failed to register token: ${response.status}`);
       }
 
       const result = await response.json();
-      console.log('Push token registered successfully:', result);
       return true;
     } catch (error) {
-      console.error('Error registering push token:', error);
+      // Error registering push token
       return false;
     }
   }
@@ -89,10 +88,9 @@ export class NotificationBackendService {
       }
 
       const result = await response.json();
-      console.log('Push notification sent successfully:', result);
       return true;
     } catch (error) {
-      console.error('Error sending push notification:', error);
+      // Error sending push notification
       return false;
     }
   }
@@ -136,10 +134,9 @@ export class NotificationBackendService {
         throw new Error(`Failed to unregister token: ${response.status}`);
       }
 
-      console.log('Push token unregistered successfully');
       return true;
     } catch (error) {
-      console.error('Error unregistering push token:', error);
+      // Error unregistering push token
       return false;
     }
   }

@@ -16,7 +16,6 @@ export function useWhatsNew() {
         setShowModal(true);
       }
     } catch (error) {
-      console.error('Error checking What\'s New status:', error);
       // Don't show modal on error to avoid blocking the user
     } finally {
       setIsLoading(false);
@@ -28,7 +27,6 @@ export function useWhatsNew() {
       await markWhatsNewAsShown(config.version);
       setShowModal(false);
     } catch (error) {
-      console.error('Error marking What\'s New as shown:', error);
       setShowModal(false); // Close modal even if marking fails
     }
   }, [config.version]);

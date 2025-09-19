@@ -289,7 +289,6 @@ export class AuthManager {
           // Start preloading schedule data in the background
           const { SchedulePreloader } = await import('./schedulePreloader');
           SchedulePreloader.preloadSchedule().catch(error => {
-            console.log('Schedule preload failed:', error);
             // Don't show error to user - preloading is optional
           });
           

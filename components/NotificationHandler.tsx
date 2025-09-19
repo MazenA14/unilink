@@ -13,8 +13,6 @@ export default function NotificationHandler() {
   useEffect(() => {
     // Set up notification response listener
     Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('Notification tapped:', response);
-      
       const data = response.notification.request.content.data;
       
       // Navigate to notifications screen when notification is tapped

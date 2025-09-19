@@ -41,6 +41,8 @@
 - Your Instructors this semester (List of view profiles separated by course)
 - View Attendance
 
+-------------------------- -------------------------- -------------------------- --------------------------
+
 ## Database Schema
 ### Table 1 (Userdata)
 - Username, GUC-ID, Date Joined App, Last Opened Date, Number of Times Opened App, GPA, Joined Season (58), Major (MET)
@@ -55,7 +57,22 @@
 - Use 'npx expo install --check' to review and upgrade your dependencies
 - npm install -g eas-cli (If error Occurred)
 
+-------------------------- -------------------------- -------------------------- --------------------------
+
 ## To-Do (Notes)
+- Clear Course grades cache on pull to refresh and not be visibile while refreshing
+- ReApply All cache timings
+- Clear all cache on logout
+- Apply smart fetching, fetch grades & attendance on loading dashboard (See if something else needs smart fetching)
+- Make notification cached and fetch on loading dashboard, on fetching don't remove the old notifications
+
+- Add tutorial and lecture notifications by a variable time reminder (15min, 20 min...) time set in settings under preferences (Make the reminder optional, no lecture reminder)
+- See if guc notifications could be fetched while app is closed
+- On loading don't show loading state, show cached data and after fetching is complete, replace notifications
+- Solve notifcations error if possible
+
+- See how all aspects of the app works (Caching,...)
+
 + Remove the effect that occurs on pressing on the tabs at the bottom
 + Change animation for the hamburger menu to Fade in
 + Unify the formating of the personal schedule
@@ -75,16 +92,5 @@
 + When i click twice on a season in the previous grades screen it removes the courses and says 'No courses found for this season'
 + Make the current/previous grades screens not show percentage but the actual mark (9/10)
 + Previous grades page is broken
-
-- Clear Course grades cache on pull to refresh and not be visibile while refreshing
-- ReApply All cache timings
-- Clear all cache on logout
-- Apply smart fetching, fetch grades & attendance on loading dashboard (See if something else needs smart fetching)
-- Make notification cached and fetch on loading dashboard, on fetching don't remove the old notifications
-
-- Make links in notifications be clickable and text be copyable
-- Adjust Colouring of transcript semester gpa (All grade colour ranges)
-- Add tutorial and lecture notifications by a variable time reminder (15min, 20 min...) time set in settings under preferences (Make the reminder optional, no lecture reminder)
-- See if guc notifications could be fetched while app is closed
-- On loading don't show loading state, show cached data and after fetching is complete, replace notifications
-- See how all aspects of the app works (Caching,...)
++ Adjust Colouring of transcript semester gpa (All grade colour ranges)
++ Make links in notifications be clickable

@@ -13,7 +13,6 @@ export async function shouldShowWhatsNew(currentVersion: string): Promise<boolea
     const shownVersion = await AsyncStorage.getItem(WHATS_NEW_VERSION_KEY);
     return shownVersion !== currentVersion;
   } catch (error) {
-    console.error('Error checking What\'s New status:', error);
     // If there's an error, show the modal to be safe
     return true;
   }
@@ -28,7 +27,6 @@ export async function markWhatsNewAsShown(currentVersion: string): Promise<void>
     await AsyncStorage.setItem(WHATS_NEW_VERSION_KEY, currentVersion);
     await AsyncStorage.setItem(WHATS_NEW_SHOWN_KEY, 'true');
   } catch (error) {
-    console.error('Error marking What\'s New as shown:', error);
   }
 }
 
@@ -40,6 +38,5 @@ export async function resetWhatsNewStatus(): Promise<void> {
     await AsyncStorage.removeItem(WHATS_NEW_VERSION_KEY);
     await AsyncStorage.removeItem(WHATS_NEW_SHOWN_KEY);
   } catch (error) {
-    console.error('Error resetting What\'s New status:', error);
   }
 }

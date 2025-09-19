@@ -129,8 +129,6 @@ export default function GradesScreen() {
     try {
       setLoadingSeasons(true);
       
-      console.log('=== NEW PREVIOUS GRADES SYSTEM ===');
-      console.log('Loading seasons with new multi-step approach...');
       
       // Try to load from cache first (unless forced refresh)
       if (!forceRefresh) {
@@ -139,7 +137,6 @@ export default function GradesScreen() {
           setSeasons(cachedData.seasons);
           setYearGroups(cachedData.yearGroups);
           setLoadingSeasons(false);
-          console.log('Using cached seasons data');
           return;
         }
       }
@@ -195,7 +192,6 @@ export default function GradesScreen() {
       // Cache the results
       await GradeCache.setCachedSeasonsWithGrades(seasonsWithGrades, groupedYears);
       
-      console.log(`Loaded ${seasonsWithGrades.length} seasons with grades`);
       
     } catch (error: any) {
       
@@ -255,23 +251,12 @@ export default function GradesScreen() {
       setLoadingCourses(true);
       setLoadingGrades(true);
       
-      console.log(`=== LOADING COURSES FOR SEASON ${seasonId} (NEW SYSTEM) ===`);
       
       // Find the selected season in our seasons data to get courses and midterm grades
       const foundSeason = [...yearGroups.flatMap(yg => yg.seasons)].find(season => season.value === seasonId);
       
-      console.log(`Looking for season ${seasonId} in ${yearGroups.length} year groups`);
-      console.log(`Found season:`, foundSeason ? 'YES' : 'NO');
-      if (foundSeason) {
-        console.log(`Season has _courses:`, foundSeason._courses ? 'YES' : 'NO');
-        console.log(`Season has _midtermGrades:`, foundSeason._midtermGrades ? 'YES' : 'NO');
-        if (foundSeason._courses) console.log(`_courses length:`, foundSeason._courses.length);
-        if (foundSeason._midtermGrades) console.log(`_midtermGrades length:`, foundSeason._midtermGrades.length);
-      }
       
       if (foundSeason && foundSeason._courses && foundSeason._midtermGrades) {
-        console.log('Using pre-loaded season data');
-        console.log(`Found ${foundSeason._courses.length} courses and ${foundSeason._midtermGrades.length} midterm grades`);
         
         const fetchedCourses = foundSeason._courses;
         const midtermGrades = foundSeason._midtermGrades;
@@ -307,12 +292,10 @@ export default function GradesScreen() {
           };
         });
         
-        console.log(`Matched ${coursesWithGradesData.filter(c => c.midtermGrade).length}/${coursesWithGradesData.length} courses with grades`);
         setCoursesWithGrades(coursesWithGradesData);
         
       } else {
         // Fallback to old method if season data not found
-        console.log('Season data not found in pre-loaded data, falling back to API...');
         
         const [apiCourses, apiMidtermGrades] = await Promise.all([
           GUCAPI.getAvailableCourses(seasonId),
@@ -361,7 +344,6 @@ export default function GradesScreen() {
       }
       
     } catch (error) {
-      console.log('Error loading courses with grades:', error);
       Alert.alert(
         'Error',
         'Failed to load courses and grades. Please try again.',
@@ -375,26 +357,21 @@ export default function GradesScreen() {
 
   const loadDetailedCourseGrades = async (seasonId: string, courseId: string, courseName: string): Promise<GradeData[]> => {
     try {
-      console.log(`=== LOADING DETAILED GRADES (NEW SYSTEM) ===`);
-      console.log(`Season: ${seasonId}, CourseId: ${courseId}, CourseName: ${courseName}`);
       
       // Check cache first
       const cachedGrades = await GradeCache.getCachedDetailedGrades(seasonId, courseId);
       if (cachedGrades) {
-        console.log(`Found cached detailed grades: ${cachedGrades.length} grades`);
         return cachedGrades;
       }
       
       // Use the new detailed grades API method
       const detailedGrades = await GUCAPI.getDetailedCourseGrades(seasonId, courseId);
-      console.log(`New API returned ${detailedGrades.length} detailed grades`);
       
       // Cache the results
       await GradeCache.setCachedDetailedGrades(seasonId, courseId, detailedGrades);
       
       return detailedGrades;
     } catch (error) {
-      console.log('Error loading detailed course grades:', error);
       return [];
     }
   };
@@ -439,7 +416,6 @@ export default function GradesScreen() {
       // Trigger refresh of courses in CurrentGradesSection
       setCurrentGradesRefreshTrigger(prev => prev + 1);
     } catch (error) {
-      console.error('Error refreshing current grades:', error);
     }
   }, []);
 
@@ -458,16 +434,11 @@ export default function GradesScreen() {
     const updatedCourses = [...coursesWithGrades];
     const course = updatedCourses[courseIndex];
     
-    console.log(`=== COURSE TOGGLE ===`);
-    console.log(`Course: ${course.text} (${course.value})`);
-    console.log(`Currently expanded: ${course.isExpanded}`);
-    console.log(`Has detailed grades: ${course.detailedGrades ? course.detailedGrades.length : 0}`);
     
     if (!course.isExpanded) {
       // Expanding - show loading and load detailed grades if not already loaded
       course.isExpanded = true;
       if (!course.detailedGrades && selectedSeason) {
-        console.log(`Loading detailed grades for course: ${course.text}`);
         course.isLoadingDetails = true;
         setCoursesWithGrades([...updatedCourses]);
         
@@ -485,20 +456,16 @@ export default function GradesScreen() {
           course.value,
           course.text
         );
-        console.log(`Loaded ${detailedGrades.length} detailed grades`);
         course.detailedGrades = detailedGrades;
         course.isLoadingDetails = false;
       } else {
-        console.log(`Course already has detailed grades or no season selected`);
       }
     } else {
       // Collapsing
-      console.log(`Collapsing course`);
       course.isExpanded = false;
     }
     
     setCoursesWithGrades([...updatedCourses]);
-    console.log(`Course toggle completed`);
   };
 
   // Use unified grading color function

@@ -4,7 +4,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthManager } from '@/utils/auth';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -99,7 +99,6 @@ const LoginScreen = () => {
           // Start preloading schedule data in the background
           const { SchedulePreloader } = await import('@/utils/schedulePreloader');
           SchedulePreloader.preloadSchedule().catch(error => {
-            console.log('Schedule preload failed:', error);
             // Don't show error to user - preloading is optional
           });
           

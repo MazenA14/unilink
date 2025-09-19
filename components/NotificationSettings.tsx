@@ -6,11 +6,11 @@ import { pushNotificationService } from '@/utils/services/pushNotificationServic
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 interface NotificationSettingsProps {
@@ -87,7 +87,6 @@ export default function NotificationSettings({ onClose }: NotificationSettingsPr
               buttons: [{ 
                 text: 'Got it!',
                 onPress: () => {
-                  console.log('Got it button pressed!');
                 }
               }]
             });

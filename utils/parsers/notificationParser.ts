@@ -12,7 +12,6 @@ export function parseNotifications(htmlContent: string): Notification[] {
     // Extract the table body content that contains the notifications
     const tableBodyMatch = htmlContent.match(/<tbody[^>]*>(.*?)<\/tbody>/s);
     if (!tableBodyMatch) {
-      console.warn('No table body found in notifications HTML');
       return notifications;
     }
 
@@ -21,7 +20,6 @@ export function parseNotifications(htmlContent: string): Notification[] {
     // Split by table rows and process each notification
     const rowMatches = tableBodyContent.match(/<tr[^>]*>(.*?)<\/tr>/gs);
     if (!rowMatches) {
-      console.warn('No table rows found in notifications HTML');
       return notifications;
     }
 
@@ -32,12 +30,11 @@ export function parseNotifications(htmlContent: string): Notification[] {
           notifications.push(notification);
         }
       } catch (error) {
-        console.warn('Error parsing notification row:', error);
         // Continue processing other rows
       }
     }
   } catch (error) {
-    console.error('Error parsing notifications HTML:', error);
+    // Error parsing notifications HTML
   }
 
   return notifications;
@@ -53,7 +50,6 @@ function parseNotificationRow(rowHtml: string): Notification | null {
     // Extract table cells
     const cellMatches = rowHtml.match(/<td[^>]*>(.*?)<\/td>/gs);
     if (!cellMatches || cellMatches.length < 6) {
-      console.warn('Invalid notification row structure');
       return null;
     }
 
@@ -80,7 +76,6 @@ function parseNotificationRow(rowHtml: string): Notification | null {
 
     // Validate required fields
     if (!id || !title) {
-      console.warn('Missing required fields for notification:', { id, title });
       return null;
     }
 
@@ -95,7 +90,6 @@ function parseNotificationRow(rowHtml: string): Notification | null {
       createdAt: new Date().toISOString(),
     };
   } catch (error) {
-    console.warn('Error parsing notification row:', error);
     return null;
   }
 }
@@ -183,7 +177,6 @@ function parseNotificationDate(dateString: string): Date | null {
     // Fallback to default Date parsing
     return new Date(dateString);
   } catch (error) {
-    console.warn('Error parsing date:', dateString, error);
     return null;
   }
 }

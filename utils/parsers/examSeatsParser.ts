@@ -62,7 +62,6 @@ export function parseExamSeatsHTML(html: string): ExamSeatsData {
 
     return { examSeats, studentName: extractedName };
   } catch (error) {
-    console.error('Error parsing exam seats HTML:', error);
     return { examSeats: [], studentName: '' };
   }
 }
@@ -144,7 +143,7 @@ function parseExamDate(dateStr: string): Date {
       }
     }
   } catch (error) {
-    console.error('Error parsing exam date:', error);
+    // Error parsing exam date
   }
   
   // Return a far future date if parsing fails

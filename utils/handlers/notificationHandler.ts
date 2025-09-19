@@ -65,7 +65,6 @@ export async function fetchNotifications(): Promise<NotificationApiResponse> {
       success: true,
     };
   } catch (error) {
-    console.error('Error fetching notifications:', error);
     return {
       htmlContent: '',
       success: false,

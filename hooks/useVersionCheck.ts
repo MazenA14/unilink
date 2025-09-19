@@ -10,7 +10,6 @@ export function useVersionCheck() {
   const checkForUpdates = useCallback(async () => {
     // Skip version check in development mode
     if (__DEV__ || Constants.appOwnership === 'expo') {
-      console.log('Skipping version check in development mode');
       return;
     }
 
@@ -29,7 +28,6 @@ export function useVersionCheck() {
         setShowUpdateModal(true);
       }
     } catch (error) {
-      console.error('Version check error:', error);
       // Silently fail - don't block the user experience
     } finally {
       setIsChecking(false);

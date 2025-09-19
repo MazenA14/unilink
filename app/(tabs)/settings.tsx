@@ -114,7 +114,6 @@ export default function SettingsScreen() {
               buttons: [{ 
                 text: 'Got it!',
                 onPress: () => {
-                  console.log('Got it button pressed!');
                 }
               }]
             });
@@ -197,7 +196,6 @@ export default function SettingsScreen() {
         const fetched = await GUCAPIProxy.getOutstandingPayments();
         setPayments(fetched);
       } catch (error) {
-        console.error('Error fetching payments:', error);
       } finally {
         setLoadingPayments(false);
       }

@@ -269,7 +269,6 @@ export class NotificationDesignService {
         },
       ]);
     } catch (error) {
-      console.error('Error setting up notification categories:', error);
     }
   }
 }

@@ -33,7 +33,6 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
         
         // If no mapping in cache, try to load available courses and create mapping
         if (!mapping) {
-          console.log('No course mapping in cache, loading available courses...');
           try {
             const availableCourses = await GUCAPIProxy.getAvailableCourses();
             
@@ -46,9 +45,7 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
             // Cache the mapping
             await GradeCache.setCachedCourseIdToName(courseIdToNameMapping);
             mapping = courseIdToNameMapping;
-            console.log('Course mapping created and cached');
           } catch (error) {
-            console.error('Error loading available courses for mapping:', error);
           }
         }
         
@@ -56,7 +53,6 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
           setCourseNameMapping(mapping);
         }
       } catch (error) {
-        console.error('Error loading course name mapping:', error);
       }
     };
     

@@ -43,7 +43,6 @@ export default function CourseGradeSelector({
       const availableCourses = await GUCAPIProxy.getAvailableCourses();
       setCourses(availableCourses);
     } catch (error) {
-      console.error('Error loading courses:', error);
       Alert.alert('Error', 'Failed to load available courses. Please try again.');
     } finally {
       setLoadingCourses(false);
@@ -60,7 +59,6 @@ export default function CourseGradeSelector({
       const courseGrades = await GUCAPIProxy.getCourseGrades(course.value);
       setGrades(courseGrades);
     } catch (error) {
-      console.error('Error loading course grades:', error);
       Alert.alert('Error', 'Failed to load grades for the selected course. Please try again.');
     } finally {
       setLoadingGrades(false);

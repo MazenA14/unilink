@@ -71,7 +71,6 @@ export class GUCAPIProxy {
    */
   static async getAvailableSeasons(): Promise<{value: string, text: string}[]> {
     try {
-      console.log('Fetching seasons through proxy...');
       
       const data = await this.makeProxyRequest(
         'https://apps.guc.edu.eg/student_ext/Grade/CheckGradePerviousSemester_01.aspx'
@@ -98,10 +97,8 @@ export class GUCAPIProxy {
         }
       }
 
-console.log(`Found ${seasons.length} seasons`);
       return seasons;
     } catch (error) {
-      console.log('Error fetching available seasons:', error);
       throw error;
     }
   }
@@ -115,7 +112,6 @@ console.log(`Found ${seasons.length} seasons`);
     midtermGrades: GradeData[]
   } | null> {
     try {
-      console.log(`=== PROCESSING SEASON ${seasonId} ===`);
       
       // Step 1: Get initial page to extract view state
       const initialData = await this.makeProxyRequest(
@@ -147,16 +143,13 @@ console.log(`Found ${seasons.length} seasons`);
       
       // Step 3: Extract courses from dropdown
       const courses = extractCourses(html);
-      console.log(`Found ${courses.length} courses for season ${seasonId}`);
       
       // Step 4: Extract midterm grades from the midterm table
       const midtermGrades = extractGradeData(html);
-      console.log(`Found ${midtermGrades.length} midterm grades for season ${seasonId}`);
       
       // If no courses found but have midterm grades, create courses from grades
       let finalCourses = courses;
       if (courses.length === 0 && midtermGrades.length > 0) {
-        console.log('No courses in dropdown, creating from midterm grades...');
         finalCourses = midtermGrades.map((grade, index) => ({
           value: `grade_${index}`,
           text: grade.course
@@ -165,11 +158,9 @@ console.log(`Found ${seasons.length} seasons`);
       
       // Only return season data if it has courses (and potentially grades)
       if (finalCourses.length === 0) {
-        console.log(`Season ${seasonId} has no courses, skipping...`);
         return null;
       }
       
-      console.log(`Season ${seasonId}: ${finalCourses.length} courses, ${midtermGrades.length} midterm grades`);
       return {
         seasonId,
         courses: finalCourses,
@@ -177,7 +168,6 @@ console.log(`Found ${seasons.length} seasons`);
       };
       
     } catch (error) {
-      console.log(`Error processing season ${seasonId}:`, error);
       return null;
     }
   }
@@ -192,11 +182,9 @@ console.log(`Found ${seasons.length} seasons`);
     midtermGrades: GradeData[]
   }[]> {
     try {
-      console.log('=== FETCHING ALL SEASONS WITH DATA ===');
       
       // Step 1: Get all available seasons
       const allSeasons = await this.getAvailableSeasons();
-      console.log(`Found ${allSeasons.length} seasons to process`);
       
       // Step 2: Process each season to get courses and grades
       const seasonsWithData: {
@@ -207,7 +195,6 @@ console.log(`Found ${seasons.length} seasons`);
       }[] = [];
       
       for (const season of allSeasons) {
-        console.log(`Processing season: ${season.text} (${season.value})`);
         
         const seasonData = await this.getSeasonWithCoursesAndGrades(season.value);
         
@@ -218,16 +205,12 @@ console.log(`Found ${seasons.length} seasons`);
             courses: seasonData.courses,
             midtermGrades: seasonData.midtermGrades
           });
-          console.log(`✅ Added season: ${season.text} with ${seasonData.courses.length} courses`);
         } else {
-          console.log(`❌ Skipped season: ${season.text} (no courses)`);
         }
       }
       
-      console.log(`=== COMPLETED: ${seasonsWithData.length}/${allSeasons.length} seasons have data ===`);
       return seasonsWithData;
     } catch (error) {
-      console.log('Error fetching all seasons with data:', error);
       throw error;
     }
   }
@@ -237,7 +220,6 @@ console.log(`Found ${seasons.length} seasons`);
    */
   static async getAvailableCourses(seasonId: string): Promise<{value: string, text: string}[]> {
     try {
-      console.log(`Fetching courses for season ${seasonId}...`);
 
       // Step 1: Get initial page to extract view state
       const initialData = await this.makeProxyRequest(
@@ -245,7 +227,6 @@ console.log(`Found ${seasons.length} seasons`);
       );
 
       const initialHtml = initialData.html || initialData.body;
-console.log('Initial HTML length:', initialHtml.length);
       
       const viewStateData = extractViewState(initialHtml);
 
@@ -254,7 +235,6 @@ console.log('Initial HTML length:', initialHtml.length);
       }
 
       // Step 2: Make POST request to get courses for the season
-      console.log(`Setting season to ${seasonId} for course extraction`);
       const formBody = new URLSearchParams({
         ...viewStateData,
         'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$Dropdownlistseason': seasonId,
@@ -262,7 +242,6 @@ console.log('Initial HTML length:', initialHtml.length);
         '__EVENTARGUMENT': '',
       });
 
-console.log('Making POST request for courses...');
       const responseData = await this.makeProxyRequest(
         'https://apps.guc.edu.eg/student_ext/Grade/CheckGradePerviousSemester_01.aspx',
         'POST',
@@ -270,14 +249,12 @@ console.log('Making POST request for courses...');
       );
 
       const html = responseData.html || responseData.body;
-console.log('Response HTML length:', html.length);
       
       // Try to extract courses
       const courses = extractCourses(html);
       
       // Fallback: If no course dropdown found, extract course names from grade data
       if (courses.length === 0) {
-console.log('No courses found in dropdown, trying to extract from grade data...');
         const grades = extractGradeData(html);
         const courseMap = new Map<string, string>();
         
@@ -295,13 +272,11 @@ console.log('No courses found in dropdown, trying to extract from grade data...'
           text: courseName
         }));
         
-console.log(`Fallback: extracted ${fallbackCourses.length} courses from grade data`);
         return fallbackCourses;
       }
       
       return courses;
     } catch (error) {
-console.log('Error fetching courses:', error);
       throw error;
     }
   }
@@ -311,8 +286,6 @@ console.log('Error fetching courses:', error);
    */
   static async getDetailedCourseGrades(seasonId: string, courseId: string): Promise<GradeData[]> {
     try {
-      console.log(`=== FETCHING DETAILED GRADES ===`);
-      console.log(`Season: ${seasonId}, Course: ${courseId}`);
       
       // Step 1: Get initial page to extract view state
       const initialData = await this.makeProxyRequest(
@@ -362,11 +335,9 @@ console.log('Error fetching courses:', error);
       
       // Step 4: Extract detailed course grades from Quiz/Assignment table
       const detailedGrades = extractCourseGradeData(courseHtml);
-      console.log(`Found ${detailedGrades.length} detailed grades for course ${courseId}`);
       
       return detailedGrades;
     } catch (error) {
-      console.log('Error fetching detailed course grades:', error);
       return [];
     }
   }
@@ -376,7 +347,6 @@ console.log('Error fetching courses:', error);
    */
   static async getPreviousGrades(seasonId: string, courseId?: string): Promise<GradeData[]> {
     try {
-      console.log(`Fetching grades for season ${seasonId}${courseId ? ` and course ${courseId}` : ''}...`);
 
       // Step 1: Get initial page to extract view state
       const initialData = await this.makeProxyRequest(
@@ -409,16 +379,7 @@ console.log('Error fetching courses:', error);
 
       // If no specific course requested, return mid-term (season) results
       if (!courseId) {
-      console.log('=== DEBUGGING MIDTERM GRADE EXTRACTION ===');
-      console.log('Season HTML length:', seasonHtml.length);
-      console.log('Contains "Mid-Term":', seasonHtml.includes('Mid-Term'));
-      console.log('Contains "midDg":', seasonHtml.includes('midDg'));
         const seasonGrades = extractGradeData(seasonHtml);
-        console.log(`Found ${seasonGrades.length} grades for season ${seasonId}`);
-        if (seasonGrades.length > 0) {
-        console.log('Sample grades:', seasonGrades.slice(0, 3));
-        }
-        console.log('==========================================');
         return seasonGrades;
       }
 
@@ -443,16 +404,13 @@ console.log('Error fetching courses:', error);
       const courseHtml = coursePost.html || coursePost.body;
       // Only extract course-specific items (Quiz/Assignment table). Don't fallback to mid-term table.
       const courseSpecific = extractCourseGradeData(courseHtml);
-console.log(`Found ${courseSpecific.length} course-specific grades for course ${courseId} in season ${seasonId}`);
       
       // If no course-specific grades found, return empty array instead of falling back to midterm grades
       if (courseSpecific.length === 0) {
-console.log(`No detailed grades available for course ${courseId}, returning empty array`);
       }
       
       return courseSpecific;
     } catch (error) {
-console.log('Error fetching previous grades:', error);
       throw error;
     }
   }
@@ -462,7 +420,6 @@ console.log('Error fetching previous grades:', error);
    */
   static async getAvailableCourses(): Promise<{value: string, text: string}[]> {
     try {
-      console.log('Fetching available courses...');
       
       const data = await this.makeProxyRequest(
         'https://apps.guc.edu.eg/student_ext/Grade/CheckGrade_01.aspx'
@@ -474,20 +431,11 @@ console.log('Error fetching previous grades:', error);
         throw new Error('No HTML content received from proxy');
       }
 
-      console.log('=== COURSE EXTRACTION DEBUG ===');
-      console.log('HTML length:', html.length);
-      console.log('Contains "smCrsLst":', html.includes('smCrsLst'));
       
       const courses = extractCourses(html);
-      console.log(`Found ${courses.length} available courses`);
-      if (courses.length > 0) {
-        console.log('Sample courses:', courses.slice(0, 3));
-      }
-      console.log('==========================================');
       
       return courses;
     } catch (error) {
-      console.log('Error fetching available courses:', error);
       throw error;
     }
   }
@@ -497,7 +445,6 @@ console.log('Error fetching previous grades:', error);
    */
   static async getCourseGrades(courseId: string): Promise<GradeData[]> {
     try {
-      console.log(`Fetching grades for course: ${courseId}`);
       
       // First get the initial page to extract view state
       const initialData = await this.makeProxyRequest(
@@ -518,12 +465,6 @@ console.log('Error fetching previous grades:', error);
       const studentId = studentIdMatch ? studentIdMatch[1] : '';
       const seasonId = seasonIdMatch ? seasonIdMatch[1] : '';
       
-      console.log('Extracted hidden fields:', { studentId, seasonId });
-      console.log('View state extracted:', { 
-        viewState: viewState.__VIEWSTATE ? 'present' : 'missing',
-        viewStateGenerator: viewState.__VIEWSTATEGENERATOR ? 'present' : 'missing',
-        eventValidation: viewState.__EVENTVALIDATION ? 'present' : 'missing'
-      });
       
       // Create form data to select the course
       const formData = new URLSearchParams();
@@ -543,7 +484,6 @@ console.log('Error fetching previous grades:', error);
         formData.append('ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$HiddenFieldseason', seasonId);
       }
       
-      console.log('Form data being sent:', formData.toString());
       
       // Submit the form to select the course
       const courseData = await this.makeProxyRequest(
@@ -558,19 +498,11 @@ console.log('Error fetching previous grades:', error);
         throw new Error('No HTML content received after course selection');
       }
       
-      console.log('=== COURSE GRADE EXTRACTION DEBUG ===');
-      console.log('HTML length after course selection:', courseHtml.length);
-      console.log('Contains "Mid-Term Results":', courseHtml.includes('Mid-Term Results'));
-      console.log('Contains "Quiz/Assignment":', courseHtml.includes('Quiz/Assignment'));
-      console.log('Contains "midDg":', courseHtml.includes('midDg'));
-      console.log('Contains "rptrNtt":', courseHtml.includes('rptrNtt'));
       
       // Check if the course was actually selected by looking for the selected option
       const selectedCourseMatch = courseHtml.match(/<option[^>]*selected="selected"[^>]*value="([^"]*)"[^>]*>([^<]*)<\/option>/i);
       if (selectedCourseMatch) {
-        console.log('Selected course found:', { value: selectedCourseMatch[1], text: selectedCourseMatch[2] });
       } else {
-        console.log('No selected course found in HTML');
       }
       
       // Extract both mid-term results and quiz/assignment grades
@@ -579,12 +511,9 @@ console.log('Error fetching previous grades:', error);
       
       const allGrades = [...midtermGrades, ...courseGrades];
       
-      console.log(`Found ${midtermGrades.length} mid-term grades and ${courseGrades.length} course grades`);
-      console.log('==========================================');
       
       return allGrades;
     } catch (error) {
-      console.log('Error fetching course grades:', error);
       throw error;
     }
   }
@@ -594,7 +523,6 @@ console.log('Error fetching previous grades:', error);
    */
   static async getCurrentGrades(): Promise<GradeData[]> {
     try {
-      console.log('Fetching current grades...');
       
       const data = await this.makeProxyRequest(
         'https://apps.guc.edu.eg/student_ext/Grade/CheckGrade_01.aspx'
@@ -606,21 +534,11 @@ console.log('Error fetching previous grades:', error);
         throw new Error('No HTML content received from proxy');
       }
 
-      console.log('=== CURRENT GRADES EXTRACTION DEBUG ===');
-      console.log('HTML length:', html.length);
-      console.log('Contains "Mid-Term Results":', html.includes('Mid-Term Results'));
-      console.log('Contains "midDg":', html.includes('midDg'));
       
       const grades = extractGradeData(html);
-      console.log(`Found ${grades.length} current grades`);
-      if (grades.length > 0) {
-      console.log('Sample grades:', grades.slice(0, 3));
-      }
-      console.log('==========================================');
       
       return grades;
     } catch (error) {
-      console.log('Error fetching current grades:', error);
       throw error;
     }
   }
@@ -647,7 +565,6 @@ console.log('Error fetching previous grades:', error);
 
       return null;
     } catch (e) {
-console.log('Error fetching user id:', e);
       return null;
     }
   }
@@ -660,12 +577,10 @@ console.log('Error fetching user id:', e);
     if (!bypassCache) {
       const cachedData = await GradeCache.getCachedScheduleData();
       if (cachedData) {
-        console.log('[CACHE] Using cached schedule data');
         return cachedData;
       }
     }
 
-    console.log('[CACHE] Fetching fresh schedule data from server...');
     const freshData = await getScheduleData();
     
     // Cache the fresh data
@@ -685,7 +600,6 @@ console.log('Error fetching user id:', e);
    */
   static async getExamSeats(): Promise<string> {
     try {
-      console.log('Fetching exam seats data...');
       
       const data = await this.makeProxyRequest(
         'https://apps.guc.edu.eg/student_ext/Exam/ViewExamSeat_01.aspx'
@@ -697,10 +611,8 @@ console.log('Error fetching user id:', e);
         throw new Error('No HTML content received from proxy');
       }
 
-      console.log('Exam seats HTML length:', html.length);
       return html;
     } catch (error) {
-      console.error('Error fetching exam seats:', error);
       throw error;
     }
   }

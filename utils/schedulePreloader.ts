@@ -33,15 +33,11 @@ export class SchedulePreloader {
    */
   private static async performPreload(): Promise<void> {
     try {
-      console.log('[SCHEDULE PRELOADER] Starting schedule preload...');
-      
       // Use the cached API which will either return cached data or fetch fresh data
       const scheduleData = await GUCAPIProxy.getScheduleData();
       
-      console.log('[SCHEDULE PRELOADER] Schedule preload completed successfully');
       return scheduleData;
     } catch (error) {
-      console.log('[SCHEDULE PRELOADER] Schedule preload failed:', error);
       // Don't throw error - preloading is optional and shouldn't break the login flow
     }
   }

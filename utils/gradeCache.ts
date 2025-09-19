@@ -160,26 +160,20 @@ export class GradeCache {
    */
   private static async getCachedData<T>(key: string): Promise<T | null> {
     try {
-      console.log(`[CACHE] Getting cached data for key: ${key}`);
       const cachedData = await AsyncStorage.getItem(key);
       if (!cachedData) {
-        console.log(`[CACHE] No cached data found for key: ${key}`);
         return null;
       }
 
       const parsed: CachedData<T> = JSON.parse(cachedData);
-      console.log(`[CACHE] Found cached data for key: ${key}, timestamp: ${parsed.timestamp}`);
       
       if (!this.isCacheValid(parsed.timestamp)) {
-        console.log(`[CACHE] Cache expired for ${key}, removing...`);
         await AsyncStorage.removeItem(key);
         return null;
       }
 
-      console.log(`[CACHE] Cache hit for ${key}`);
       return parsed.data;
     } catch (error) {
-      console.log(`[CACHE] Error reading cache for ${key}:`, error);
       return null;
     }
   }
@@ -189,26 +183,20 @@ export class GradeCache {
    */
   private static async getPermanentCachedData<T>(key: string): Promise<T | null> {
     try {
-      console.log(`[CACHE] Getting permanent cached data for key: ${key}`);
       const cachedData = await AsyncStorage.getItem(key);
       if (!cachedData) {
-        console.log(`[CACHE] No permanent cached data found for key: ${key}`);
         return null;
       }
 
       const parsed: CachedData<T> = JSON.parse(cachedData);
-      console.log(`[CACHE] Found permanent cached data for key: ${key}, timestamp: ${parsed.timestamp}`);
       
       if (!this.isPreviousGradesCacheValid(parsed.timestamp)) {
-        console.log(`[CACHE] Permanent cache expired for ${key}, removing...`);
         await AsyncStorage.removeItem(key);
         return null;
       }
 
-      console.log(`[CACHE] Permanent cache hit for ${key}`);
       return parsed.data;
     } catch (error) {
-      console.log(`[CACHE] Error reading permanent cache for ${key}:`, error);
       return null;
     }
   }
@@ -222,11 +210,8 @@ export class GradeCache {
         data,
         timestamp: Date.now(),
       };
-      console.log(`[CACHE] Setting data for key: ${key}, data size: ${JSON.stringify(cacheData).length} chars`);
       await AsyncStorage.setItem(key, JSON.stringify(cacheData));
-      console.log(`[CACHE] Successfully cached data for ${key}`);
     } catch (error) {
-      console.log(`[CACHE] Error caching data for ${key}:`, error);
     }
   }
 
@@ -257,9 +242,7 @@ export class GradeCache {
         await this.setCachedData(CACHE_KEYS.DETAILED_GRADES, detailedCache);
       }
 
-      console.log(`Cleared cache for season ${seasonId}`);
     } catch (error) {
-      console.log(`Error clearing cache for season ${seasonId}:`, error);
     }
   }
 
@@ -370,9 +353,7 @@ export class GradeCache {
   static async clearCurrentGradesCache(): Promise<void> {
     try {
       await AsyncStorage.removeItem(CACHE_KEYS.CURRENT_GRADES);
-      console.log('Cleared current grades cache');
     } catch (error) {
-      console.log('Error clearing current grades cache:', error);
     }
   }
 
@@ -398,9 +379,7 @@ export class GradeCache {
   static async clearCurrentCoursesCache(): Promise<void> {
     try {
       await AsyncStorage.removeItem(CACHE_KEYS.CURRENT_COURSES);
-      console.log('Cleared current courses cache');
     } catch (error) {
-      console.log('Error clearing current courses cache:', error);
     }
   }
 
@@ -442,9 +421,7 @@ export class GradeCache {
   static async clearCurrentCourseGradesCache(): Promise<void> {
     try {
       await AsyncStorage.removeItem(CACHE_KEYS.CURRENT_COURSE_GRADES);
-      console.log('Cleared current course grades cache');
     } catch (error) {
-      console.log('Error clearing current course grades cache:', error);
     }
   }
 
@@ -512,9 +489,7 @@ export class GradeCache {
         await this.setCachedDetailedGrades(seasonId, courseId, grades);
       }
       
-      console.log(`Pre-cached all data for season ${seasonId}: ${courses.length} courses, ${midtermGrades.length} midterm grades, ${Object.keys(detailedGradesMap).length} detailed grade sets`);
     } catch (error) {
-      console.log(`Error pre-caching season data for ${seasonId}:`, error);
     }
   }
 
@@ -598,7 +573,6 @@ export class GradeCache {
         totalCacheSize,
       };
     } catch (error) {
-      console.log('Error getting cache stats:', error);
       return {
         seasonsWithGrades: false,
         coursesCount: 0,
@@ -627,15 +601,12 @@ export class GradeCache {
       const parsed: CachedStudyYearsData = JSON.parse(cachedData);
       
       if (!this.isTranscriptCacheValid(parsed.timestamp)) {
-        console.log('Study years cache expired, removing...');
         await AsyncStorage.removeItem(CACHE_KEYS.STUDY_YEARS);
         return null;
       }
 
-      console.log('Study years cache hit');
       return parsed.studyYears;
     } catch (error) {
-      console.log('Error reading study years cache:', error);
       return null;
     }
   }
@@ -650,9 +621,7 @@ export class GradeCache {
         timestamp: Date.now(),
       };
       await AsyncStorage.setItem(CACHE_KEYS.STUDY_YEARS, JSON.stringify(cacheData));
-      console.log(`Cached ${studyYears.length} study years`);
     } catch (error) {
-      console.log('Error caching study years:', error);
     }
   }
 
@@ -661,35 +630,26 @@ export class GradeCache {
    */
   static async getCachedTranscriptData(studyYearId: string): Promise<TranscriptData | null> {
     try {
-      console.log(`[CACHE] Getting cached transcript data for year: "${studyYearId}"`);
       const cachedData = await AsyncStorage.getItem(CACHE_KEYS.TRANSCRIPT_DATA);
       if (!cachedData) {
-        console.log(`[CACHE] No cached data found for key: ${CACHE_KEYS.TRANSCRIPT_DATA}`);
         return null;
       }
 
       const parsed: CachedTranscriptData = JSON.parse(cachedData);
-      console.log(`[CACHE] Parsed cache data keys:`, Object.keys(parsed));
       if (!parsed[studyYearId]) {
-        console.log(`[CACHE] No data found for study year: "${studyYearId}"`);
         return null;
       }
       
       const yearData = parsed[studyYearId];
-      console.log(`[CACHE] Found data for year "${studyYearId}", timestamp: ${yearData.timestamp}`);
-      console.log(`[CACHE] Cache age: ${Date.now() - yearData.timestamp}ms, expiry: ${TRANSCRIPT_CACHE_EXPIRY_MS}ms`);
       
       if (!this.isTranscriptCacheValid(yearData.timestamp)) {
-        console.log(`[CACHE] Transcript cache expired for year ${studyYearId}, removing...`);
         delete parsed[studyYearId];
         await AsyncStorage.setItem(CACHE_KEYS.TRANSCRIPT_DATA, JSON.stringify(parsed));
         return null;
       }
 
-      console.log(`[CACHE] Transcript cache hit for year ${studyYearId}`);
       return yearData.transcriptData;
     } catch (error) {
-      console.log(`[CACHE] Error reading transcript cache for year ${studyYearId}:`, error);
       return null;
     }
   }
@@ -699,7 +659,6 @@ export class GradeCache {
    */
   static async setCachedTranscriptData(studyYearId: string, transcriptData: TranscriptData): Promise<void> {
     try {
-      console.log(`[CACHE] Setting cached transcript data for year: "${studyYearId}"`);
       
       // Get existing cached data directly from AsyncStorage to avoid expiry checks
       let cachedData: CachedTranscriptData = {};
@@ -709,21 +668,16 @@ export class GradeCache {
           cachedData = JSON.parse(existingData);
         }
       } catch {
-        console.log(`[CACHE] No existing transcript cache data, starting fresh`);
       }
       
-      console.log(`[CACHE] Existing cache keys:`, Object.keys(cachedData));
       
       cachedData[studyYearId] = {
         transcriptData,
         timestamp: Date.now(),
       };
       
-      console.log(`[CACHE] About to cache data for year "${studyYearId}" with timestamp: ${Date.now()}`);
       await AsyncStorage.setItem(CACHE_KEYS.TRANSCRIPT_DATA, JSON.stringify(cachedData));
-      console.log(`[CACHE] Successfully cached transcript data for year ${studyYearId}`);
     } catch (error) {
-      console.log(`[CACHE] Error caching transcript data for year ${studyYearId}:`, error);
     }
   }
 
@@ -736,10 +690,8 @@ export class GradeCache {
       if (cachedData && cachedData[studyYearId]) {
         delete cachedData[studyYearId];
         await this.setCachedData(CACHE_KEYS.TRANSCRIPT_DATA, cachedData);
-        console.log(`Cleared transcript cache for year ${studyYearId}`);
       }
     } catch (error) {
-      console.log(`Error clearing transcript cache for year ${studyYearId}:`, error);
     }
   }
 
@@ -750,9 +702,7 @@ export class GradeCache {
     try {
       await AsyncStorage.removeItem(CACHE_KEYS.STUDY_YEARS);
       await AsyncStorage.removeItem(CACHE_KEYS.TRANSCRIPT_DATA);
-      console.log('Cleared all transcript cache');
     } catch (error) {
-      console.log('Error clearing transcript cache:', error);
     }
   }
 
@@ -761,26 +711,20 @@ export class GradeCache {
    */
   static async getCachedScheduleData(): Promise<ScheduleData | null> {
     try {
-      console.log(`[CACHE] Getting cached schedule data for key: ${CACHE_KEYS.SCHEDULE_DATA}`);
       const cachedData = await AsyncStorage.getItem(CACHE_KEYS.SCHEDULE_DATA);
       if (!cachedData) {
-        console.log(`[CACHE] No cached schedule data found for key: ${CACHE_KEYS.SCHEDULE_DATA}`);
         return null;
       }
 
       const parsed: CachedData<ScheduleData> = JSON.parse(cachedData);
-      console.log(`[CACHE] Found cached schedule data, timestamp: ${parsed.timestamp}`);
       
       if (!this.isScheduleCacheValid(parsed.timestamp)) {
-        console.log(`[CACHE] Schedule cache expired, removing...`);
         await AsyncStorage.removeItem(CACHE_KEYS.SCHEDULE_DATA);
         return null;
       }
 
-      console.log(`[CACHE] Schedule cache hit`);
       return parsed.data;
     } catch (error) {
-      console.log(`[CACHE] Error reading schedule cache:`, error);
       return null;
     }
   }
@@ -796,9 +740,7 @@ export class GradeCache {
       };
       
       await AsyncStorage.setItem(CACHE_KEYS.SCHEDULE_DATA, JSON.stringify(cachedData));
-      console.log(`[CACHE] Schedule data cached successfully`);
     } catch (error) {
-      console.log(`[CACHE] Error caching schedule data:`, error);
     }
   }
 
@@ -808,9 +750,7 @@ export class GradeCache {
   static async clearScheduleCache(): Promise<void> {
     try {
       await AsyncStorage.removeItem(CACHE_KEYS.SCHEDULE_DATA);
-      console.log('Cleared schedule cache');
     } catch (error) {
-      console.log('Error clearing schedule cache:', error);
     }
   }
 
@@ -819,26 +759,20 @@ export class GradeCache {
    */
   static async getCachedCourseIdToName(): Promise<CourseIdToNameMapping | null> {
     try {
-      console.log(`[CACHE] Getting cached course ID to name mapping for key: ${CACHE_KEYS.COURSE_ID_TO_NAME}`);
       const cachedData = await AsyncStorage.getItem(CACHE_KEYS.COURSE_ID_TO_NAME);
       if (!cachedData) {
-        console.log(`[CACHE] No cached course ID to name mapping found for key: ${CACHE_KEYS.COURSE_ID_TO_NAME}`);
         return null;
       }
 
       const parsed: CachedData<CourseIdToNameMapping> = JSON.parse(cachedData);
-      console.log(`[CACHE] Found cached course ID to name mapping, timestamp: ${parsed.timestamp}`);
       
       if (!this.isCacheValid(parsed.timestamp)) {
-        console.log(`[CACHE] Course ID to name mapping cache expired, removing...`);
         await AsyncStorage.removeItem(CACHE_KEYS.COURSE_ID_TO_NAME);
         return null;
       }
 
-      console.log(`[CACHE] Course ID to name mapping cache hit`);
       return parsed.data;
     } catch (error) {
-      console.log(`[CACHE] Error reading course ID to name mapping cache:`, error);
       return null;
     }
   }
@@ -854,9 +788,7 @@ export class GradeCache {
       };
       
       await AsyncStorage.setItem(CACHE_KEYS.COURSE_ID_TO_NAME, JSON.stringify(cachedData));
-      console.log(`[CACHE] Course ID to name mapping cached successfully`);
     } catch (error) {
-      console.log(`[CACHE] Error caching course ID to name mapping:`, error);
     }
   }
 
@@ -866,9 +798,7 @@ export class GradeCache {
   static async clearCourseIdToNameCache(): Promise<void> {
     try {
       await AsyncStorage.removeItem(CACHE_KEYS.COURSE_ID_TO_NAME);
-      console.log('Cleared course ID to name mapping cache');
     } catch (error) {
-      console.log('Error clearing course ID to name mapping cache:', error);
     }
   }
 
@@ -881,9 +811,7 @@ export class GradeCache {
       await AsyncStorage.removeItem(CACHE_KEYS.COURSES);
       await AsyncStorage.removeItem(CACHE_KEYS.MIDTERM_GRADES);
       await AsyncStorage.removeItem(CACHE_KEYS.DETAILED_GRADES);
-      console.log('Cleared previous grades cache (permanent cache)');
     } catch (error) {
-      console.log('Error clearing previous grades cache:', error);
     }
   }
 
@@ -904,9 +832,7 @@ export class GradeCache {
       ];
       
       await Promise.all(keysToClear.map(key => AsyncStorage.removeItem(key)));
-      console.log('Cleared all cache (excluding permanent previous grades cache)');
     } catch (error) {
-      console.log('Error clearing cache:', error);
     }
   }
 
@@ -917,9 +843,7 @@ export class GradeCache {
     try {
       const keys = Object.values(CACHE_KEYS);
       await Promise.all(keys.map(key => AsyncStorage.removeItem(key)));
-      console.log('Cleared all cache (including permanent previous grades cache)');
     } catch (error) {
-      console.log('Error clearing all cache:', error);
     }
   }
 }

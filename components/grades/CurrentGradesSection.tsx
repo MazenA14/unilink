@@ -67,7 +67,6 @@ export default function CurrentGradesSection({
       const course = courses.find(c => c.value === courseId);
       return course ? course.text : null;
     } catch (error) {
-      console.error('Error getting course name by ID:', error);
       return null;
     }
   };
@@ -117,7 +116,6 @@ export default function CurrentGradesSection({
       }));
       setCoursesWithGrades(initialCoursesWithGrades);
     } catch (error) {
-      console.error('Error loading courses:', error);
       Alert.alert('Error', 'Failed to load available courses. Please try again.');
     } finally {
       setLoadingCourses(false);
@@ -146,7 +144,6 @@ export default function CurrentGradesSection({
       updatedCourses[courseIndex].isLoadingDetails = false;
       setCoursesWithGrades([...updatedCourses]);
     } catch (error) {
-      console.error('Error loading course grades:', error);
       const updatedCourses = [...coursesWithGrades];
       updatedCourses[courseIndex].isLoadingDetails = false;
       setCoursesWithGrades([...updatedCourses]);
@@ -197,7 +194,6 @@ export default function CurrentGradesSection({
         await onRefresh();
       }
     } catch (error) {
-      console.error('Error refreshing current grades:', error);
     }
   };
 

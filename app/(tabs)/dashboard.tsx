@@ -60,7 +60,6 @@ export default function DashboardScreen() {
         
         // If no mapping in cache, try to load available courses and create mapping
         if (!mapping) {
-          console.log('No course mapping in cache, loading available courses...');
           try {
             const availableCourses = await GUCAPIProxy.getAvailableCourses();
             
@@ -73,9 +72,7 @@ export default function DashboardScreen() {
             // Cache the mapping
             await GradeCache.setCachedCourseIdToName(courseIdToNameMapping);
             mapping = courseIdToNameMapping;
-            console.log('Course mapping created and cached');
           } catch (error) {
-            console.error('Error loading available courses for mapping:', error);
           }
         }
         
@@ -83,7 +80,6 @@ export default function DashboardScreen() {
           setCourseNameMapping(mapping);
         }
       } catch (error) {
-        console.error('Error loading course name mapping:', error);
       }
     };
     
@@ -366,7 +362,6 @@ export default function DashboardScreen() {
       refreshRotation.stopAnimation();
       refreshRotation.setValue(0);
     } catch (error) {
-      console.log('Failed to refresh schedule:', error);
       // Stop animation on error
       refreshRotation.stopAnimation();
       refreshRotation.setValue(0);

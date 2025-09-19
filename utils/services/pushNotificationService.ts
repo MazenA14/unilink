@@ -58,13 +58,11 @@ class PushNotificationServiceImpl implements PushNotificationService {
   async requestPermissions(): Promise<boolean> {
     try {
       if (!Device.isDevice) {
-        console.warn('Must use physical device for push notifications');
         return false;
       }
 
       // Check if running in Expo Go
       if (this.isExpoGo()) {
-        console.warn(this.getExpoGoWarning());
         // In Expo Go, we can still request permissions for local notifications
         // but we should check the actual system permission
         const { status } = await Notifications.getPermissionsAsync();
@@ -98,14 +96,11 @@ class PushNotificationServiceImpl implements PushNotificationService {
       await AsyncStorage.setItem(NOTIFICATION_PERMISSION_KEY, JSON.stringify(isGranted));
       
       if (isGranted) {
-        console.log('Notification permissions granted');
       } else {
-        console.log('Notification permissions denied');
       }
 
       return isGranted;
     } catch (error) {
-      console.error('Error requesting notification permissions:', error);
       return false;
     }
   }
@@ -116,13 +111,11 @@ class PushNotificationServiceImpl implements PushNotificationService {
   async getExpoPushToken(): Promise<string | null> {
     try {
       if (!Device.isDevice) {
-        console.warn('Must use physical device for push notifications');
         return null;
       }
 
       // Check if running in Expo Go - return early to avoid the error
       if (this.isExpoGo()) {
-        console.warn('Push tokens are not available in Expo Go. Use a development build for remote notifications.');
         return null;
       }
 
@@ -147,7 +140,6 @@ class PushNotificationServiceImpl implements PushNotificationService {
         // Cache the token
         await AsyncStorage.setItem(EXPO_PUSH_TOKEN_KEY, token.data);
         
-        console.log('Expo push token:', token.data);
         return token.data;
       }
       
@@ -155,10 +147,8 @@ class PushNotificationServiceImpl implements PushNotificationService {
     } catch (error) {
       // Suppress the specific Expo Go error
       if (error instanceof Error && error.message.includes('expo-notifications')) {
-        console.warn('Push notifications not available in Expo Go. Use a development build for full functionality.');
         return null;
       }
-      console.error('Error getting Expo push token:', error);
       return null;
     }
   }
@@ -176,7 +166,6 @@ class PushNotificationServiceImpl implements PushNotificationService {
       const token = await this.getExpoPushToken();
       return token;
     } catch (error) {
-      console.error('Error registering for push notifications:', error);
       return null;
     }
   }
@@ -202,7 +191,6 @@ class PushNotificationServiceImpl implements PushNotificationService {
         trigger: null, // Show immediately
       });
     } catch (error) {
-      console.error('Error scheduling local notification:', error);
     }
   }
 
@@ -218,7 +206,6 @@ class PushNotificationServiceImpl implements PushNotificationService {
         trigger: null, // Show immediately
       });
     } catch (error) {
-      console.error('Error scheduling GUC notification:', error);
     }
   }
 
@@ -234,7 +221,6 @@ class PushNotificationServiceImpl implements PushNotificationService {
         trigger: null, // Show immediately
       });
     } catch (error) {
-      console.error('Error scheduling batch notification:', error);
     }
   }
 
@@ -258,7 +244,6 @@ class PushNotificationServiceImpl implements PushNotificationService {
         trigger: null, // Show immediately
       });
     } catch (error) {
-      console.error('Error scheduling reminder notification:', error);
     }
   }
 
@@ -269,7 +254,6 @@ class PushNotificationServiceImpl implements PushNotificationService {
     try {
       await Notifications.dismissAllNotificationsAsync();
     } catch (error) {
-      console.error('Error clearing notifications:', error);
     }
   }
 
@@ -288,7 +272,6 @@ class PushNotificationServiceImpl implements PushNotificationService {
       
       return isGranted;
     } catch (error) {
-      console.error('Error checking notification permission:', error);
       return false;
     }
   }
@@ -299,12 +282,10 @@ class PushNotificationServiceImpl implements PushNotificationService {
   setupNotificationListeners() {
     // Handle notification received while app is in foreground
     Notifications.addNotificationReceivedListener(notification => {
-      console.log('Notification received:', notification);
     });
 
     // Handle notification tapped
     Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('Notification tapped:', response);
       
       // Navigate to notifications screen when notification is tapped
       const data = response.notification.request.content.data;
@@ -341,7 +322,6 @@ class PushNotificationServiceImpl implements PushNotificationService {
       await AsyncStorage.removeItem(NOTIFICATION_PERMISSION_KEY);
       this.expoPushToken = null;
     } catch (error) {
-      console.error('Error clearing cached token:', error);
     }
   }
 }

@@ -1,6 +1,6 @@
 import { AuthManager } from '@/utils/auth';
 import { Redirect } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function Index() {
   const [ready, setReady] = useState(false);
@@ -16,7 +16,6 @@ export default function Index() {
         if (isAuthenticated) {
           const { SchedulePreloader } = await import('@/utils/schedulePreloader');
           SchedulePreloader.preloadSchedule().catch(error => {
-            console.log('Schedule preload failed:', error);
             // Don't show error to user - preloading is optional
           });
         }

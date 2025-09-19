@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 interface ShiftedScheduleContextType {
   isShiftedScheduleEnabled: boolean;
@@ -24,7 +24,7 @@ export function ShiftedScheduleProvider({ children }: ShiftedScheduleProviderPro
           setShiftedScheduleEnabled(JSON.parse(cachedValue));
         }
       } catch (error) {
-        console.log('Failed to load shifted schedule preference:', error);
+        // Failed to load shifted schedule preference
       }
     };
 
@@ -37,7 +37,7 @@ export function ShiftedScheduleProvider({ children }: ShiftedScheduleProviderPro
     try {
       await AsyncStorage.setItem('shiftedScheduleEnabled', JSON.stringify(enabled));
     } catch (error) {
-      console.log('Failed to cache shifted schedule preference:', error);
+      // Failed to cache shifted schedule preference
     }
   };
 
