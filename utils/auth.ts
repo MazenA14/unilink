@@ -266,7 +266,8 @@ export class AuthManager {
    */
   static async getRemainingStorageKeys(): Promise<string[]> {
     try {
-      return await AsyncStorage.getAllKeys();
+      const keys = await AsyncStorage.getAllKeys();
+      return keys as string[];
     } catch (error) {
       return [];
     }
@@ -392,23 +393,14 @@ export class AuthManager {
           await this.storeCredentials(username.trim(), password);
           
           // Track user login in Supabase database
-          console.log('🚀 [AuthManager] ===== STARTING USER TRACKING PROCESS =====');
-          console.log('🚀 [AuthManager] 🔥 LOGIN SUCCESSFUL - TRIGGERING DATABASE INSERT 🔥');
-          console.log('🚀 [AuthManager] Username for tracking:', username.trim());
-          console.log('🚀 [AuthManager] About to call userTrackingService.trackUserLogin()...');
           try {
             // Get user ID for tracking (import GUCAPIProxy dynamically to avoid circular dependency)
             const { GUCAPIProxy } = await import('./gucApiProxy');
             const userId = await GUCAPIProxy.getUserId();
-            console.log('🚀 [AuthManager] User ID for tracking:', userId);
             
-            await userTrackingService.trackUserLogin(username.trim(), undefined, userId);
-            console.log('✅ [AuthManager] User tracking completed successfully');
+            await userTrackingService.trackUserLogin(username.trim(), undefined, userId || undefined);
           } catch (error) {
             // Don't fail login if tracking fails
-            console.warn('⚠️ [AuthManager] User tracking failed:', error);
-            console.warn('⚠️ [AuthManager] Login will continue despite tracking failure');
-            console.warn('⚠️ [AuthManager] Error details:', JSON.stringify(error, null, 2));
           }
           
           // Start preloading schedule data in the background

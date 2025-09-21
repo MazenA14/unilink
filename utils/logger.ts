@@ -3,7 +3,7 @@
  */
 
 export class Logger {
-  private static isEnabled = true;
+  private static isEnabled = false;
   private static logLevel: 'debug' | 'info' | 'warn' | 'error' = 'debug';
 
   static setEnabled(enabled: boolean) {

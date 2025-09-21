@@ -34,17 +34,13 @@ export class GradesPreloader {
    */
   private static async performPreload(): Promise<void> {
     try {
-      console.log('🚀 [GradesPreloader] Starting grades preload...');
-      
       // Preload current grades
       const currentGrades = await GUCAPIProxy.getCurrentGrades();
       await GradeCache.setCachedCurrentGrades(currentGrades);
-      console.log('✅ [GradesPreloader] Current grades cached successfully');
       
       // Preload available courses
       const availableCourses = await GUCAPIProxy.getAvailableCourses();
       await GradeCache.setCachedCurrentCourses(availableCourses);
-      console.log('✅ [GradesPreloader] Available courses cached successfully');
       
       // Create and cache course ID to name mapping
       const courseIdToNameMapping: { [courseId: string]: string } = {};
@@ -52,12 +48,8 @@ export class GradesPreloader {
         courseIdToNameMapping[course.value] = course.text;
       });
       await GradeCache.setCachedCourseIdToName(courseIdToNameMapping);
-      console.log('✅ [GradesPreloader] Course ID to name mapping cached successfully');
-      
-      console.log('🎉 [GradesPreloader] Grades preload completed successfully');
       
     } catch (error) {
-      console.warn('⚠️ [GradesPreloader] Grades preload failed:', error);
       // Don't throw error - preloading is optional and shouldn't break the login flow
     }
   }

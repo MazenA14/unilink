@@ -1,31 +1,24 @@
 import { useState } from 'react';
 import { Alert, Button, Text, View } from 'react-native';
-import { userTrackingService } from '../utils/services/userTrackingService';
+import { UserData, userTrackingService } from '../utils/services/userTrackingService';
 import { supabase } from '../utils/supabase';
 
 export default function UserTrackingTest() {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(false);
 
   const testConnection = async () => {
     setLoading(true);
-    console.log('🧪 [TestComponent] Testing Supabase connection...');
     try {
       // Test basic connection
-      console.log('🔍 [TestComponent] Sending test query to userdata table...');
       const { data, error } = await supabase.from('userdata').select('count').limit(1);
       
-      console.log('📊 [TestComponent] Query result:', { data, error });
-      
       if (error) {
-        console.error('❌ [TestComponent] Connection test failed:', error);
         Alert.alert('Connection Error', error.message);
       } else {
-        console.log('✅ [TestComponent] Connection test successful!');
         Alert.alert('Success', 'Connected to Supabase successfully!');
       }
     } catch (error) {
-      console.error('💥 [TestComponent] Unexpected error during connection test:', error);
       Alert.alert('Error', 'Failed to connect to Supabase');
     } finally {
       setLoading(false);
@@ -34,13 +27,10 @@ export default function UserTrackingTest() {
 
   const fetchUsers = async () => {
     setLoading(true);
-    console.log('👥 [TestComponent] Fetching all users...');
     try {
       const userData = await userTrackingService.getAllUsers();
-      console.log('📊 [TestComponent] Users fetched:', userData.length, 'users');
       setUsers(userData);
     } catch (error) {
-      console.error('❌ [TestComponent] Error fetching users:', error);
       Alert.alert('Error', 'Failed to fetch users');
     } finally {
       setLoading(false);
@@ -49,13 +39,10 @@ export default function UserTrackingTest() {
 
   const testUserTracking = async () => {
     setLoading(true);
-    console.log('🧪 [TestComponent] Testing user tracking...');
     try {
       await userTrackingService.trackUserLogin('test_user', '12345678');
-      console.log('✅ [TestComponent] User tracking test completed successfully!');
       Alert.alert('Success', 'User tracking test completed!');
     } catch (error) {
-      console.error('❌ [TestComponent] User tracking test failed:', error);
       Alert.alert('Error', 'User tracking test failed');
     } finally {
       setLoading(false);
@@ -101,7 +88,8 @@ export default function UserTrackingTest() {
           <Text>Username: {user.username}</Text>
           <Text>GUC ID: {user.guc_id}</Text>
           <Text>Joined: {new Date(user.date_joined_app).toLocaleDateString()}</Text>
-          <Text>Last Opened: {new Date(user.last_opened_date).toLocaleDateString()}</Text>
+          {user.joined_season && <Text>Season: {user.joined_season}</Text>}
+          {user.major && <Text>Major: {user.major}</Text>}
         </View>
       ))}
     </View>

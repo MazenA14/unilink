@@ -102,27 +102,18 @@ const LoginScreen = () => {
           router.replace('/(tabs)/dashboard');
           
           // Run user tracking and schedule preloading in the background
-          console.log('🚀 [LoginScreen] ===== STARTING BACKGROUND USER TRACKING =====');
-          console.log('🚀 [LoginScreen] 🔥 LOGIN SUCCESSFUL - TRIGGERING BACKGROUND DATABASE INSERT 🔥');
-          console.log('🚀 [LoginScreen] Username for tracking:', username.trim());
-          
           // Background user tracking (don't await - let it run async)
           (async () => {
             try {
-              console.log('🚀 [LoginScreen] About to call userTrackingService.trackUserLogin()...');
               // Get user info (ID and faculty) for tracking (import GUCAPIProxy dynamically to avoid circular dependency)
               const { GUCAPIProxy } = await import('@/utils/gucApiProxy');
               const userInfo = await GUCAPIProxy.getUserInfo();
-              console.log('🚀 [LoginScreen] User info for tracking:', userInfo);
               
               // Import and call user tracking service
               const { userTrackingService } = await import('@/utils/services/userTrackingService');
               await userTrackingService.trackUserLogin(username.trim(), undefined, userInfo.userId || undefined);
-              console.log('✅ [LoginScreen] Background user tracking completed successfully');
-            } catch (error) {
+            } catch {
               // Don't fail login if tracking fails
-              console.warn('⚠️ [LoginScreen] Background user tracking failed:', error);
-              console.warn('⚠️ [LoginScreen] Error details:', JSON.stringify(error, null, 2));
             }
           })();
           
@@ -272,10 +263,7 @@ const LoginScreen = () => {
 
             <TouchableOpacity
               style={styles.resetPasswordButton}
-              onPress={() => {
-                console.log('Reset password button pressed');
-                setShowResetModal(true);
-              }}
+              onPress={() => setShowResetModal(true)}
               disabled={isLoading}
             >
               <Ionicons name="key-outline" size={16} color={colors.tabColor} />

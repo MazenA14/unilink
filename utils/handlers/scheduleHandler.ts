@@ -106,10 +106,6 @@ async function sendHtmlToApi(html: string): Promise<any> {
 
     const result = await response.json();
     
-    // Log the JSON response to terminal
-    // console.log('=== SCHEDULE API JSON RESPONSE ===');
-    // console.log(JSON.stringify(result, null, 2));
-    // console.log('=== END SCHEDULE API JSON RESPONSE ===');
     
     return result;
   } catch (error: any) {
@@ -402,19 +398,10 @@ export async function getScheduleData(): Promise<ScheduleData> {
         const jsonResponse = await sendHtmlToApi(html);
         scheduleData = extractScheduleFromJson(jsonResponse);
         
-        // Log the newly formatted schedule data
-        // console.log('=== EXTRACTED SCHEDULE DATA ===');
-        // console.log(JSON.stringify(scheduleData, null, 2));
-        // console.log('=== END EXTRACTED SCHEDULE DATA ===');
         
-      } catch (apiError: any) {
-        console.log('API call failed:', apiError.message);
+      } catch {
         // Fallback to free schedule if API fails
         scheduleData = createFreeSchedule();
-        
-        // console.log('=== FALLBACK FREE SCHEDULE ===');
-        // console.log(JSON.stringify(scheduleData, null, 2));
-        // console.log('=== END FALLBACK FREE SCHEDULE ===');
       }
       
       return scheduleData;

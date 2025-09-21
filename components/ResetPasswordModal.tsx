@@ -25,8 +25,6 @@ const ResetPasswordModal = ({ visible, onClose, onSuccess }: ResetPasswordModalP
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   
-  // Debug log
-  console.log('ResetPasswordModal rendered, visible:', visible);
   
   const [username, setUsername] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
@@ -71,14 +69,9 @@ const ResetPasswordModal = ({ visible, onClose, onSuccess }: ResetPasswordModalP
     setError('');
     setSuccess('');
     
-    console.log('ResetPasswordModal: Starting form submission');
-    
     if (!validateForm()) {
-      console.log('ResetPasswordModal: Form validation failed');
       return;
     }
-
-    console.log('ResetPasswordModal: Form validation passed, starting submission');
     setIsLoading(true);
 
     try {
@@ -90,13 +83,6 @@ const ResetPasswordModal = ({ visible, onClose, onSuccess }: ResetPasswordModalP
       formData.append('newPwd2', confirmPassword);
       formData.append('isUtf8', '1');
 
-      console.log('Submitting password reset with data:', {
-        username: username.trim(),
-        oldPwd: '[HIDDEN]',
-        newPwd1: '[HIDDEN]',
-        newPwd2: '[HIDDEN]',
-        isUtf8: '1'
-      });
 
       const response = await fetch('https://mail.guc.edu.eg/owa/auth/expiredpassword.aspx', {
         method: 'POST',
@@ -108,18 +94,7 @@ const ResetPasswordModal = ({ visible, onClose, onSuccess }: ResetPasswordModalP
         body: formData.toString(),
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
-
       const responseText = await response.text();
-      console.log('Response text length:', responseText.length);
-      console.log('Response contains "error":', responseText.toLowerCase().includes('error'));
-      console.log('Response contains "success":', responseText.toLowerCase().includes('success'));
-      
-      // Log a portion of the HTML response to see error messages
-      console.log('=== HTML RESPONSE SAMPLE (first 2000 chars) ===');
-      console.log(responseText.substring(0, 2000));
-      console.log('=== END HTML RESPONSE SAMPLE ===');
 
       if (response.ok) {
         // Check if the response indicates success or if we're redirected
@@ -144,8 +119,7 @@ const ResetPasswordModal = ({ visible, onClose, onSuccess }: ResetPasswordModalP
       } else {
         setError(`Password reset failed. Server returned status: ${response.status}`);
       }
-    } catch (error) {
-      console.error('Password reset error:', error);
+    } catch {
       setError('Network error. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
@@ -351,10 +325,7 @@ const ResetPasswordModal = ({ visible, onClose, onSuccess }: ResetPasswordModalP
                 { backgroundColor: colors.tabColor },
                 isLoading && { backgroundColor: colors.secondaryFont, opacity: 0.7 }
               ]}
-              onPress={() => {
-                console.log('ResetPasswordModal: Submit button pressed');
-                handleSubmit();
-              }}
+              onPress={handleSubmit}
               disabled={isLoading}
             >
               {isLoading ? (

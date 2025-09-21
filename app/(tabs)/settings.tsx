@@ -45,22 +45,18 @@ export default function SettingsScreen() {
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
 
   const testUserTracking = async () => {
-    console.log('🧪 Testing user tracking manually...');
     try {
       await userTrackingService.trackUserLogin('test_user', '12345678', '2020-12345');
-      console.log('✅ Manual test completed');
-    } catch (error) {
-      console.error('❌ Manual test failed:', error);
+    } catch {
+      // Manual test failed
     }
   };
 
   const testConnection = async () => {
-    console.log('🧪 Testing Supabase connection...');
     try {
       await userTrackingService.testConnection();
-      console.log('✅ Connection test completed');
-    } catch (error) {
-      console.error('❌ Connection test failed:', error);
+    } catch {
+      // Connection test failed
     }
   };
   
@@ -465,10 +461,7 @@ export default function SettingsScreen() {
           
           <TouchableOpacity
             style={styles.rowBetween}
-            onPress={() => {
-              console.log('Settings: Reset password button pressed');
-              setShowResetPasswordModal(true);
-            }}
+            onPress={() => setShowResetPasswordModal(true)}
           >
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
               {/* <Ionicons name="key-outline" size={20} color={colors.tabColor} style={{ marginRight: 12 }} /> */}
