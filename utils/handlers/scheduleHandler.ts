@@ -109,18 +109,13 @@ async function parseScheduleWithVercel(html: string): Promise<ScheduleData> {
     const result = await response.json();
     
     // Log the JSON response to terminal
-    console.log('📋 Vercel Parser JSON Response:');
-    console.log(JSON.stringify(result, null, 2));
     
     // Convert the new format to your app's expected format
     const scheduleData = convertVercelResponseToScheduleData(result);
     
-    console.log('🔍 Converted Schedule Data:');
-    console.log(JSON.stringify(scheduleData, null, 2));
     
     return scheduleData;
   } catch (error: any) {
-    console.error('Vercel parser error:', error);
     throw new Error(`Vercel parsing failed: ${error.message}`);
   }
 }
@@ -181,14 +176,7 @@ function convertPeriodDataArray(periodData: any[]): any[] | null {
     
     // Extract group identifier and append to course name
     const groupIdentifier = extractGroupIdentifier(period.group || '');
-    console.log('🔍 Vercel Parser Debug:');
-    console.log('  - period.subject:', period.subject);
-    console.log('  - extracted slotType:', slotType);
-    console.log('  - period.group:', period.group);
-    console.log('  - groupIdentifier:', groupIdentifier);
-    console.log('  - cleanCourseName:', cleanCourseName);
     const finalCourseName = groupIdentifier ? `${cleanCourseName} - ${groupIdentifier}` : cleanCourseName;
-    console.log('  - finalCourseName:', finalCourseName);
     
     return {
       courseName: finalCourseName,
@@ -211,39 +199,28 @@ function extractSlotTypeFromSubject(subject: string): string {
   if (!subject) return 'Lecture';
   
   const lowerSubject = subject.toLowerCase();
-  console.log('🔍 extractSlotTypeFromSubject Debug:', { subject, lowerSubject });
-  
   // Check for explicit slot type indicators in the subject
   if (lowerSubject.includes(' lecture')) {
-    console.log('  -> Detected Lecture from subject');
     return 'Lecture';
   }
   if (lowerSubject.includes(' tut') || lowerSubject.includes(' tutorial')) {
-    console.log('  -> Detected Tutorial from subject');
     return 'Tutorial';
   }
   if (lowerSubject.includes(' lab') || lowerSubject.includes(' laboratory')) {
-    console.log('  -> Detected Lab from subject');
     return 'Lab';
   }
   if (lowerSubject.includes(' seminar')) {
-    console.log('  -> Detected Seminar from subject');
     return 'Seminar';
   }
   if (lowerSubject.includes(' workshop')) {
-    console.log('  -> Detected Workshop from subject');
     return 'Workshop';
   }
   if (lowerSubject.includes(' project')) {
-    console.log('  -> Detected Project from subject');
     return 'Project';
   }
   if (lowerSubject.includes(' thesis') || lowerSubject.includes(' dissertation')) {
-    console.log('  -> Detected Thesis from subject');
     return 'Thesis';
   }
-  
-  console.log('  -> Defaulting to Lecture (no explicit type found)');
   return 'Lecture';
 }
 
@@ -384,24 +361,16 @@ export async function getScheduleData(): Promise<ScheduleData> {
       try {
         // Try the Vercel Cheerio parser first
         scheduleData = await parseScheduleWithVercel(html);
-        console.log('Successfully parsed with Vercel Cheerio parser');
       } catch (vercelError: any) {
-        console.warn('Vercel parser failed, falling back to local parsers:', vercelError.message);
         
         try {
           // Fallback to local simple parser
-          console.log('🔄 Using local simple parser...');
           scheduleData = parseScheduleDataSimple(html);
-          console.log('✅ Successfully parsed with local simple parser');
-          console.log('🔍 Local Parser Schedule Data:');
-          console.log(JSON.stringify(scheduleData, null, 2));
         } catch {
           try {
             scheduleData = parseScheduleData(html);
-            console.log('Successfully parsed with local standard parser');
           } catch {
             scheduleData = parseScheduleDataAlternative(html);
-            console.log('Successfully parsed with local alternative parser');
           }
         }
       }

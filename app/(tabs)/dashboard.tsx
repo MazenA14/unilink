@@ -377,12 +377,6 @@ export default function DashboardScreen() {
 
   // Multiple lectures modal handlers
   const handleMultipleLecturesPress = (lectures: any[], periodName: string, dayName: string) => {
-    console.log('Dashboard: Opening multiple lectures modal', {
-      lecturesCount: lectures.length,
-      periodName,
-      dayName,
-      lectures: lectures.map(l => ({ courseName: l.courseName, slotType: l.slotType }))
-    });
     setSelectedLectures(lectures);
     setSelectedPeriodName(periodName);
     setSelectedDayName(dayName);

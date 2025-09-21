@@ -124,39 +124,28 @@ function extractSlotTypeFromCourse(course: string): string {
   if (!course) return 'Lecture';
   
   const lowerCourse = course.toLowerCase();
-  console.log('🔍 extractSlotTypeFromCourse Debug:', { course, lowerCourse });
-  
   // Check for explicit slot type indicators in the course field
   if (lowerCourse.includes(' lecture')) {
-    console.log('  -> Detected Lecture from course');
     return 'Lecture';
   }
   if (lowerCourse.includes(' tut') || lowerCourse.includes(' tutorial')) {
-    console.log('  -> Detected Tutorial from course');
     return 'Tutorial';
   }
   if (lowerCourse.includes(' lab') || lowerCourse.includes(' laboratory')) {
-    console.log('  -> Detected Lab from course');
     return 'Lab';
   }
   if (lowerCourse.includes(' seminar')) {
-    console.log('  -> Detected Seminar from course');
     return 'Seminar';
   }
   if (lowerCourse.includes(' workshop')) {
-    console.log('  -> Detected Workshop from course');
     return 'Workshop';
   }
   if (lowerCourse.includes(' project')) {
-    console.log('  -> Detected Project from course');
     return 'Project';
   }
   if (lowerCourse.includes(' thesis') || lowerCourse.includes(' dissertation')) {
-    console.log('  -> Detected Thesis from course');
     return 'Thesis';
   }
-  
-  console.log('  -> Defaulting to Lecture (no explicit type found)');
   return 'Lecture';
 }
 
@@ -246,9 +235,6 @@ function getCourseForPeriod(spans: CourseSpan[], tables: CourseTable[], dayName:
       // Extract slot type FIRST from course field
       const slotType = extractSlotTypeFromCourse(table.course);
       
-      console.log('🔍 SimpleScheduleParser Table Debug:');
-      console.log('  - table.course:', table.course);
-      console.log('  - extracted slotType:', slotType);
 
       return {
         courseName: table.course,
@@ -291,10 +277,6 @@ function parseClassContent(content: string): ScheduleClass {
   
   // Extract group identifier from instructor and append to course name
   const groupIdentifier = extractGroupIdentifier(instructor || '');
-  console.log('🔍 Local Parser Debug:');
-  console.log('  - instructor:', instructor);
-  console.log('  - groupIdentifier:', groupIdentifier);
-  console.log('  - courseName:', courseName);
 
   // Clean up course name: remove spaces, remove type suffixes, remove parentheses content
   const cleanCourseName = courseName
@@ -305,15 +287,10 @@ function parseClassContent(content: string): ScheduleClass {
     .trim();
 
   const finalCourseName = groupIdentifier ? `${cleanCourseName} - ${groupIdentifier}` : cleanCourseName;
-  console.log('  - finalCourseName:', finalCourseName);
   
   // Extract slot type FIRST from the original course name (before processing)
   const slotType = extractSlotTypeFromCourse(courseName);
   
-  console.log('🔍 SimpleScheduleParser parseClassContent Debug:');
-  console.log('  - original courseName:', courseName);
-  console.log('  - extracted slotType:', slotType);
-  console.log('  - finalCourseName:', finalCourseName);
 
   return {
     courseName: finalCourseName,
@@ -328,7 +305,6 @@ function parseClassContent(content: string): ScheduleClass {
  * Example: '7MCTR T031' -> 'T031'
  */
 function extractGroupIdentifier(group: string): string | undefined {
-  console.log('🔍 extractGroupIdentifier - input:', group);
   if (!group) return undefined;
   
   // Pattern to match group identifiers like T031, L001, P031, etc.
@@ -336,14 +312,9 @@ function extractGroupIdentifier(group: string): string | undefined {
   const groupPattern = /([A-Z]\d+)$/;
   const match = group.match(groupPattern);
   
-  console.log('🔍 extractGroupIdentifier - match:', match);
-  
   if (match) {
-    console.log('🔍 extractGroupIdentifier - returning:', match[1]);
     return match[1]; // Return the captured group (e.g., 'T031')
   }
-  
-  console.log('🔍 extractGroupIdentifier - no match found');
   return undefined;
 }
 

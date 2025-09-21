@@ -25,15 +25,6 @@ export function ScheduleCard({ classData, periodName, scheduleType = 'personal',
   const hasMultipleLectures = lectures.length > 1;
 
   // Debug logging for course code data
-  console.log('ScheduleCard Debug:', {
-    courseName: firstLecture.courseName,
-    courseCode: firstLecture.courseCode,
-    instructor: firstLecture.instructor,
-    room: firstLecture.room,
-    slotType: firstLecture.slotType,
-    periodName,
-    dayName
-  });
 
   // Function to format course code in the new format "MCTR704 - P031"
   const formatCourseCode = (courseCode?: string, instructor?: string): string => {

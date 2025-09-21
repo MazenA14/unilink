@@ -125,15 +125,6 @@ export function MultipleLecturesModal({
             const typeColor = getSlotTypeColor(lecture.slotType);
             
             // Debug logging for each lecture
-            console.log('MultipleLecturesModal Debug:', {
-              index,
-              courseName: lecture.courseName,
-              courseCode: lecture.courseCode,
-              instructor: lecture.instructor,
-              room: lecture.room,
-              slotType: lecture.slotType,
-              formattedCode: formatCourseCode(lecture.courseCode, lecture.instructor)
-            });
             
             return (
               <View
