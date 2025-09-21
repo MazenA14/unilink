@@ -1,15 +1,15 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import { Colors } from '@/constants/Colors';
 import { UPDATE_DOWNLOAD_LINK } from '@/constants/Version';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { BlurView } from 'expo-blur';
 import {
-    Alert,
-    Linking,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Linking,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface UpdateModalProps {
@@ -21,6 +21,7 @@ interface UpdateModalProps {
 export default function UpdateModal({ visible, onClose, onUpdate }: UpdateModalProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   const handleUpdatePress = async () => {
     try {
@@ -29,27 +30,33 @@ export default function UpdateModal({ visible, onClose, onUpdate }: UpdateModalP
         await Linking.openURL(UPDATE_DOWNLOAD_LINK);
         onUpdate();
       } else {
-        Alert.alert(
-          'Error',
-          'Cannot open the download link. Please copy the link manually.',
-          [
+        showAlert({
+          title: 'Error',
+          message: 'Cannot open the download link. Please copy the link manually.',
+          type: 'error',
+          buttons: [
             {
               text: 'Copy Link',
               onPress: () => {
-                // You could add clipboard functionality here if needed
-                Alert.alert('Link', UPDATE_DOWNLOAD_LINK);
+                showAlert({
+                  title: 'Download Link',
+                  message: UPDATE_DOWNLOAD_LINK,
+                  type: 'info',
+                  buttons: [{ text: 'OK' }]
+                });
               },
             },
             { text: 'Cancel', style: 'cancel' },
           ]
-        );
+        });
       }
-    } catch (error) {
-      Alert.alert(
-        'Error',
-        'Failed to open the download link. Please try again later.',
-        [{ text: 'OK' }]
-      );
+    } catch {
+      showAlert({
+        title: 'Error',
+        message: 'Failed to open the download link. Please try again later.',
+        type: 'error',
+        buttons: [{ text: 'OK' }]
+      });
     }
   };
 
@@ -93,6 +100,7 @@ export default function UpdateModal({ visible, onClose, onUpdate }: UpdateModalP
           </View>
         </View>
       </BlurView>
+      {AlertComponent()}
     </Modal>
   );
 }

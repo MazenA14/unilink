@@ -1,5 +1,6 @@
 import { useCustomAlert } from '@/components/CustomAlert';
 import NotificationTest from '@/components/NotificationTest';
+import UpdateModal from '@/components/UpdateModal';
 import WhatsNewModal from '@/components/WhatsNewModal';
 import { Colors } from '@/constants/Colors';
 import { APP_VERSION } from '@/constants/Version';
@@ -9,6 +10,7 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useVersionCheck } from '@/hooks/useVersionCheck';
 import { AuthManager } from '@/utils/auth';
 import { GUCAPIProxy, PaymentItem } from '@/utils/gucApiProxy';
 import { pushNotificationService } from '@/utils/services/pushNotificationService';
@@ -38,6 +40,15 @@ export default function SettingsScreen() {
   const pillButtonRef = useRef<View>(null);
   const [showWhatsNewModal, setShowWhatsNewModal] = useState(false);
   const [isNotificationLoading, setIsNotificationLoading] = useState(false);
+  
+  // Version check functionality
+  const {
+    showUpdateModal,
+    isChecking,
+    checkForUpdates,
+    handleUpdateModalClose,
+    handleUpdateModalUpdate,
+  } = useVersionCheck();
 
   const isDark = useMemo(() => themePreference === 'dark' || (themePreference === 'system' && (colorScheme === 'dark')), [themePreference, colorScheme]);
 
@@ -195,7 +206,7 @@ export default function SettingsScreen() {
       try {
         const fetched = await GUCAPIProxy.getOutstandingPayments();
         setPayments(fetched);
-      } catch (error) {
+      } catch {
       } finally {
         setLoadingPayments(false);
       }
@@ -469,7 +480,43 @@ export default function SettingsScreen() {
           <TouchableOpacity
             style={styles.rowBetween}
             onPress={async () => {
-              const email = 'example@gmail.com';
+              try {
+                await checkForUpdates();
+                if (!showUpdateModal) {
+                  showAlert({
+                    title: 'Up to Date',
+                    message: 'You are using the latest version of UniLink.',
+                    type: 'success',
+                    buttons: [{ text: 'OK' }]
+                  });
+                }
+              } catch {
+                showAlert({
+                  title: 'Update Check Failed',
+                  message: 'Unable to check for updates. Please try again later.',
+                  type: 'error',
+                  buttons: [{ text: 'OK' }]
+                });
+              }
+            }}
+            disabled={isChecking}
+          >
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={[styles.primaryText, { color: colors.mainFont }]}>Check for Updates</Text>
+              {isChecking && (
+                <ActivityIndicator 
+                  size="small" 
+                  color={colors.tabColor} 
+                  style={{ marginLeft: 8 }} 
+                />
+              )}
+            </View>
+          </TouchableOpacity>
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <TouchableOpacity
+            style={styles.rowBetween}
+            onPress={async () => {
+              const email = 'unilink058@gmail.com';
               showAlert({
                 title: 'Contact',
                 message: email,
@@ -611,6 +658,13 @@ export default function SettingsScreen() {
         onClose={closeWhatsNewModal}
         features={whatsNewConfig.features}
         version={whatsNewConfig.version}
+      />
+
+      {/* Update Modal */}
+      <UpdateModal
+        visible={showUpdateModal}
+        onClose={handleUpdateModalClose}
+        onUpdate={handleUpdateModalUpdate}
       />
 
       {AlertComponent()}
