@@ -7,12 +7,8 @@ import { APP_VERSION } from './Version';
 export const WHATS_NEW_CONFIG = {
   version: APP_VERSION,
   features: [
-    "Automatic version checking with update notifications",
-    "Improved dashboard loading performance",
-    "Enhanced notification system",
-    "Better error handling and user feedback",
-    "Updated UI with modern design elements",
-    "Bug fixes and stability improvements"
+    "Improved Schedule Parsing",
+    "Reset Password Feature"
   ]
 };
 

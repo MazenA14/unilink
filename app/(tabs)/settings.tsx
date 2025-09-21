@@ -1,5 +1,6 @@
 import { useCustomAlert } from '@/components/CustomAlert';
 import NotificationTest from '@/components/NotificationTest';
+import ResetPasswordModal from '@/components/ResetPasswordModal';
 import UpdateModal from '@/components/UpdateModal';
 import WhatsNewModal from '@/components/WhatsNewModal';
 import { Colors } from '@/constants/Colors';
@@ -14,6 +15,7 @@ import { useVersionCheck } from '@/hooks/useVersionCheck';
 import { AuthManager } from '@/utils/auth';
 import { GUCAPIProxy, PaymentItem } from '@/utils/gucApiProxy';
 import { pushNotificationService } from '@/utils/services/pushNotificationService';
+import { userTrackingService } from '@/utils/services/userTrackingService';
 import { resetWhatsNewStatus } from '@/utils/whatsNewStorage';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -40,6 +42,27 @@ export default function SettingsScreen() {
   const pillButtonRef = useRef<View>(null);
   const [showWhatsNewModal, setShowWhatsNewModal] = useState(false);
   const [isNotificationLoading, setIsNotificationLoading] = useState(false);
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+
+  const testUserTracking = async () => {
+    console.log('🧪 Testing user tracking manually...');
+    try {
+      await userTrackingService.trackUserLogin('test_user', '12345678', '2020-12345');
+      console.log('✅ Manual test completed');
+    } catch (error) {
+      console.error('❌ Manual test failed:', error);
+    }
+  };
+
+  const testConnection = async () => {
+    console.log('🧪 Testing Supabase connection...');
+    try {
+      await userTrackingService.testConnection();
+      console.log('✅ Connection test completed');
+    } catch (error) {
+      console.error('❌ Connection test failed:', error);
+    }
+  };
   
   // Version check functionality
   const {
@@ -237,7 +260,7 @@ export default function SettingsScreen() {
   const logout = async () => {
     showAlert({
       title: 'Logout',
-      message: 'Are you sure you want to logout?',
+      message: 'Are you sure you want to logout?\n Saved data will be cleared.',
       type: 'warning',
       buttons: [
         { text: 'Cancel', style: 'cancel' },
@@ -245,7 +268,7 @@ export default function SettingsScreen() {
           text: 'Logout',
           style: 'destructive',
           onPress: async () => {
-            await AuthManager.logout();
+            await AuthManager.userLogout();
             router.replace('/login');
           },
         },
@@ -437,6 +460,29 @@ export default function SettingsScreen() {
               Notification tips for best experience
             </Text>
           </TouchableOpacity>
+          
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          
+          <TouchableOpacity
+            style={styles.rowBetween}
+            onPress={() => {
+              console.log('Settings: Reset password button pressed');
+              setShowResetPasswordModal(true);
+            }}
+          >
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+              {/* <Ionicons name="key-outline" size={20} color={colors.tabColor} style={{ marginRight: 12 }} /> */}
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.primaryText, { color: colors.mainFont }]}>
+                  Reset Password
+                </Text>
+                <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>
+                  Change your account password
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.secondaryFont} />
+          </TouchableOpacity>
         </View>
 
         {/* Development Section */}
@@ -460,6 +506,30 @@ export default function SettingsScreen() {
                 <Text style={[styles.primaryText, { color: colors.mainFont }]}>Reset What&apos;s New</Text>
                 <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>
                   Show modal again
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
+              <TouchableOpacity
+                style={styles.rowBetween}
+                onPress={testConnection}
+              >
+                <Text style={[styles.primaryText, { color: colors.mainFont }]}>Test Supabase Connection</Text>
+                <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>
+                  Check Database
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
+              <TouchableOpacity
+                style={styles.rowBetween}
+                onPress={testUserTracking}
+              >
+                <Text style={[styles.primaryText, { color: colors.mainFont }]}>Test User Tracking</Text>
+                <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>
+                  Debug Supabase
                 </Text>
               </TouchableOpacity>
             </View>
@@ -665,6 +735,17 @@ export default function SettingsScreen() {
         visible={showUpdateModal}
         onClose={handleUpdateModalClose}
         onUpdate={handleUpdateModalUpdate}
+      />
+
+      {/* Reset Password Modal */}
+      <ResetPasswordModal
+        visible={showResetPasswordModal}
+        onClose={() => setShowResetPasswordModal(false)}
+        onSuccess={async () => {
+          // Logout user after successful password reset
+          await AuthManager.userLogout();
+          router.replace('/login');
+        }}
       />
 
       {AlertComponent()}

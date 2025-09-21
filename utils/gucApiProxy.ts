@@ -218,7 +218,7 @@ export class GUCAPIProxy {
   /**
    * Get available courses for a season
    */
-  static async getAvailableCourses(seasonId: string): Promise<{value: string, text: string}[]> {
+  static async getAvailableCoursesWithSeason(seasonId: string): Promise<{value: string, text: string}[]> {
     try {
 
       // Step 1: Get initial page to extract view state
@@ -566,6 +566,40 @@ export class GUCAPIProxy {
       return null;
     } catch (e) {
       return null;
+    }
+  }
+
+  /**
+   * Get user ID and faculty (major) from the index page
+   */
+  static async getUserInfo(): Promise<{ userId: string | null; faculty: string | null }> {
+    try {
+      const data = await this.makeProxyRequest('https://apps.guc.edu.eg/student_ext/index.aspx');
+      const html = data.html || data.body || '';
+
+      // Extract user ID
+      let userId: string | null = null;
+      const idMatch = html.match(/<span[^>]*id="ContentPlaceHolderright_ContentPlaceHoldercontent_LabelUniqAppNo"[^>]*>([^<]+)<\/span>/i);
+      if (idMatch && idMatch[1]) {
+        userId = idMatch[1].trim();
+      } else {
+        // Fallback: search by label text nearby
+        const liBlockMatch = html.match(/<li[^>]*class="list-group-item"[\s\S]*?Uniq-App-No[\s\S]*?<span[^>]*>([^<]+)<\/span>[\s\S]*?<\/li>/i);
+        if (liBlockMatch && liBlockMatch[1]) {
+          userId = liBlockMatch[1].trim();
+        }
+      }
+
+      // Extract faculty (major)
+      let faculty: string | null = null;
+      const facultyMatch = html.match(/<span[^>]*id="ContentPlaceHolderright_ContentPlaceHoldercontent_Labelfaculty"[^>]*>([^<]+)<\/span>/i);
+      if (facultyMatch && facultyMatch[1]) {
+        faculty = facultyMatch[1].trim();
+      }
+
+      return { userId, faculty };
+    } catch (e) {
+      return { userId: null, faculty: null };
     }
   }
 

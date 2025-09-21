@@ -1,4 +1,5 @@
 import { useCustomAlert } from '@/components/CustomAlert';
+import ResetPasswordModal from '@/components/ResetPasswordModal';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthManager } from '@/utils/auth';
@@ -6,15 +7,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const LoginScreen = () => {
@@ -22,6 +23,7 @@ const LoginScreen = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { showAlert, AlertComponent } = useCustomAlert();
@@ -96,13 +98,39 @@ const LoginScreen = () => {
           // also store creds for NTLM mode in proxy requests
           await AuthManager.storeCredentials(username.trim(), password);
           
+          // Redirect to dashboard immediately for fast user experience
+          router.replace('/(tabs)/dashboard');
+          
+          // Run user tracking and schedule preloading in the background
+          console.log('🚀 [LoginScreen] ===== STARTING BACKGROUND USER TRACKING =====');
+          console.log('🚀 [LoginScreen] 🔥 LOGIN SUCCESSFUL - TRIGGERING BACKGROUND DATABASE INSERT 🔥');
+          console.log('🚀 [LoginScreen] Username for tracking:', username.trim());
+          
+          // Background user tracking (don't await - let it run async)
+          (async () => {
+            try {
+              console.log('🚀 [LoginScreen] About to call userTrackingService.trackUserLogin()...');
+              // Get user info (ID and faculty) for tracking (import GUCAPIProxy dynamically to avoid circular dependency)
+              const { GUCAPIProxy } = await import('@/utils/gucApiProxy');
+              const userInfo = await GUCAPIProxy.getUserInfo();
+              console.log('🚀 [LoginScreen] User info for tracking:', userInfo);
+              
+              // Import and call user tracking service
+              const { userTrackingService } = await import('@/utils/services/userTrackingService');
+              await userTrackingService.trackUserLogin(username.trim(), undefined, userInfo.userId || undefined);
+              console.log('✅ [LoginScreen] Background user tracking completed successfully');
+            } catch (error) {
+              // Don't fail login if tracking fails
+              console.warn('⚠️ [LoginScreen] Background user tracking failed:', error);
+              console.warn('⚠️ [LoginScreen] Error details:', JSON.stringify(error, null, 2));
+            }
+          })();
+          
           // Start preloading schedule data in the background
           const { SchedulePreloader } = await import('@/utils/schedulePreloader');
           SchedulePreloader.preloadSchedule().catch(error => {
             // Don't show error to user - preloading is optional
           });
-          
-          router.replace('/(tabs)/dashboard');
         } 
         // else {
         //   // Still proceed if we got HTTP 200, assuming login worked
@@ -111,7 +139,7 @@ const LoginScreen = () => {
         else {
           showAlert({
             title: 'Login Failed',
-            message: 'Invalid username or password.\n Please try again.',
+            message: 'Invalid username/password or password expired.\n\n Please try again.',
             type: 'error',
           });
         }
@@ -121,14 +149,14 @@ const LoginScreen = () => {
         const msg =
           data?.error ||
           (rawText ? rawText.slice(0, 200) : `HTTP ${response.status}`) ||
-          'Invalid username or password. Please try again.';
+          'Invalid username/password or password expired. Please try again.';
         showAlert({
           title: 'Login Failed',
           message: msg,
           type: 'error',
         });
       }
-    } catch (error) {
+    } catch {
       showAlert({
         title: 'Login Failed',
         message: 'Network or server error. Please try again shortly.',
@@ -235,11 +263,29 @@ const LoginScreen = () => {
                 </View>
               )}
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.resetPasswordButton}
+              onPress={() => {
+                console.log('Reset password button pressed');
+                setShowResetModal(true);
+              }}
+              disabled={isLoading}
+            >
+              <Ionicons name="key-outline" size={16} color={colors.tabColor} />
+              <Text style={[styles.resetPasswordText, { color: colors.tabColor }]}>
+                Reset Password
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
         </ScrollView>
       </KeyboardAvoidingView>
       <AlertComponent />
+      <ResetPasswordModal
+        visible={showResetModal}
+        onClose={() => setShowResetModal(false)}
+      />
     </View>
   );
 };
@@ -380,6 +426,18 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
+    fontWeight: '600',
+  },
+  resetPasswordButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  resetPasswordText: {
+    fontSize: 14,
     fontWeight: '600',
   },
   footerContainer: {

@@ -298,7 +298,7 @@ export default function GradesScreen() {
         // Fallback to old method if season data not found
         
         const [apiCourses, apiMidtermGrades] = await Promise.all([
-          GUCAPI.getAvailableCourses(seasonId),
+          GUCAPI.getAvailableCoursesWithSeason(seasonId),
           GUCAPI.getPreviousGrades(seasonId)
         ]);
         

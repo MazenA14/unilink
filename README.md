@@ -44,8 +44,8 @@
 -------------------------- -------------------------- -------------------------- --------------------------
 
 ## Database Schema
-### Table 1 (Userdata)
-- Username, GUC-ID, Date Joined App, Last Opened Date, Number of Times Opened App, GPA, Joined Season (58), Major (MET)
+### Table 1 (Users)
+- Username, GUC-ID, Date Joined App, Last Opened Date, GPA, Joined Season (58), Major (MET)
 
 ### Table 2 (Feedback)
 - Username, Notes, Season Joined (58), Date, Version
@@ -75,10 +75,15 @@
 - On selecting the default screen don't go there
 - Namin isn't working with new parser
 - Lecture Location isn't parsed correctly
+- Add to the login modal popup that the username/password might be incorrect or the password expired
+- Add reset password feature on the login screen and in the settings
+- Change sign in button (Make it smaller)
 
 - Wraping up the app
     - Make it more efficient
-    - Remove the unneeded dependencies (Smaller file size) 
+    - Remove the unneeded dependencies (Smaller file size)
+    - Remove any console logs/wars/errors
+    - Replace Alert.alert with custom alert component
 
 + Remove the effect that occurs on pressing on the tabs at the bottom
 + Change animation for the hamburger menu to Fade in

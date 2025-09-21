@@ -41,7 +41,7 @@ export default function WhatsNewModal({
               <Ionicons name="sparkles" size={24} color="white" />
             </View>
             <Text style={[styles.title, { color: colors.text }]}>
-              What's New
+              What&apos;s New
             </Text>
             <Text style={[styles.version, { color: colors.secondaryFont }]}>
               Version {version}
@@ -54,7 +54,7 @@ export default function WhatsNewModal({
             contentContainerStyle={styles.scrollContent}
           >
             <Text style={[styles.subtitle, { color: colors.text }]}>
-              Here's what's new in this update:
+              Here&apos;s what&apos;s new in this update:
             </Text>
             
             <View style={styles.featuresList}>

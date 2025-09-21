@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { userTrackingService } from './services/userTrackingService';
 
 export class AuthManager {
   private static SESSION_COOKIE_KEY = 'sessionCookie';
@@ -206,12 +207,108 @@ export class AuthManager {
   }
 
   /**
-   * Perform full logout - clear all stored data
+   * Clear all application cache and user data - comprehensive cleanup
    */
-  static async logout(): Promise<void> {
+  static async clearAllCache(): Promise<void> {
+    try {
+      // Import GradeCache to access its cache clearing methods
+      const { GradeCache } = await import('./gradeCache');
+      
+      // Clear all grade and transcript cache
+      await GradeCache.clearAllCacheIncludingPreviousGrades();
+      
+      // Clear notification cache
+      await Promise.all([
+        AsyncStorage.removeItem('notifications_cache'),
+        AsyncStorage.removeItem('notifications_read_status'),
+        AsyncStorage.removeItem('seen_notification_ids')
+      ]);
+      
+      // Clear push notification cache using the service
+      const { pushNotificationService } = await import('./services/pushNotificationService');
+      await pushNotificationService.clearCachedToken();
+      
+      // Clear What's New cache
+      await Promise.all([
+        AsyncStorage.removeItem('whats_new_shown'),
+        AsyncStorage.removeItem('whats_new_version')
+      ]);
+      
+      // Clear any other potential cache keys
+      await Promise.all([
+        AsyncStorage.removeItem('shiftedScheduleEnabled'),
+        AsyncStorage.removeItem('defaultScreen')
+      ]);
+      
+    } catch (error) {
+      // Continue even if some cache clearing fails
+    }
+  }
+
+  /**
+   * Nuclear option: Clear ALL AsyncStorage data (use with extreme caution)
+   * This will remove everything stored in AsyncStorage, including app preferences
+   */
+  static async clearAllAsyncStorage(): Promise<void> {
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      if (keys.length > 0) {
+        await AsyncStorage.multiRemove(keys);
+      }
+    } catch (error) {
+      // Continue even if clearing fails
+    }
+  }
+
+  /**
+   * Debug method: Get all remaining AsyncStorage keys after logout
+   * Useful for verifying that all cache has been cleared
+   */
+  static async getRemainingStorageKeys(): Promise<string[]> {
+    try {
+      return await AsyncStorage.getAllKeys();
+    } catch (error) {
+      return [];
+    }
+  }
+
+  /**
+   * User logout - clear all stored data and cache (for when user explicitly logs out)
+   * @param nuclear - If true, will clear ALL AsyncStorage data (use with caution)
+   */
+  static async userLogout(nuclear: boolean = false): Promise<void> {
     try {
       
-      // Clear all stored data
+      if (nuclear) {
+        // Nuclear option: Clear everything
+        await this.clearAllAsyncStorage();
+      } else {
+        // User logout: Clear authentication data and cache
+        await Promise.all([
+          this.clearSessionCookie(),
+          this.clearCredentials(),
+          this.clearNickname(),
+          this.clearUserId(),
+          this.clearShiftedSchedulePreference(),
+          this.clearDefaultScreen()
+        ]);
+        
+        // Clear all application cache
+        await this.clearAllCache();
+      }
+      
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Session reset logout - clear only authentication data (for logout/login cycle)
+   * This is used internally for session recovery and does NOT clear cache
+   */
+  static async sessionResetLogout(): Promise<void> {
+    try {
+      // Only clear authentication data, keep cache intact
       await Promise.all([
         this.clearSessionCookie(),
         this.clearCredentials(),
@@ -224,6 +321,14 @@ export class AuthManager {
     } catch (error) {
       throw error;
     }
+  }
+
+  /**
+   * @deprecated Use userLogout() for user-initiated logout or sessionResetLogout() for session recovery
+   * This method is kept for backward compatibility but will use userLogout() behavior
+   */
+  static async logout(nuclear: boolean = false): Promise<void> {
+    return this.userLogout(nuclear);
   }
 
   /**
@@ -286,6 +391,26 @@ export class AuthManager {
           await this.storeSessionCookie(cookieString);
           await this.storeCredentials(username.trim(), password);
           
+          // Track user login in Supabase database
+          console.log('🚀 [AuthManager] ===== STARTING USER TRACKING PROCESS =====');
+          console.log('🚀 [AuthManager] 🔥 LOGIN SUCCESSFUL - TRIGGERING DATABASE INSERT 🔥');
+          console.log('🚀 [AuthManager] Username for tracking:', username.trim());
+          console.log('🚀 [AuthManager] About to call userTrackingService.trackUserLogin()...');
+          try {
+            // Get user ID for tracking (import GUCAPIProxy dynamically to avoid circular dependency)
+            const { GUCAPIProxy } = await import('./gucApiProxy');
+            const userId = await GUCAPIProxy.getUserId();
+            console.log('🚀 [AuthManager] User ID for tracking:', userId);
+            
+            await userTrackingService.trackUserLogin(username.trim(), undefined, userId);
+            console.log('✅ [AuthManager] User tracking completed successfully');
+          } catch (error) {
+            // Don't fail login if tracking fails
+            console.warn('⚠️ [AuthManager] User tracking failed:', error);
+            console.warn('⚠️ [AuthManager] Login will continue despite tracking failure');
+            console.warn('⚠️ [AuthManager] Error details:', JSON.stringify(error, null, 2));
+          }
+          
           // Start preloading schedule data in the background
           const { SchedulePreloader } = await import('./schedulePreloader');
           SchedulePreloader.preloadSchedule().catch(error => {
@@ -318,8 +443,8 @@ export class AuthManager {
         return false;
       }
       
-      // Perform logout
-      await this.logout();
+      // Perform session reset logout (clears auth but keeps cache)
+      await this.sessionResetLogout();
       
       // Wait a bit for logout to complete
       await new Promise(resolve => setTimeout(resolve, 50));
