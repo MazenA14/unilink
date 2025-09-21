@@ -2,7 +2,17 @@ import { Notification } from '@/utils/types/notificationTypes';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
+import {
+  addNotificationReceivedListener,
+  addNotificationResponseReceivedListener,
+  AndroidNotificationPriority,
+  dismissAllNotificationsAsync,
+  getExpoPushTokenAsync,
+  getPermissionsAsync,
+  requestPermissionsAsync,
+  scheduleNotificationAsync,
+  setNotificationHandler
+} from 'expo-notifications';
 import { NotificationDesignService } from './notificationDesignService';
 
 // Storage keys
@@ -10,7 +20,7 @@ const EXPO_PUSH_TOKEN_KEY = 'expo_push_token';
 const NOTIFICATION_PERMISSION_KEY = 'notification_permission_granted';
 
 // Configure how notifications are handled when the app is in the foreground
-Notifications.setNotificationHandler({
+setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
@@ -65,7 +75,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
       if (this.isExpoGo()) {
         // In Expo Go, we can still request permissions for local notifications
         // but we should check the actual system permission
-        const { status } = await Notifications.getPermissionsAsync();
+        const { status } = await getPermissionsAsync();
         const isGranted = status === 'granted';
         
         // Store permission status
@@ -73,7 +83,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
         
         if (!isGranted) {
           // Request permissions even in Expo Go for local notifications
-          const { status: newStatus } = await Notifications.requestPermissionsAsync();
+          const { status: newStatus } = await requestPermissionsAsync();
           const newIsGranted = newStatus === 'granted';
           await AsyncStorage.setItem(NOTIFICATION_PERMISSION_KEY, JSON.stringify(newIsGranted));
           return newIsGranted;
@@ -82,11 +92,11 @@ class PushNotificationServiceImpl implements PushNotificationService {
         return isGranted;
       }
 
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      const { status: existingStatus } = await getPermissionsAsync();
       let finalStatus = existingStatus;
 
       if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
+        const { status } = await requestPermissionsAsync();
         finalStatus = status;
       }
 
@@ -131,7 +141,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
       
       // Only call getExpoPushTokenAsync if not in Expo Go
       if (!this.isExpoGo()) {
-        const token = await Notifications.getExpoPushTokenAsync({
+        const token = await getExpoPushTokenAsync({
           projectId,
         });
 
@@ -179,13 +189,13 @@ class PushNotificationServiceImpl implements PushNotificationService {
     data?: any
   ): Promise<void> {
     try {
-      await Notifications.scheduleNotificationAsync({
+      await scheduleNotificationAsync({
         content: {
           title,
           body,
           data,
           sound: 'default',
-          priority: Notifications.AndroidNotificationPriority.HIGH,
+          priority: AndroidNotificationPriority.HIGH,
           vibrate: [0, 250, 250, 250],
         },
         trigger: null, // Show immediately
@@ -201,7 +211,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
     try {
       const content = NotificationDesignService.createNotificationContent(notification);
       
-      await Notifications.scheduleNotificationAsync({
+      await scheduleNotificationAsync({
         content,
         trigger: null, // Show immediately
       });
@@ -216,7 +226,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
     try {
       const content = NotificationDesignService.createBatchNotification(count);
       
-      await Notifications.scheduleNotificationAsync({
+      await scheduleNotificationAsync({
         content,
         trigger: null, // Show immediately
       });
@@ -239,7 +249,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
         reminderType
       );
       
-      await Notifications.scheduleNotificationAsync({
+      await scheduleNotificationAsync({
         content,
         trigger: null, // Show immediately
       });
@@ -252,7 +262,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
    */
   async clearAllNotifications(): Promise<void> {
     try {
-      await Notifications.dismissAllNotificationsAsync();
+      await dismissAllNotificationsAsync();
     } catch (error) {
     }
   }
@@ -264,7 +274,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
   async isPermissionGranted(): Promise<boolean> {
     try {
       // Always check the actual system permission, not cached value
-      const { status } = await Notifications.getPermissionsAsync();
+      const { status } = await getPermissionsAsync();
       const isGranted = status === 'granted';
       
       // Update cache with current status
@@ -281,11 +291,11 @@ class PushNotificationServiceImpl implements PushNotificationService {
    */
   setupNotificationListeners() {
     // Handle notification received while app is in foreground
-    Notifications.addNotificationReceivedListener(notification => {
+    addNotificationReceivedListener(notification => {
     });
 
     // Handle notification tapped
-    Notifications.addNotificationResponseReceivedListener(response => {
+    addNotificationResponseReceivedListener(response => {
       
       // Navigate to notifications screen when notification is tapped
       const data = response.notification.request.content.data;

@@ -1,10 +1,10 @@
 import {
-    CourseWithGrades,
-    CurrentGradesSection,
-    GradeType,
-    PreviousGradesSection,
-    Season,
-    YearGroup
+  CourseWithGrades,
+  CurrentGradesSection,
+  GradeType,
+  PreviousGradesSection,
+  Season,
+  YearGroup
 } from '@/components/grades';
 import { GradesMenu } from '@/components/GradesMenu';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';

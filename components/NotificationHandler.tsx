@@ -1,5 +1,5 @@
 import { useNotifications } from '@/contexts/NotificationContext';
-import * as Notifications from 'expo-notifications';
+import { addNotificationResponseReceivedListener } from 'expo-notifications';
 import { router } from 'expo-router';
 import { useEffect } from 'react';
 
@@ -12,7 +12,7 @@ export default function NotificationHandler() {
 
   useEffect(() => {
     // Set up notification response listener
-    Notifications.addNotificationResponseReceivedListener(response => {
+    addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data;
       
       // Navigate to notifications screen when notification is tapped

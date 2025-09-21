@@ -1,8 +1,8 @@
 import {
-  EmptyState,
-  LoadingIndicator,
-  SemesterTable,
-  YearSelector,
+    EmptyState,
+    LoadingIndicator,
+    SemesterTable,
+    YearSelector,
 } from '@/components/transcript';
 import GradingInfoModal from '@/components/transcript/GradingInfoModal';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';

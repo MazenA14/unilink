@@ -1,9 +1,9 @@
 import { useScheduleContext } from '@/contexts/ScheduleContext';
 import { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { PlatformPressable } from '@react-navigation/elements';
-import * as Haptics from 'expo-haptics';
+import { impactAsync, ImpactFeedbackStyle } from 'expo-haptics';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ScheduleMenu } from './ScheduleMenu';
 
 export function ScheduleTabButton(props: BottomTabBarButtonProps) {
@@ -13,7 +13,7 @@ export function ScheduleTabButton(props: BottomTabBarButtonProps) {
 
   const handlePress = () => {
     if (process.env.EXPO_OS === 'ios') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      impactAsync(ImpactFeedbackStyle.Light);
     }
     
     if (menuVisible) {
@@ -49,7 +49,7 @@ export function ScheduleTabButton(props: BottomTabBarButtonProps) {
         onPressIn={(ev) => {
           setPressed(true);
           if (process.env.EXPO_OS === 'ios') {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            impactAsync(ImpactFeedbackStyle.Light);
           }
           props.onPressIn?.(ev);
         }}

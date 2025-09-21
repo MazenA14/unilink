@@ -4,11 +4,11 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { pushNotificationService } from '@/utils/services/pushNotificationService';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  Alert,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 /**

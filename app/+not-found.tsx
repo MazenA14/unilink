@@ -2,7 +2,7 @@ import { Link, Stack } from 'expo-router';
 import React from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { IconSymbol } from '@/components/ui/IconSymbol';
+// import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
@@ -15,7 +15,7 @@ export default function NotFoundScreen() {
       <Stack.Screen options={{ title: 'Oops!', headerShown: false }} />
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.iconWrap, { backgroundColor: Platform.select({ ios: 'rgba(255,255,255,0.08)', default: colors.fileBackground }) }]}>
-          <IconSymbol name="exclamationmark.triangle.fill" size={48} color={colors.tabColor} />
+          {/* <IconSymbol name="exclamationmark.triangle.fill" size={48} color={colors.tabColor} /> */}
         </View>
 
         <Text style={[styles.title, { color: colors.mainFont }]}>Page not found</Text>

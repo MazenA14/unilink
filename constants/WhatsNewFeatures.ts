@@ -8,7 +8,8 @@ export const WHATS_NEW_CONFIG = {
   version: APP_VERSION,
   features: [
     "Improved Schedule Parsing",
-    "Reset Password Feature"
+    "Reset Password Feature",
+    "Smaller App Size"
   ]
 };
 

@@ -1,5 +1,9 @@
 import { Notification } from '@/utils/types/notificationTypes';
-import * as Notifications from 'expo-notifications';
+import {
+    AndroidNotificationPriority,
+    NotificationContentInput,
+    setNotificationCategoryAsync
+} from 'expo-notifications';
 
 /**
  * Service for designing and customizing notification appearance
@@ -8,7 +12,7 @@ export class NotificationDesignService {
   /**
    * Create a beautifully designed notification based on GUC notification data
    */
-  static createNotificationContent(notification: Notification): Notifications.NotificationContentInput {
+  static createNotificationContent(notification: Notification): NotificationContentInput {
     const importance = notification.importance?.toLowerCase() || 'medium';
     
     // Design notification based on importance
@@ -45,14 +49,14 @@ export class NotificationDesignService {
       case 'high':
         return {
           sound: 'default',
-          priority: Notifications.AndroidNotificationPriority.MAX,
+          priority: AndroidNotificationPriority.MAX,
           vibrate: [0, 500, 200, 500], // Strong vibration pattern
           color: '#FF3B30', // Red for high importance
         };
       case 'medium':
         return {
           sound: 'default',
-          priority: Notifications.AndroidNotificationPriority.HIGH,
+          priority: AndroidNotificationPriority.HIGH,
           vibrate: [0, 250, 250, 250], // Medium vibration pattern
           color: '#FF9500', // Orange for medium importance
         };
@@ -60,7 +64,7 @@ export class NotificationDesignService {
       default:
         return {
           sound: 'default',
-          priority: Notifications.AndroidNotificationPriority.DEFAULT,
+          priority: AndroidNotificationPriority.DEFAULT,
           vibrate: [0, 200], // Light vibration pattern
           color: '#007AFF', // Blue for low importance
         };
@@ -70,7 +74,7 @@ export class NotificationDesignService {
   /**
    * Create a rich notification with custom styling
    */
-  static createRichNotification(notification: Notification): Notifications.NotificationContentInput {
+  static createRichNotification(notification: Notification): NotificationContentInput {
     const baseContent = this.createNotificationContent(notification);
     
     // Add rich content for better appearance
@@ -90,7 +94,7 @@ export class NotificationDesignService {
   /**
    * Create a notification for multiple new notifications
    */
-  static createBatchNotification(count: number): Notifications.NotificationContentInput {
+  static createBatchNotification(count: number): NotificationContentInput {
     return {
       title: 'New Notifications',
       body: `You have ${count} new notification${count > 1 ? 's' : ''}`,
@@ -100,7 +104,7 @@ export class NotificationDesignService {
         count,
       },
       sound: 'default',
-      priority: Notifications.AndroidNotificationPriority.HIGH,
+      priority: AndroidNotificationPriority.HIGH,
       vibrate: [0, 300, 200, 300],
       badge: count,
       categoryIdentifier: 'guc-batch-notification',
@@ -116,7 +120,7 @@ export class NotificationDesignService {
     title: string,
     message: string,
     reminderType: 'exam' | 'assignment' | 'payment' | 'general'
-  ): Notifications.NotificationContentInput {
+  ): NotificationContentInput {
     const design = this.getReminderDesign(reminderType);
     
     return {
@@ -144,28 +148,28 @@ export class NotificationDesignService {
       case 'exam':
         return {
           sound: 'default',
-          priority: Notifications.AndroidNotificationPriority.MAX,
+          priority: AndroidNotificationPriority.MAX,
           vibrate: [0, 400, 200, 400],
           color: '#FF3B30', // Red for exams
         };
       case 'assignment':
         return {
           sound: 'default',
-          priority: Notifications.AndroidNotificationPriority.HIGH,
+          priority: AndroidNotificationPriority.HIGH,
           vibrate: [0, 300, 200, 300],
           color: '#FF9500', // Orange for assignments
         };
       case 'payment':
         return {
           sound: 'default',
-          priority: Notifications.AndroidNotificationPriority.HIGH,
+          priority: AndroidNotificationPriority.HIGH,
           vibrate: [0, 250, 250, 250],
           color: '#34C759', // Green for payments
         };
       default:
         return {
           sound: 'default',
-          priority: Notifications.AndroidNotificationPriority.DEFAULT,
+          priority: AndroidNotificationPriority.DEFAULT,
           vibrate: [0, 200],
           color: '#007AFF', // Blue for general
         };
@@ -220,7 +224,7 @@ export class NotificationDesignService {
    */
   static async setupNotificationCategories(): Promise<void> {
     try {
-      await Notifications.setNotificationCategoryAsync('guc-notification', [
+      await setNotificationCategoryAsync('guc-notification', [
         {
           identifier: 'VIEW_ACTION',
           buttonTitle: 'View',
@@ -239,7 +243,7 @@ export class NotificationDesignService {
         },
       ]);
 
-      await Notifications.setNotificationCategoryAsync('guc-batch-notification', [
+      await setNotificationCategoryAsync('guc-batch-notification', [
         {
           identifier: 'VIEW_ALL_ACTION',
           buttonTitle: 'View All',
@@ -250,7 +254,7 @@ export class NotificationDesignService {
         },
       ]);
 
-      await Notifications.setNotificationCategoryAsync('guc-reminder', [
+      await setNotificationCategoryAsync('guc-reminder', [
         {
           identifier: 'SNOOZE_ACTION',
           buttonTitle: 'Snooze',
