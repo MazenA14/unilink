@@ -79,18 +79,39 @@ export default function DashboardScreen() {
             // Cache the mapping
             await GradeCache.setCachedCourseIdToName(courseIdToNameMapping);
             mapping = courseIdToNameMapping;
-          } catch (error) {
+          } catch {
           }
         }
         
         if (mapping) {
           setCourseNameMapping(mapping);
         }
-      } catch (error) {
+      } catch {
       }
     };
     
     loadCourseNameMapping();
+  }, []);
+
+  const loadNickname = useCallback(async () => {
+    // First try to get stored nickname
+    const storedNickname = await AuthManager.getNickname();
+    if (storedNickname) {
+      setNickname(storedNickname);
+      return;
+    }
+    
+    // If no stored nickname, extract first name from username
+    const { username } = await AuthManager.getCredentials();
+    if (username) {
+      // Extract first name from username (assuming format: user.name or user_name)
+      const firstName = username.split(/[._]/)[0];
+      if (firstName) {
+        // Capitalize first letter
+        const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+        setNickname(capitalizedFirstName);
+      }
+    }
   }, []);
 
   // Utility function to get course name by matching course names
@@ -101,14 +122,14 @@ export default function DashboardScreen() {
     
     // Try to find a match in the course mapping
     // First, try exact match
-    for (const [courseId, courseName] of Object.entries(courseNameMapping)) {
+    for (const [, courseName] of Object.entries(courseNameMapping)) {
       if (courseName === scheduleCourseName) {
         return courseName;
       }
     }
     
     // Try partial matching - look for course names that contain the schedule course name
-    for (const [courseId, courseName] of Object.entries(courseNameMapping)) {
+    for (const [, courseName] of Object.entries(courseNameMapping)) {
       if (courseName.toLowerCase().includes(scheduleCourseName.toLowerCase()) ||
           scheduleCourseName.toLowerCase().includes(courseName.toLowerCase())) {
         return courseName;
@@ -118,7 +139,7 @@ export default function DashboardScreen() {
     // Try to match by extracting course code from both
     const scheduleCourseCode = extractCourseCode(scheduleCourseName);
     if (scheduleCourseCode) {
-      for (const [courseId, courseName] of Object.entries(courseNameMapping)) {
+      for (const [, courseName] of Object.entries(courseNameMapping)) {
         const mappedCourseCode = extractCourseCode(courseName);
         if (mappedCourseCode && mappedCourseCode === scheduleCourseCode) {
           return courseName;
@@ -155,7 +176,7 @@ export default function DashboardScreen() {
     // If no pattern matches, return the original name
     return fullCourseName;
   };
-
+  
   // Function to extract course code from course name (e.g., "CSEN 701" -> "CSEN701")
   const extractCourseCode = (courseName: string): string => {
     if (!courseName) return '';
@@ -169,36 +190,6 @@ export default function DashboardScreen() {
     // Fallback: remove all spaces
     return courseName.replace(/\s+/g, '');
   };
-
-  // Function to check if the instructor field is a tutorial/lab identifier
-  const isTutorialIdentifier = (instructor: string): boolean => {
-    if (!instructor || !instructor.trim()) return false;
-    
-    // Check for patterns like "7MET T014", "7MET L001", etc.
-    const tutorialPattern = /^\d+[A-Z]+\s+[A-Z]\d+$/;
-    return tutorialPattern.test(instructor.trim());
-  };
-
-  const loadNickname = useCallback(async () => {
-    // First try to get stored nickname
-    const storedNickname = await AuthManager.getNickname();
-    if (storedNickname) {
-      setNickname(storedNickname);
-      return;
-    }
-    
-    // If no stored nickname, extract first name from username
-    const { username } = await AuthManager.getCredentials();
-    if (username) {
-      // Extract first name from username (assuming format: user.name or user_name)
-      const firstName = username.split(/[._]/)[0];
-      if (firstName) {
-        // Capitalize first letter
-        const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
-        setNickname(capitalizedFirstName);
-      }
-    }
-  }, []);
 
   // Get today's schedule and day name
   const getTodaysSchedule = () => {
@@ -234,106 +225,7 @@ export default function DashboardScreen() {
     return timings[periodKey as keyof typeof timings] || '';
   };
 
-  // Function to extract course code from course name
-  const getCourseCode = (classData: any): string => {
-    if (!classData?.courseName) return '';
-    
-    const courseName = classData.courseName;
-    
-    // Look for course code patterns like "7MET L001", "CSEN601", etc.
-    const courseCodePatterns = [
-      /(\d+[A-Z]+\s+[A-Z]\d+)/,  // Pattern like "7MET L001"
-      /([A-Z]{2,}\d{3,})/,        // Pattern like "CSEN601"
-      /([A-Z]{3,}\d{2,})/,        // Pattern like "MATH101"
-    ];
-    
-    for (const pattern of courseCodePatterns) {
-      const match = courseName.match(pattern);
-      if (match) {
-        return match[1];
-      }
-    }
-    
-    return '';
-  };
 
-  // Function to clean course name by removing type information
-  const cleanCourseName = (classData: any): string => {
-    if (!classData?.courseName) return '';
-    
-    let courseName = classData.courseName;
-    
-    // Remove common type patterns from course name
-    const typePatterns = [
-      /\s*\(lab\)/gi,
-      /\s*\(laboratory\)/gi,
-      /\s*\(tutorial\)/gi,
-      /\s*\(tut\)/gi,
-      /\s*\(seminar\)/gi,
-      /\s*\(workshop\)/gi,
-      /\s*\(project\)/gi,
-      /\s*\(thesis\)/gi,
-      /\s*\(dissertation\)/gi,
-      /\s*\[lab\]/gi,
-      /\s*\[laboratory\]/gi,
-      /\s*\[tutorial\]/gi,
-      /\s*\[tut\]/gi,
-      /\s*\[seminar\]/gi,
-      /\s*\[workshop\]/gi,
-      /\s*\[project\]/gi,
-      /\s*\[thesis\]/gi,
-      /\s*\[dissertation\]/gi,
-      /\s*-\s*lab/gi,
-      /\s*-\s*laboratory/gi,
-      /\s*-\s*tutorial/gi,
-      /\s*-\s*tut/gi,
-      /\s*-\s*seminar/gi,
-      /\s*-\s*workshop/gi,
-      /\s*-\s*project/gi,
-      /\s*-\s*thesis/gi,
-      /\s*-\s*dissertation/gi,
-      // Additional patterns for common formats
-      /\s+lab\s*$/gi,
-      /\s+laboratory\s*$/gi,
-      /\s+tutorial\s*$/gi,
-      /\s+tut\s*$/gi,
-      /\s+seminar\s*$/gi,
-      /\s+workshop\s*$/gi,
-      /\s+project\s*$/gi,
-      /\s+thesis\s*$/gi,
-      /\s+dissertation\s*$/gi,
-      // Patterns with numbers (e.g., "Lab 1", "Tutorial 2")
-      /\s+lab\s+\d+\s*$/gi,
-      /\s+laboratory\s+\d+\s*$/gi,
-      /\s+tutorial\s+\d+\s*$/gi,
-      /\s+tut\s+\d+\s*$/gi,
-      /\s+seminar\s+\d+\s*$/gi,
-      /\s+workshop\s+\d+\s*$/gi,
-      /\s+project\s+\d+\s*$/gi,
-      // Lecture patterns
-      /\s+lecture\s*$/gi,
-      /\s*\(lecture\)/gi,
-      /\s*\[lecture\]/gi,
-      /\s*-\s*lecture/gi,
-      /\s+lecture\s+/gi,
-      // Test pattern for "Lecture" at the end
-      / lecture$/gi,
-      // Course code patterns (e.g., "7MET L001", "CSEN601", etc.)
-      /\s*\(\d+[A-Z]+\s+[A-Z]\d+\)/gi,
-      /\s*\[\d+[A-Z]+\s+[A-Z]\d+\]/gi,
-      /\s*-\s*\d+[A-Z]+\s+[A-Z]\d+/gi,
-    ];
-    
-    // Apply all patterns to clean the course name
-    for (const pattern of typePatterns) {
-      courseName = courseName.replace(pattern, '');
-    }
-    
-    // Clean up extra spaces
-    courseName = courseName.replace(/\s+/g, ' ').trim();
-    
-    return courseName;
-  };
 
   // Get slot type color
   const getSlotTypeColor = (slotType: string) => {
@@ -368,7 +260,7 @@ export default function DashboardScreen() {
       // Stop animation
       refreshRotation.stopAnimation();
       refreshRotation.setValue(0);
-    } catch (error) {
+    } catch {
       // Stop animation on error
       refreshRotation.stopAnimation();
       refreshRotation.setValue(0);
@@ -591,21 +483,23 @@ export default function DashboardScreen() {
                                   return originalTitle;
                                 }
                                 
-                                // Final fallback to original cleaned course name
-                                return cleanCourseName(classData);
+                                // Final fallback to original course name
+                                return classData.courseName;
                               })()}
                             </Text>
                             
-                            {/* Final Course Name (with group identifier) */}
-                            <Text style={[styles.finalCourseName, { color: colors.secondaryFont }]} numberOfLines={1}>
-                              {classData.courseName}
-                            </Text>
+                            {/* Course Code (with group identifier) */}
+                            {classData.courseCode && (
+                              <Text style={[styles.finalCourseName, { color: colors.secondaryFont }]} numberOfLines={1}>
+                                {classData.courseCode}
+                              </Text>
+                            )}
                             
-                            {classData.instructor && classData.instructor.trim() && !isTutorialIdentifier(classData.instructor) && (
+                            {/* {classData.instructor && classData.instructor.trim() && (
                               <Text style={[styles.instructor, { color: colors.secondaryFont }]} numberOfLines={1}>
                                 {classData.instructor}
                               </Text>
-                            )}
+                            )} */}
                           </View>
                           <View style={styles.periodContentRight}>
                             {classData.room && (

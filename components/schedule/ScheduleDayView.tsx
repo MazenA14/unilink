@@ -52,20 +52,20 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
             // Cache the mapping
             await GradeCache.setCachedCourseIdToName(courseIdToNameMapping);
             mapping = courseIdToNameMapping;
-          } catch (error) {
+          } catch {
           }
         }
         
         if (mapping) {
           setCourseNameMapping(mapping);
         }
-      } catch (error) {
+      } catch {
       }
     };
     
     loadCourseNameMapping();
   }, []);
-  
+
   // Utility function to get course name by matching course names
   const getCourseNameByMatching = (scheduleCourseName: string): string | null => {
     if (!scheduleCourseName || Object.keys(courseNameMapping).length === 0) {
@@ -74,14 +74,14 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
     
     // Try to find a match in the course mapping
     // First, try exact match
-    for (const [courseId, courseName] of Object.entries(courseNameMapping)) {
+    for (const [, courseName] of Object.entries(courseNameMapping)) {
       if (courseName === scheduleCourseName) {
         return courseName;
       }
     }
     
     // Try partial matching - look for course names that contain the schedule course name
-    for (const [courseId, courseName] of Object.entries(courseNameMapping)) {
+    for (const [, courseName] of Object.entries(courseNameMapping)) {
       if (courseName.toLowerCase().includes(scheduleCourseName.toLowerCase()) ||
           scheduleCourseName.toLowerCase().includes(courseName.toLowerCase())) {
         return courseName;
@@ -91,7 +91,7 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
     // Try to match by extracting course code from both
     const scheduleCourseCode = extractCourseCode(scheduleCourseName);
     if (scheduleCourseCode) {
-      for (const [courseId, courseName] of Object.entries(courseNameMapping)) {
+      for (const [, courseName] of Object.entries(courseNameMapping)) {
         const mappedCourseCode = extractCourseCode(courseName);
         if (mappedCourseCode && mappedCourseCode === scheduleCourseCode) {
           return courseName;
@@ -142,6 +142,9 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
     // Fallback: remove all spaces
     return courseName.replace(/\s+/g, '');
   };
+  
+
+  
   
   // Calculate dynamic padding based on screen width
   const basePadding = Math.max(12, screenWidth * 0.04);
@@ -204,120 +207,7 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
     setSelectedDayName('');
   };
 
-  // Function to extract course code from course name
-  const getCourseCode = (classData: any): string => {
-    if (!classData?.courseName) return '';
-    
-    const courseName = classData.courseName;
-    
-    // Try to extract course code patterns like "7MET L001", "CSEN601", etc.
-    const courseCodePatterns = [
-      /\((\d+[A-Z]+\s+[A-Z]\d+)\)/gi,
-      /\[(\d+[A-Z]+\s+[A-Z]\d+)\]/gi,
-      /-(\d+[A-Z]+\s+[A-Z]\d+)/gi,
-      /(\d+[A-Z]+\s+[A-Z]\d+)$/gi,
-      /\(([A-Z]+\d+[A-Z]*\s*[A-Z]\d+)\)/gi,
-      /\[([A-Z]+\d+[A-Z]*\s*[A-Z]\d+)\]/gi,
-      /-([A-Z]+\d+[A-Z]*\s*[A-Z]\d+)/gi,
-      /([A-Z]+\d+[A-Z]*\s*[A-Z]\d+)$/gi,
-    ];
-    
-    for (const pattern of courseCodePatterns) {
-      const match = courseName.match(pattern);
-      if (match) {
-        let result = match[1] || match[0];
-        result = result.slice(1, -1);
-        // Return the captured group (without brackets) or the full match if no group
-        return result;
-      }
-    }
-    
-    return '';
-  };
 
-  // Function to clean course name by removing type information
-  const cleanCourseName = (classData: any): string => {
-    if (!classData?.courseName) return '';
-    
-    let courseName = classData.courseName;
-    
-    // Remove common type patterns from course name
-    const typePatterns = [
-      /\s*\(lab\)/gi,
-      /\s*\(laboratory\)/gi,
-      /\s*\(tutorial\)/gi,
-      /\s*\(tut\)/gi,
-      /\s*\(seminar\)/gi,
-      /\s*\(workshop\)/gi,
-      /\s*\(project\)/gi,
-      /\s*\(thesis\)/gi,
-      /\s*\(dissertation\)/gi,
-      /\s*\[lab\]/gi,
-      /\s*\[laboratory\]/gi,
-      /\s*\[tutorial\]/gi,
-      /\s*\[tut\]/gi,
-      /\s*\[seminar\]/gi,
-      /\s*\[workshop\]/gi,
-      /\s*\[project\]/gi,
-      /\s*\[thesis\]/gi,
-      /\s*\[dissertation\]/gi,
-      /\s*-\s*lab/gi,
-      /\s*-\s*laboratory/gi,
-      /\s*-\s*tutorial/gi,
-      /\s*-\s*tut/gi,
-      /\s*-\s*seminar/gi,
-      /\s*-\s*workshop/gi,
-      /\s*-\s*project/gi,
-      /\s*-\s*thesis/gi,
-      /\s*-\s*dissertation/gi,
-      // Additional patterns for common formats
-      /\s+lab\s*$/gi,
-      /\s+laboratory\s*$/gi,
-      /\s+tutorial\s*$/gi,
-      /\s+tut\s*$/gi,
-      /\s+seminar\s*$/gi,
-      /\s+workshop\s*$/gi,
-      /\s+project\s*$/gi,
-      /\s+thesis\s*$/gi,
-      /\s+dissertation\s*$/gi,
-      // Patterns with numbers (e.g., "Lab 1", "Tutorial 2")
-      /\s+lab\s+\d+\s*$/gi,
-      /\s+laboratory\s+\d+\s*$/gi,
-      /\s+tutorial\s+\d+\s*$/gi,
-      /\s+tut\s+\d+\s*$/gi,
-      /\s+seminar\s+\d+\s*$/gi,
-      /\s+workshop\s+\d+\s*$/gi,
-      /\s+project\s+\d+\s*$/gi,
-      // Lecture patterns
-      /\s+lecture\s*$/gi,
-      /\s*\(lecture\)/gi,
-      /\s*\[lecture\]/gi,
-      /\s*-\s*lecture/gi,
-      /\s+lecture\s+/gi,
-      // Test pattern for "Lecture" at the end
-      / lecture$/gi,
-      // Course code patterns (e.g., "7MET L001", "CSEN601", etc.)
-      /\s*\(\d+[A-Z]+\s+[A-Z]\d+\)/gi,
-      /\s*\[\d+[A-Z]+\s+[A-Z]\d+\]/gi,
-      /\s*-\s*\d+[A-Z]+\s+[A-Z]\d+/gi,
-      /\s+\d+[A-Z]+\s+[A-Z]\d+\s*$/gi,
-      // More general course code patterns
-      /\s*\([A-Z]+\d+[A-Z]*\s*[A-Z]\d+\)/gi,
-      /\s*\[[A-Z]+\d+[A-Z]*\s*[A-Z]\d+\]/gi,
-      /\s*-\s*[A-Z]+\d+[A-Z]*\s*[A-Z]\d+/gi,
-      /\s+[A-Z]+\d+[A-Z]*\s*[A-Z]\d+\s*$/gi,
-    ];
-    
-    // Apply all patterns to clean the course name
-    typePatterns.forEach((pattern, index) => {
-      courseName = courseName.replace(pattern, '');
-    });
-    
-    // Clean up any extra spaces
-    courseName = courseName.trim();
-    
-    return courseName;
-  };
 
   const periods = [
     { key: 'first', name: '1st', timing: '8:15 - 9:45' },
@@ -401,20 +291,8 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
                           return originalTitle;
                         }
                         
-                        // Final fallback to original cleaned course name
-                        return cleanCourseName(lecture);
-                      })(),
-                      courseCode: (() => {
-                        // Try to get course code from mapped course name first
-                        const mappedCourseName = getCourseNameByMatching(lecture.courseName);
-                        if (mappedCourseName) {
-                          const code = extractCourseCode(mappedCourseName);
-                          if (code) return code;
-                        }
-                        
-                        // Fallback: extract from original course name
-                        const originalCode = getCourseCode(lecture);
-                        return extractCourseCode(originalCode || lecture.courseName);
+                        // Final fallback to original course name
+                        return lecture.courseName;
                       })()
                     }))}
                     periodName={period.name} 

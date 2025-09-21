@@ -1,7 +1,5 @@
 import { AuthManager } from '../auth';
 import { PROXY_SERVER } from '../config/proxyConfig';
-import { parseScheduleData, parseScheduleDataAlternative } from '../parsers/scheduleParser';
-import { parseScheduleDataSimple } from '../parsers/simpleScheduleParser';
 import { ScheduleData } from '../types/gucTypes';
 
 // Vercel endpoint for Cheerio-based parsing
@@ -90,9 +88,9 @@ function extractRedirectParam(html: string): string {
 }
 
 /**
- * Parse schedule data using the Vercel Cheerio parser
+ * Send HTML to API and retrieve JSON response
  */
-async function parseScheduleWithVercel(html: string): Promise<ScheduleData> {
+async function sendHtmlToApi(html: string): Promise<any> {
   try {
     const response = await fetch(VERCEL_PARSER_ENDPOINT, {
       method: 'POST',
@@ -103,49 +101,76 @@ async function parseScheduleWithVercel(html: string): Promise<ScheduleData> {
     });
 
     if (!response.ok) {
-      throw new Error(`Vercel parser request failed: ${response.status}`);
+      throw new Error(`API request failed: ${response.status}`);
     }
 
     const result = await response.json();
     
     // Log the JSON response to terminal
+    console.log('=== SCHEDULE API JSON RESPONSE ===');
+    console.log(JSON.stringify(result, null, 2));
+    console.log('=== END SCHEDULE API JSON RESPONSE ===');
     
-    // Convert the new format to your app's expected format
-    const scheduleData = convertVercelResponseToScheduleData(result);
-    
-    
-    return scheduleData;
+    return result;
   } catch (error: any) {
-    throw new Error(`Vercel parsing failed: ${error.message}`);
+    throw new Error(`API request failed: ${error.message}`);
   }
 }
 
 /**
- * Convert Vercel response format to app's ScheduleData format
+ * Extract schedule data from API JSON response
  */
-function convertVercelResponseToScheduleData(vercelResponse: any): ScheduleData {
-  const days: any[] = [];
+function extractScheduleFromJson(jsonData: any): ScheduleData {
   const dayNames = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
+  const periodKeys = ['first', 'second', 'third', 'fourth', 'fifth'] as const;
   
-  dayNames.forEach(dayName => {
-    const dayData = vercelResponse[dayName];
-    if (!dayData) return;
+  const days = dayNames.map(dayName => {
+    const dayData = jsonData[dayName];
+    if (!dayData || !Array.isArray(dayData)) {
+      // If no data for this day, return all free periods
+      return {
+        dayName,
+        periods: {
+          first: null,
+          second: null,
+          third: null,
+          fourth: null,
+          fifth: null
+        },
+        isFree: true
+      };
+    }
     
-    const periods = {
-      first: convertPeriodDataArray(dayData[0]),
-      second: convertPeriodDataArray(dayData[1]),
-      third: convertPeriodDataArray(dayData[2]),
-      fourth: convertPeriodDataArray(dayData[3]),
-      fifth: convertPeriodDataArray(dayData[4])
-    };
+    const periods: any = {};
+    let hasAnyClasses = false;
     
-    const isFree = !Object.values(periods).some(period => period !== null && period.length > 0);
+    // Process each period (0-4 corresponds to first-fifth)
+    periodKeys.forEach((periodKey, index) => {
+      const periodData = dayData[index];
+      
+      if (!periodData || !Array.isArray(periodData) || periodData.length === 0) {
+        periods[periodKey] = null;
+        return;
+      }
+      
+      // Filter out "Free" entries and process actual courses
+      const courses = periodData
+        .filter(course => course.subject && !course.subject.includes('Free'))
+        .map(course => extractCourseData(course));
+      
+      if (courses.length > 0) {
+        periods[periodKey] = courses;
+        hasAnyClasses = true;
+      } else {
+        periods[periodKey] = null;
+      }
+    });
     
-    days.push({
+    return {
       dayName,
       periods,
-      isFree
-    });
+      isFree: !hasAnyClasses
+    };
   });
   
   return {
@@ -155,123 +180,139 @@ function convertVercelResponseToScheduleData(vercelResponse: any): ScheduleData 
 }
 
 /**
- * Convert period data array from Vercel format to app format
+ * Extract course data from a single course object
  */
-function convertPeriodDataArray(periodData: any[]): any[] | null {
-  if (!periodData || periodData.length === 0) return null;
+function extractCourseData(course: any): any {
+  const subject = course.subject || '';
+  const group = course.group || '';
+  const room = course.room || '';
   
-  const convertedPeriods = periodData.map(period => {
-    if (period.subject && period.subject.includes('Free')) {
-      return null;
-    }
-    
-    // Extract slot type FIRST from subject field
-    const slotType = extractSlotTypeFromSubject(period.subject || '');
-    
-    // Extract location from subject format like "MCTR 703 Lecture (7MCTR L001)H9"
-    const { courseName, room } = extractCourseInfoFromSubject(period.subject || '');
-    
-    // Clean up course name (remove newlines and excessive whitespace)
-    const cleanCourseName = courseName.replace(/\s+/g, ' ').trim();
-    
-    // Extract group identifier and append to course name
-    const groupIdentifier = extractGroupIdentifier(period.group || '');
-    const finalCourseName = groupIdentifier ? `${cleanCourseName} - ${groupIdentifier}` : cleanCourseName;
-    
-    return {
-      courseName: finalCourseName,
-      room: room || period.room || undefined,
-      instructor: period.group || undefined,
-      slotType: slotType
-    };
-  }).filter(period => period !== null);
+  // Extract slot type from subject
+  const slotType = extractSlotTypeFromSubject(subject);
   
-  return convertedPeriods.length > 0 ? convertedPeriods : null;
+  // Extract course name, room, and lecture group
+  const { courseName, extractedRoom, lectureGroup } = extractCourseNameAndRoom(subject);
+  
+  // Use extracted room if available, otherwise use the room field
+  const finalRoom = extractedRoom || room || undefined;
+  
+  // Extract group identifier from the group field (for tutorials/labs)
+  const groupIdentifier = extractGroupIdentifier(group);
+  
+  // For lectures, use the lecture group from parentheses; for others, use the group field
+  const finalGroupIdentifier = slotType === 'Lecture' ? lectureGroup : groupIdentifier;
+  
+  // Create course code with group identifier if available
+  const courseCode = finalGroupIdentifier ? `${courseName} - ${finalGroupIdentifier}` : courseName;
+  
+  return {
+    courseName: courseName, // Just the course name without group (e.g., "MCTR 704")
+    courseCode: courseCode, // Course code with group identifier (e.g., "MCTR 704 - P031")
+    room: finalRoom,
+    instructor: group || undefined,
+    slotType: slotType
+  };
 }
 
 /**
  * Extract slot type from subject field
- * Example: 'MCTR 703 Lecture (7MCTR L001)H9' -> 'Lecture'
- * Example: 'ELCT 708 Tut' -> 'Tutorial'
- * Example: 'CSEN 401 Lab' -> 'Lab'
  */
 function extractSlotTypeFromSubject(subject: string): string {
   if (!subject) return 'Lecture';
   
   const lowerSubject = subject.toLowerCase();
-  // Check for explicit slot type indicators in the subject
-  if (lowerSubject.includes(' lecture')) {
-    return 'Lecture';
-  }
-  if (lowerSubject.includes(' tut') || lowerSubject.includes(' tutorial')) {
-    return 'Tutorial';
-  }
-  if (lowerSubject.includes(' lab') || lowerSubject.includes(' laboratory')) {
-    return 'Lab';
-  }
-  if (lowerSubject.includes(' seminar')) {
-    return 'Seminar';
-  }
-  if (lowerSubject.includes(' workshop')) {
-    return 'Workshop';
-  }
-  if (lowerSubject.includes(' project')) {
-    return 'Project';
-  }
-  if (lowerSubject.includes(' thesis') || lowerSubject.includes(' dissertation')) {
-    return 'Thesis';
-  }
+  
+  if (lowerSubject.includes(' lecture')) return 'Lecture';
+  if (lowerSubject.includes(' tut') || lowerSubject.includes(' tutorial')) return 'Tutorial';
+  if (lowerSubject.includes(' lab') || lowerSubject.includes(' laboratory')) return 'Lab';
+  if (lowerSubject.includes(' seminar')) return 'Seminar';
+  if (lowerSubject.includes(' workshop')) return 'Workshop';
+  if (lowerSubject.includes(' project')) return 'Project';
+  if (lowerSubject.includes(' thesis') || lowerSubject.includes(' dissertation')) return 'Thesis';
+  
   return 'Lecture';
 }
 
 /**
- * Extract course name and room from subject format
- * Example: 'MCTR 703 Lecture (7MCTR L001)H9' -> { courseName: 'MCTR703', room: 'H9' }
- * Example: 'ELCT 708 Tut' -> { courseName: 'ELCT708', room: undefined }
+ * Extract course name and room from subject string
+ * Handles formats like: "MCTR 702 Lecture (7MCTR L001)H10"
  */
-function extractCourseInfoFromSubject(subject: string): { courseName: string; room: string | undefined } {
-  if (!subject) return { courseName: '', room: undefined };
+function extractCourseNameAndRoom(subject: string): { courseName: string; extractedRoom: string | undefined; lectureGroup: string | undefined } {
+  if (!subject) return { courseName: '', extractedRoom: undefined, lectureGroup: undefined };
   
-  // Pattern to match room codes at the end (like H9, C3.201, D4.108, etc.)
+  // Pattern to match room codes at the end (like H10, C3.201, D4.108, etc.)
+  // This matches letters followed by numbers, optionally with dots
   const roomPattern = /([A-Z]\d+(?:\.\d+)?)$/;
   const match = subject.match(roomPattern);
   
   let courseName = subject;
-  let room: string | undefined;
+  let extractedRoom: string | undefined;
   
   if (match) {
-    room = match[1];
-    courseName = subject.substring(0, subject.length - room.length);
+    extractedRoom = match[1];
+    courseName = subject.substring(0, subject.length - extractedRoom.length);
   }
   
-  // Clean up course name: remove spaces, remove type suffixes (Lecture, Tut, Lab), remove parentheses content
+  // Extract lecture group from parentheses before cleaning
+  let lectureGroup: string | undefined;
+  const lectureGroupMatch = courseName.match(/\(([^)]*)\)/);
+  if (lectureGroupMatch) {
+    const groupContent = lectureGroupMatch[1];
+    // Extract group identifier like L001 from "7MCTR L001"
+    const groupIdMatch = groupContent.match(/([A-Z]\d+)$/);
+    if (groupIdMatch) {
+      lectureGroup = groupIdMatch[1];
+    }
+  }
+  
+  // Clean up course name: remove type suffixes, remove parentheses content, normalize whitespace
   courseName = courseName
     .trim()
-    .replace(/\s+/g, '') // Remove all spaces
-    .replace(/\s*(Lecture|Tut|Lab)\s*/gi, '') // Remove type suffixes
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .replace(/\s*(Lecture|Tut|Lab|Tutorial|Laboratory|Seminar|Workshop|Project|Thesis|Dissertation)\s*/gi, '') // Remove type suffixes
     .replace(/\([^)]*\)/g, '') // Remove parentheses and their content
     .trim();
   
-  return { courseName, room };
+  return { courseName, extractedRoom, lectureGroup };
 }
+
 
 /**
  * Extract group identifier from group string
- * Example: '7MCTR T031' -> 'T031'
  */
 function extractGroupIdentifier(group: string): string | undefined {
   if (!group) return undefined;
   
   // Pattern to match group identifiers like T031, L001, P031, etc.
-  // This matches letters followed by numbers at the end of the string
   const groupPattern = /([A-Z]\d+)$/;
   const match = group.match(groupPattern);
   
-  if (match) {
-    return match[1]; // Return the captured group (e.g., 'T031')
-  }
+  return match ? match[1] : undefined;
+}
+
+
+/**
+ * Create a schedule with all slots free to prevent UI errors
+ */
+function createFreeSchedule(): ScheduleData {
+  const dayNames = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
   
-  return undefined;
+  const days = dayNames.map(dayName => ({
+    dayName,
+    periods: {
+      first: null,
+      second: null,
+      third: null,
+      fourth: null,
+      fifth: null
+    },
+    isFree: true
+  }));
+  
+  return {
+    days,
+    type: 'personal' as const
+  };
 }
 
 
@@ -355,24 +396,25 @@ export async function getScheduleData(): Promise<ScheduleData> {
         }
       }
       
-      // Parse the schedule data
+      // Send HTML to API and get JSON response
       let scheduleData: ScheduleData;
-      
       try {
-        // Try the Vercel Cheerio parser first
-        scheduleData = await parseScheduleWithVercel(html);
-      } catch (vercelError: any) {
+        const jsonResponse = await sendHtmlToApi(html);
+        scheduleData = extractScheduleFromJson(jsonResponse);
         
-        try {
-          // Fallback to local simple parser
-          scheduleData = parseScheduleDataSimple(html);
-        } catch {
-          try {
-            scheduleData = parseScheduleData(html);
-          } catch {
-            scheduleData = parseScheduleDataAlternative(html);
-          }
-        }
+        // Log the newly formatted schedule data
+        console.log('=== EXTRACTED SCHEDULE DATA ===');
+        console.log(JSON.stringify(scheduleData, null, 2));
+        console.log('=== END EXTRACTED SCHEDULE DATA ===');
+        
+      } catch (apiError: any) {
+        console.log('API call failed:', apiError.message);
+        // Fallback to free schedule if API fails
+        scheduleData = createFreeSchedule();
+        
+        console.log('=== FALLBACK FREE SCHEDULE ===');
+        console.log(JSON.stringify(scheduleData, null, 2));
+        console.log('=== END FALLBACK FREE SCHEDULE ===');
       }
       
       return scheduleData;
