@@ -173,18 +173,19 @@ const ResetPasswordModal = ({ visible, onClose, onSuccess }: ResetPasswordModalP
       animationType="fade"
       onRequestClose={handleClose}
     >
-      <KeyboardAvoidingView
-        style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 50 : 80}
-      >
-        <View style={[
-          styles.modalContainer,
-          {
-            backgroundColor: colorScheme === 'dark' ? '#232323' : '#ffffff',
-            borderColor: colors.border,
-          }
-        ]}>
+      <View style={styles.overlay}>
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoidingView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
+          <View style={[
+            styles.modalContainer,
+            {
+              backgroundColor: colorScheme === 'dark' ? '#232323' : '#ffffff',
+              borderColor: colors.border,
+            }
+          ]}>
           <View style={styles.header}>
             {/* <View style={styles.iconContainer}>
               <Ionicons name="key-outline" size={24} color={colors.tabColor} />
@@ -372,7 +373,8 @@ const ResetPasswordModal = ({ visible, onClose, onSuccess }: ResetPasswordModalP
             </TouchableOpacity>
           </View>
         </View>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 };
@@ -385,6 +387,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 40,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    paddingTop: 50,
+    paddingBottom: 100,
   },
   modalContainer: {
     width: '100%',

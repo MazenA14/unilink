@@ -12,10 +12,15 @@ export default function Index() {
         const isAuthenticated = await AuthManager.isAuthenticated();
         setAuthed(isAuthenticated);
         
-        // If user is already authenticated, preload schedule data
+        // If user is already authenticated, preload schedule and grades data
         if (isAuthenticated) {
           const { SchedulePreloader } = await import('@/utils/schedulePreloader');
           SchedulePreloader.preloadSchedule().catch(error => {
+            // Don't show error to user - preloading is optional
+          });
+          
+          const { GradesPreloader } = await import('@/utils/gradesPreloader');
+          GradesPreloader.preloadCurrentGrades().catch(error => {
             // Don't show error to user - preloading is optional
           });
         }

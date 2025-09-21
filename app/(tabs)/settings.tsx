@@ -486,9 +486,11 @@ export default function SettingsScreen() {
         </View>
 
         {/* Development Section */}
+        {__DEV__ && (
+          <>
             <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>DEVELOPMENT</Text>
 
-        <NotificationTest />
+            <NotificationTest />
 
             <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
               <TouchableOpacity
@@ -533,6 +535,8 @@ export default function SettingsScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+          </>
+        )}
 
         {/* Support & Actions */}
         <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>SUPPORT</Text>

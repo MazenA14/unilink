@@ -131,6 +131,12 @@ const LoginScreen = () => {
           SchedulePreloader.preloadSchedule().catch(error => {
             // Don't show error to user - preloading is optional
           });
+          
+          // Start preloading grades data in the background
+          const { GradesPreloader } = await import('@/utils/gradesPreloader');
+          GradesPreloader.preloadCurrentGrades().catch(error => {
+            // Don't show error to user - preloading is optional
+          });
         } 
         // else {
         //   // Still proceed if we got HTTP 200, assuming login worked
@@ -259,7 +265,7 @@ const LoginScreen = () => {
               ) : (
                 <View style={styles.buttonContent}>
                   <Text style={[styles.loginButtonText, { color: colors.background }]}>Sign In</Text>
-                  <Ionicons name="arrow-forward" size={20} color={colors.background} />
+                  {/* <Ionicons name="arrow-forward" size={20} color={colors.background} /> */}
                 </View>
               )}
             </TouchableOpacity>
@@ -395,19 +401,21 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   loginButton: {
-    height: 56,
-    borderRadius: 12,
+    height: 40,
+    width: 120,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 16,
+    alignSelf: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 2,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
   },
   buttonContent: {
     flexDirection: 'row',
