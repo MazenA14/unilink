@@ -55,7 +55,7 @@
 ## Build APK
 - eas build -p android --profile preview
 - Use 'npx expo install --check' to review and upgrade your dependencies
-- npm install -g eas-cli (If error Occurred)
+- npm install -g eas-cli (To upgrade eas-cli version)
 
 -------------------------- -------------------------- -------------------------- --------------------------
 
@@ -72,6 +72,9 @@
 - Solve notifcations error if possible
 
 - See how all aspects of the app works (Caching,...)
+- On selecting the default screen don't go there
+- Namin isn't working with new parser
+- Lecture Location isn't parsed correctly
 
 - Wraping up the app
     - Make it more efficient
@@ -98,3 +101,9 @@
 + Previous grades page is broken
 + Adjust Colouring of transcript semester gpa (All grade colour ranges)
 + Make links in notifications be clickable
+
+## Run these next time
+- npx expo install @expo/metro-runtime react-native-worklets
+- npx expo install --check
+- npx expo install --fix
+- npx expo install eslint-config-expo@~10.0.0

@@ -500,7 +500,9 @@ export default function DashboardScreen() {
               </View>
             ) : periods ? (
               ['first', 'second', 'third', 'fourth', 'fifth'].map((periodKey, index) => {
-                const classData = periods[periodKey as keyof typeof periods];
+                const classDataArray = periods[periodKey as keyof typeof periods];
+                const classData = Array.isArray(classDataArray) ? classDataArray[0] : classDataArray;
+                const hasMultipleLectures = Array.isArray(classDataArray) && classDataArray.length > 1;
                 const periodNumber = ['1st', '2nd', '3rd', '4th', '5th'][index];
                 const timing = getPeriodTiming(periodKey);
                 
@@ -532,7 +534,7 @@ export default function DashboardScreen() {
                       borderLeftWidth: 3,
                       borderLeftColor: ScheduleTypeColors.personal,
                     }]}>
-                      {classData ? (
+                      {classData && (Array.isArray(classDataArray) ? classDataArray.length > 0 : classData) ? (
                         <View style={styles.periodContentRow}>
                           <View style={styles.periodContentLeft}>
                             <Text style={[styles.courseName, { color: colors.mainFont }]} numberOfLines={2}>
@@ -598,6 +600,11 @@ export default function DashboardScreen() {
                             {classData.slotType && (
                               <View style={[styles.typePill, { backgroundColor: getSlotTypeColor(classData.slotType) }]}>
                                 <Text style={[styles.typeText, { color: 'white' }]}>{classData.slotType}</Text>
+                              </View>
+                            )}
+                            {hasMultipleLectures && (
+                              <View style={[styles.multipleLecturesBadge, { backgroundColor: ScheduleTypeColors.personal }]}>
+                                <Text style={[styles.multipleLecturesText, { color: 'white' }]}>{classDataArray.length}</Text>
                               </View>
                             )}
                           </View>
@@ -1035,5 +1042,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     opacity: 0.7,
     fontWeight: '500',
+  },
+  multipleLecturesBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  multipleLecturesText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
 });

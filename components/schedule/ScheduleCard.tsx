@@ -2,20 +2,27 @@ import { Colors, ScheduleColors, ScheduleTypeColors } from '@/constants/Colors';
 // Updated to support courseCode
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ScheduleClass, ScheduleType } from './types';
 
 interface ScheduleCardProps {
-  classData: ScheduleClass;
+  classData: ScheduleClass | ScheduleClass[];
   periodName: string;
   scheduleType?: ScheduleType;
+  onMultipleLecturesPress?: (lectures: ScheduleClass[], periodName: string, dayName: string) => void;
+  dayName?: string;
 }
 
-export function ScheduleCard({ classData, periodName, scheduleType = 'personal' }: ScheduleCardProps) {
+export function ScheduleCard({ classData, periodName, scheduleType = 'personal', onMultipleLecturesPress, dayName }: ScheduleCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const scheduleColors = ScheduleColors[colorScheme ?? 'light'];
   const typeColor = ScheduleTypeColors[scheduleType];
+
+  // Handle both single lecture and multiple lectures
+  const lectures = Array.isArray(classData) ? classData : [classData];
+  const firstLecture = lectures[0];
+  const hasMultipleLectures = lectures.length > 1;
 
   // Function to check if the instructor field is a tutorial identifier
   const isTutorialIdentifier = (instructor: string): boolean => {
@@ -31,9 +38,9 @@ export function ScheduleCard({ classData, periodName, scheduleType = 'personal' 
       case 'staff':
         return (
           <>
-            {classData.officeHours && (
+            {firstLecture.officeHours && (
               <Text style={[styles.additionalInfo, { color: colors.secondaryFont }]} numberOfLines={1}>
-                🏢 Office: {classData.officeHours}
+                🏢 Office: {firstLecture.officeHours}
               </Text>
             )}
           </>
@@ -41,14 +48,14 @@ export function ScheduleCard({ classData, periodName, scheduleType = 'personal' 
       case 'course':
         return (
           <>
-            {classData.enrollmentCount && (
+            {firstLecture.enrollmentCount && (
               <Text style={[styles.additionalInfo, { color: colors.secondaryFont }]} numberOfLines={1}>
-                👥 Students: {classData.enrollmentCount}
+                👥 Students: {firstLecture.enrollmentCount}
               </Text>
             )}
-            {classData.credits && (
+            {firstLecture.credits && (
               <Text style={[styles.additionalInfo, { color: colors.secondaryFont }]} numberOfLines={1}>
-                📊 Credits: {classData.credits}
+                📊 Credits: {firstLecture.credits}
               </Text>
             )}
           </>
@@ -56,14 +63,14 @@ export function ScheduleCard({ classData, periodName, scheduleType = 'personal' 
       case 'group':
         return (
           <>
-            {classData.groupSize && (
+            {firstLecture.groupSize && (
               <Text style={[styles.additionalInfo, { color: colors.secondaryFont }]} numberOfLines={1}>
-                👥 Group Size: {classData.groupSize}
+                👥 Group Size: {firstLecture.groupSize}
               </Text>
             )}
-            {classData.department && (
+            {firstLecture.department && (
               <Text style={[styles.additionalInfo, { color: colors.secondaryFont }]} numberOfLines={1}>
-                🏛️ {classData.department}
+                🏛️ {firstLecture.department}
               </Text>
             )}
           </>
@@ -73,38 +80,54 @@ export function ScheduleCard({ classData, periodName, scheduleType = 'personal' 
     }
   };
 
+  const handleMultipleLecturesPress = () => {
+    if (hasMultipleLectures && onMultipleLecturesPress && dayName) {
+      onMultipleLecturesPress(lectures, periodName, dayName);
+    }
+  };
+
   return (
-    <View style={[styles.container, { 
-      backgroundColor: scheduleColors.periodLabelBg,
-      borderColor: typeColor + '40',
-      borderTopRightRadius: 16,
-      borderBottomRightRadius: 16,
-      borderLeftWidth: 3,
-      borderLeftColor: typeColor,
-    }]}>
-      <Text style={[styles.courseName, { color: colors.text }]} numberOfLines={2}>
-        {classData.courseName}
-      </Text>
-      {classData.courseCode && (
-        <Text style={[styles.courseCode, { color: colors.secondaryFont }]} numberOfLines={1}>
-          {classData.courseCode}
-        </Text>
-      )}
-      {/* {classData.instructor && !isTutorialIdentifier(classData.instructor) && (
-        <Text style={[styles.instructor, { color: colors.secondaryFont }]} numberOfLines={1}>
-          {classData.instructor}
-        </Text>
-      )} */}
-      {classData.room && (
-        <View style={styles.roomContainer}>
-          <Ionicons name="location-outline" size={14} color={colors.secondaryFont} />
-          <Text style={[styles.room, { color: colors.secondaryFont }]} numberOfLines={1}>
-            {classData.room}
+    <TouchableOpacity 
+      style={[styles.container, { 
+        backgroundColor: scheduleColors.periodLabelBg,
+        borderColor: typeColor + '40',
+        borderTopRightRadius: 16,
+        borderBottomRightRadius: 16,
+        borderLeftWidth: 3,
+        borderLeftColor: typeColor,
+      }]}
+      onPress={hasMultipleLectures ? handleMultipleLecturesPress : undefined}
+      disabled={!hasMultipleLectures}
+    >
+      <View style={styles.contentContainer}>
+        <View style={styles.lectureInfo}>
+          <Text style={[styles.courseName, { color: colors.text }]} numberOfLines={2}>
+            {firstLecture.courseName}
           </Text>
+          {firstLecture.courseCode && (
+            <Text style={[styles.courseCode, { color: colors.secondaryFont }]} numberOfLines={1}>
+              {firstLecture.courseCode}
+            </Text>
+          )}
+          {firstLecture.room && (
+            <View style={styles.roomContainer}>
+              <Ionicons name="location-outline" size={14} color={colors.secondaryFont} />
+              <Text style={[styles.room, { color: colors.secondaryFont }]} numberOfLines={1}>
+                {firstLecture.room}
+              </Text>
+            </View>
+          )}
+          {renderTypeSpecificInfo()}
         </View>
-      )}
-      {renderTypeSpecificInfo()}
-    </View>
+        
+        {/* Multiple lectures count badge */}
+        {hasMultipleLectures && (
+          <View style={[styles.countBadge, { backgroundColor: typeColor }]}>
+            <Text style={styles.countText}>{lectures.length}</Text>
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
   );
 }
 
@@ -114,6 +137,31 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     minHeight: 80,
     flex: 1,
+  },
+  contentContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  lectureInfo: {
+    flex: 1,
+    marginRight: 8,
+  },
+  countBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+  },
+  countText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
   },
   courseName: {
     fontSize: 14,

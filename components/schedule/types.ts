@@ -19,11 +19,11 @@ export interface ScheduleClass {
 export interface ScheduleDay {
   dayName: string;
   periods: {
-    first: ScheduleClass | null;
-    second: ScheduleClass | null;
-    third: ScheduleClass | null;
-    fourth: ScheduleClass | null;
-    fifth: ScheduleClass | null;
+    first: ScheduleClass[] | null;
+    second: ScheduleClass[] | null;
+    third: ScheduleClass[] | null;
+    fourth: ScheduleClass[] | null;
+    fifth: ScheduleClass[] | null;
   };
   isFree: boolean;
 }

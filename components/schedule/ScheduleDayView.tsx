@@ -5,8 +5,9 @@ import { GradeCache } from '@/utils/gradeCache';
 import { GUCAPIProxy } from '@/utils/gucApiProxy';
 import { useEffect, useState } from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { MultipleLecturesModal } from './MultipleLecturesModal';
 import { ScheduleCard } from './ScheduleCard';
-import { ScheduleDay, ScheduleType } from './types';
+import { ScheduleClass, ScheduleDay, ScheduleType } from './types';
 
 interface ScheduleDayViewProps {
   day: ScheduleDay;
@@ -23,6 +24,12 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
   
   // State for course name mapping
   const [courseNameMapping, setCourseNameMapping] = useState<{ [courseId: string]: string }>({});
+  
+  // State for multiple lectures modal
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedLectures, setSelectedLectures] = useState<ScheduleClass[]>([]);
+  const [selectedPeriodName, setSelectedPeriodName] = useState('');
+  const [selectedDayName, setSelectedDayName] = useState('');
   
   // Load course name mapping on component mount
   useEffect(() => {
@@ -144,6 +151,11 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
   const getSlotType = (classData: any): string => {
     if (!classData) return 'Free';
     
+    // Handle array of lectures
+    if (Array.isArray(classData)) {
+      return classData[0]?.slotType || 'Lecture';
+    }
+    
     // If slotType is explicitly provided, use it
     if (classData.slotType) {
       return classData.slotType;
@@ -174,6 +186,22 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
     
     // Default to Lecture for regular courses
     return 'Lecture';
+  };
+  
+  // Function to handle multiple lectures press
+  const handleMultipleLecturesPress = (lectures: ScheduleClass[], periodName: string, dayName: string) => {
+    setSelectedLectures(lectures);
+    setSelectedPeriodName(periodName);
+    setSelectedDayName(dayName);
+    setModalVisible(true);
+  };
+  
+  // Function to close modal
+  const closeModal = () => {
+    setModalVisible(false);
+    setSelectedLectures([]);
+    setSelectedPeriodName('');
+    setSelectedDayName('');
   };
 
   // Function to extract course code from course name
@@ -348,13 +376,13 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
                 </View>
               </View>
               <View style={styles.periodContent}>
-                {classData ? (
+                {classData && classData.length > 0 ? (
                   <ScheduleCard 
-                    classData={{
-                      ...classData,
+                    classData={classData.map(lecture => ({
+                      ...lecture,
                       courseName: (() => {
                         // Try to get course name from mapping using matching
-                        const mappedCourseName = getCourseNameByMatching(classData.courseName);
+                        const mappedCourseName = getCourseNameByMatching(lecture.courseName);
                         
                         if (mappedCourseName) {
                           // Extract the course title from the mapped course name
@@ -368,29 +396,31 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
                         }
                         
                         // Fallback: try to extract course title from original course name
-                        const originalTitle = extractCourseTitle(classData.courseName);
-                        if (originalTitle !== classData.courseName) {
+                        const originalTitle = extractCourseTitle(lecture.courseName);
+                        if (originalTitle !== lecture.courseName) {
                           return originalTitle;
                         }
                         
                         // Final fallback to original cleaned course name
-                        return cleanCourseName(classData);
+                        return cleanCourseName(lecture);
                       })(),
                       courseCode: (() => {
                         // Try to get course code from mapped course name first
-                        const mappedCourseName = getCourseNameByMatching(classData.courseName);
+                        const mappedCourseName = getCourseNameByMatching(lecture.courseName);
                         if (mappedCourseName) {
                           const code = extractCourseCode(mappedCourseName);
                           if (code) return code;
                         }
                         
                         // Fallback: extract from original course name
-                        const originalCode = getCourseCode(classData);
-                        return extractCourseCode(originalCode || classData.courseName);
+                        const originalCode = getCourseCode(lecture);
+                        return extractCourseCode(originalCode || lecture.courseName);
                       })()
-                    }} 
+                    }))}
                     periodName={period.name} 
-                    scheduleType={scheduleType} 
+                    scheduleType={scheduleType}
+                    onMultipleLecturesPress={handleMultipleLecturesPress}
+                    dayName={day.dayName}
                   />
                 ) : (
                   <View style={[styles.emptyPeriod, { 
@@ -407,6 +437,15 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
           );
         })}
       </View>
+      
+      {/* Multiple Lectures Modal */}
+      <MultipleLecturesModal
+        visible={modalVisible}
+        onClose={closeModal}
+        lectures={selectedLectures}
+        periodName={selectedPeriodName}
+        dayName={selectedDayName}
+      />
     </View>
   );
 }
