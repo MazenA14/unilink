@@ -1,13 +1,14 @@
 import { Colors } from '@/constants/Colors';
+import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import {
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { ScheduleClass } from './types';
 
@@ -28,6 +29,53 @@ export function MultipleLecturesModal({
 }: MultipleLecturesModalProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { isShiftedScheduleEnabled } = useShiftedSchedule();
+
+  // Function to get period timing based on period name
+  const getPeriodTiming = (period: string): string => {
+    const periodTimings: { [key: string]: string } = {
+      '1st': '8:15 - 9:45',
+      'first': '8:15 - 9:45',
+      '2nd': '10:00 - 11:30',
+      'second': '10:00 - 11:30',
+      '3rd': isShiftedScheduleEnabled ? '12:00 - 1:30' : '11:45 - 1:15',
+      'third': isShiftedScheduleEnabled ? '12:00 - 1:30' : '11:45 - 1:15',
+      '4th': isShiftedScheduleEnabled ? '2:00 - 3:30' : '1:45 - 3:15',
+      'fourth': isShiftedScheduleEnabled ? '2:00 - 3:30' : '1:45 - 3:15',
+      '5th': isShiftedScheduleEnabled ? '4:00 - 5:30' : '3:45 - 5:15',
+      'fifth': isShiftedScheduleEnabled ? '4:00 - 5:30' : '3:45 - 5:15',
+    };
+    
+    return periodTimings[period.toLowerCase()] || '';
+  };
+
+  // Function to format course code in the new format "MCTR704 - P031"
+  const formatCourseCode = (courseCode?: string, instructor?: string): string => {
+    if (!courseCode) return '';
+    
+    // Extract the main course code (e.g., "MCTR704" from "MCTR704 - P031")
+    const mainCode = courseCode.split(' - ')[0] || courseCode;
+    
+    // Try to extract section/group info from instructor field if it follows pattern like "P031"
+    let sectionInfo = '';
+    if (instructor) {
+      const sectionMatch = instructor.match(/([A-Z]\d+)/);
+      if (sectionMatch) {
+        sectionInfo = sectionMatch[1];
+      }
+    }
+    
+    // If no section info found in instructor, try to extract from courseCode itself
+    if (!sectionInfo && courseCode.includes(' - ')) {
+      const parts = courseCode.split(' - ');
+      if (parts.length > 1) {
+        sectionInfo = parts[1];
+      }
+    }
+    
+    // Format as "MCTR704 - P031" or just "MCTR704" if no section info
+    return sectionInfo ? `${mainCode} - ${sectionInfo}` : mainCode;
+  };
 
   const getSlotTypeColor = (slotType?: string) => {
     const typeColors: { [key: string]: string } = {
@@ -56,6 +104,9 @@ export function MultipleLecturesModal({
             <Text style={[styles.title, { color: colors.text }]}>
               {dayName} - {periodName}
             </Text>
+            <Text style={[styles.timing, { color: colors.secondaryFont }]}>
+              {getPeriodTiming(periodName)}
+            </Text>
             <Text style={[styles.subtitle, { color: colors.secondaryFont }]}>
               {lectures.length} {lectures.length === 1 ? 'Slot' : 'Slots'}
             </Text>
@@ -72,6 +123,17 @@ export function MultipleLecturesModal({
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {lectures.map((lecture, index) => {
             const typeColor = getSlotTypeColor(lecture.slotType);
+            
+            // Debug logging for each lecture
+            console.log('MultipleLecturesModal Debug:', {
+              index,
+              courseName: lecture.courseName,
+              courseCode: lecture.courseCode,
+              instructor: lecture.instructor,
+              room: lecture.room,
+              slotType: lecture.slotType,
+              formattedCode: formatCourseCode(lecture.courseCode, lecture.instructor)
+            });
             
             return (
               <View
@@ -98,7 +160,7 @@ export function MultipleLecturesModal({
                 {/* Course Code */}
                 {lecture.courseCode && (
                   <Text style={[styles.courseCode, { color: colors.secondaryFont }]} numberOfLines={1}>
-                    {lecture.courseCode}
+                    {formatCourseCode(lecture.courseCode, lecture.instructor)}
                   </Text>
                 )}
 
@@ -113,14 +175,14 @@ export function MultipleLecturesModal({
                 )}
 
                 {/* Instructor */}
-                {lecture.instructor && (
+                {/* {lecture.instructor && (
                   <View style={styles.infoRow}>
                     <Ionicons name="person-outline" size={16} color={colors.secondaryFont} />
                     <Text style={[styles.infoText, { color: colors.secondaryFont }]}>
                       {lecture.instructor}
                     </Text>
                   </View>
-                )}
+                )} */}
 
                 {/* Time */}
                 {lecture.time && (
@@ -158,6 +220,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
+  },
+  timing: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 2,
+    opacity: 0.8,
   },
   subtitle: {
     fontSize: 14,

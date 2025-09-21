@@ -115,6 +115,9 @@ async function parseScheduleWithVercel(html: string): Promise<ScheduleData> {
     // Convert the new format to your app's expected format
     const scheduleData = convertVercelResponseToScheduleData(result);
     
+    console.log('🔍 Converted Schedule Data:');
+    console.log(JSON.stringify(scheduleData, null, 2));
+    
     return scheduleData;
   } catch (error: any) {
     console.error('Vercel parser error:', error);
@@ -167,14 +170,31 @@ function convertPeriodDataArray(periodData: any[]): any[] | null {
       return null;
     }
     
+    // Extract slot type FIRST from subject field
+    const slotType = extractSlotTypeFromSubject(period.subject || '');
+    
     // Extract location from subject format like "MCTR 703 Lecture (7MCTR L001)H9"
     const { courseName, room } = extractCourseInfoFromSubject(period.subject || '');
     
+    // Clean up course name (remove newlines and excessive whitespace)
+    const cleanCourseName = courseName.replace(/\s+/g, ' ').trim();
+    
+    // Extract group identifier and append to course name
+    const groupIdentifier = extractGroupIdentifier(period.group || '');
+    console.log('🔍 Vercel Parser Debug:');
+    console.log('  - period.subject:', period.subject);
+    console.log('  - extracted slotType:', slotType);
+    console.log('  - period.group:', period.group);
+    console.log('  - groupIdentifier:', groupIdentifier);
+    console.log('  - cleanCourseName:', cleanCourseName);
+    const finalCourseName = groupIdentifier ? `${cleanCourseName} - ${groupIdentifier}` : cleanCourseName;
+    console.log('  - finalCourseName:', finalCourseName);
+    
     return {
-      courseName,
+      courseName: finalCourseName,
       room: room || period.room || undefined,
       instructor: period.group || undefined,
-      slotType: getSlotType(courseName)
+      slotType: slotType
     };
   }).filter(period => period !== null);
   
@@ -182,44 +202,101 @@ function convertPeriodDataArray(periodData: any[]): any[] | null {
 }
 
 /**
+ * Extract slot type from subject field
+ * Example: 'MCTR 703 Lecture (7MCTR L001)H9' -> 'Lecture'
+ * Example: 'ELCT 708 Tut' -> 'Tutorial'
+ * Example: 'CSEN 401 Lab' -> 'Lab'
+ */
+function extractSlotTypeFromSubject(subject: string): string {
+  if (!subject) return 'Lecture';
+  
+  const lowerSubject = subject.toLowerCase();
+  console.log('🔍 extractSlotTypeFromSubject Debug:', { subject, lowerSubject });
+  
+  // Check for explicit slot type indicators in the subject
+  if (lowerSubject.includes(' lecture')) {
+    console.log('  -> Detected Lecture from subject');
+    return 'Lecture';
+  }
+  if (lowerSubject.includes(' tut') || lowerSubject.includes(' tutorial')) {
+    console.log('  -> Detected Tutorial from subject');
+    return 'Tutorial';
+  }
+  if (lowerSubject.includes(' lab') || lowerSubject.includes(' laboratory')) {
+    console.log('  -> Detected Lab from subject');
+    return 'Lab';
+  }
+  if (lowerSubject.includes(' seminar')) {
+    console.log('  -> Detected Seminar from subject');
+    return 'Seminar';
+  }
+  if (lowerSubject.includes(' workshop')) {
+    console.log('  -> Detected Workshop from subject');
+    return 'Workshop';
+  }
+  if (lowerSubject.includes(' project')) {
+    console.log('  -> Detected Project from subject');
+    return 'Project';
+  }
+  if (lowerSubject.includes(' thesis') || lowerSubject.includes(' dissertation')) {
+    console.log('  -> Detected Thesis from subject');
+    return 'Thesis';
+  }
+  
+  console.log('  -> Defaulting to Lecture (no explicit type found)');
+  return 'Lecture';
+}
+
+/**
  * Extract course name and room from subject format
- * Example: 'MCTR 703 Lecture (7MCTR L001)H9' -> { courseName: 'MCTR 703 Lecture (7MCTR L001)', room: 'H9' }
+ * Example: 'MCTR 703 Lecture (7MCTR L001)H9' -> { courseName: 'MCTR703', room: 'H9' }
+ * Example: 'ELCT 708 Tut' -> { courseName: 'ELCT708', room: undefined }
  */
 function extractCourseInfoFromSubject(subject: string): { courseName: string; room: string | undefined } {
   if (!subject) return { courseName: '', room: undefined };
   
   // Pattern to match room codes at the end (like H9, C3.201, D4.108, etc.)
-  // This matches alphanumeric codes that appear at the end of the string
   const roomPattern = /([A-Z]\d+(?:\.\d+)?)$/;
   const match = subject.match(roomPattern);
   
+  let courseName = subject;
+  let room: string | undefined;
+  
   if (match) {
-    const room = match[1];
-    const courseName = subject.substring(0, subject.length - room.length);
-    return { courseName: courseName.trim(), room };
+    room = match[1];
+    courseName = subject.substring(0, subject.length - room.length);
   }
   
-  // If no room pattern found, return the original subject as course name
-  return { courseName: subject, room: undefined };
+  // Clean up course name: remove spaces, remove type suffixes (Lecture, Tut, Lab), remove parentheses content
+  courseName = courseName
+    .trim()
+    .replace(/\s+/g, '') // Remove all spaces
+    .replace(/\s*(Lecture|Tut|Lab)\s*/gi, '') // Remove type suffixes
+    .replace(/\([^)]*\)/g, '') // Remove parentheses and their content
+    .trim();
+  
+  return { courseName, room };
 }
 
 /**
- * Determine slot type from course name
+ * Extract group identifier from group string
+ * Example: '7MCTR T031' -> 'T031'
  */
-function getSlotType(courseName: string): string {
-  if (!courseName) return 'Lecture';
+function extractGroupIdentifier(group: string): string | undefined {
+  if (!group) return undefined;
   
-  const lowerName = courseName.toLowerCase();
+  // Pattern to match group identifiers like T031, L001, P031, etc.
+  // This matches letters followed by numbers at the end of the string
+  const groupPattern = /([A-Z]\d+)$/;
+  const match = group.match(groupPattern);
   
-  if (lowerName.includes('lab')) return 'Lab';
-  if (lowerName.includes('tut')) return 'Tutorial';
-  if (lowerName.includes('seminar')) return 'Seminar';
-  if (lowerName.includes('workshop')) return 'Workshop';
-  if (lowerName.includes('project')) return 'Project';
-  if (lowerName.includes('thesis')) return 'Thesis';
+  if (match) {
+    return match[1]; // Return the captured group (e.g., 'T031')
+  }
   
-  return 'Lecture';
+  return undefined;
 }
+
 
 /**
  * Get schedule data from GUC scheduling page
@@ -313,8 +390,11 @@ export async function getScheduleData(): Promise<ScheduleData> {
         
         try {
           // Fallback to local simple parser
+          console.log('🔄 Using local simple parser...');
           scheduleData = parseScheduleDataSimple(html);
-          console.log('Successfully parsed with local simple parser');
+          console.log('✅ Successfully parsed with local simple parser');
+          console.log('🔍 Local Parser Schedule Data:');
+          console.log(JSON.stringify(scheduleData, null, 2));
         } catch {
           try {
             scheduleData = parseScheduleData(html);

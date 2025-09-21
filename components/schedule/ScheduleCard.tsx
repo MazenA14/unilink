@@ -24,14 +24,45 @@ export function ScheduleCard({ classData, periodName, scheduleType = 'personal',
   const firstLecture = lectures[0];
   const hasMultipleLectures = lectures.length > 1;
 
-  // Function to check if the instructor field is a tutorial identifier
-  const isTutorialIdentifier = (instructor: string): boolean => {
-    if (!instructor || !instructor.trim()) return false;
+  // Debug logging for course code data
+  console.log('ScheduleCard Debug:', {
+    courseName: firstLecture.courseName,
+    courseCode: firstLecture.courseCode,
+    instructor: firstLecture.instructor,
+    room: firstLecture.room,
+    slotType: firstLecture.slotType,
+    periodName,
+    dayName
+  });
+
+  // Function to format course code in the new format "MCTR704 - P031"
+  const formatCourseCode = (courseCode?: string, instructor?: string): string => {
+    if (!courseCode) return '';
     
-    // Check for patterns like "7MET T014", "7MET L001", etc.
-    const tutorialPattern = /^\d+[A-Z]+\s+[A-Z]\d+$/;
-    return tutorialPattern.test(instructor.trim());
+    // Extract the main course code (e.g., "MCTR704" from "MCTR704 - P031")
+    const mainCode = courseCode.split(' - ')[0] || courseCode;
+    
+    // Try to extract section/group info from instructor field if it follows pattern like "P031"
+    let sectionInfo = '';
+    if (instructor) {
+      const sectionMatch = instructor.match(/([A-Z]\d+)/);
+      if (sectionMatch) {
+        sectionInfo = sectionMatch[1];
+      }
+    }
+    
+    // If no section info found in instructor, try to extract from courseCode itself
+    if (!sectionInfo && courseCode.includes(' - ')) {
+      const parts = courseCode.split(' - ');
+      if (parts.length > 1) {
+        sectionInfo = parts[1];
+      }
+    }
+    
+    // Format as "MCTR704 - P031" or just "MCTR704" if no section info
+    return sectionInfo ? `${mainCode} - ${sectionInfo}` : mainCode;
   };
+
 
   const renderTypeSpecificInfo = () => {
     switch (scheduleType) {
@@ -106,7 +137,7 @@ export function ScheduleCard({ classData, periodName, scheduleType = 'personal',
           </Text>
           {firstLecture.courseCode && (
             <Text style={[styles.courseCode, { color: colors.secondaryFont }]} numberOfLines={1}>
-              {firstLecture.courseCode}
+              {formatCourseCode(firstLecture.courseCode, firstLecture.instructor)}
             </Text>
           )}
           {firstLecture.room && (

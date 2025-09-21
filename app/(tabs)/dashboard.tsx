@@ -1,5 +1,6 @@
 import UpdateModal from '@/components/UpdateModal';
 import WhatsNewModal from '@/components/WhatsNewModal';
+import { MultipleLecturesModal } from '@/components/schedule/MultipleLecturesModal';
 import { Colors, ScheduleTypeColors } from '@/constants/Colors';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
@@ -14,12 +15,12 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Animated,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function DashboardScreen() {
@@ -30,6 +31,12 @@ export default function DashboardScreen() {
   const { isShiftedScheduleEnabled } = useShiftedSchedule();
   const { unreadCount, fetchNotifications } = useNotifications();
   const refreshRotation = useRef(new Animated.Value(0)).current;
+  
+  // Multiple lectures modal state
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedLectures, setSelectedLectures] = useState<any[]>([]);
+  const [selectedPeriodName, setSelectedPeriodName] = useState('');
+  const [selectedDayName, setSelectedDayName] = useState('');
   
   // Version check hook
   const {
@@ -368,6 +375,27 @@ export default function DashboardScreen() {
     }
   };
 
+  // Multiple lectures modal handlers
+  const handleMultipleLecturesPress = (lectures: any[], periodName: string, dayName: string) => {
+    console.log('Dashboard: Opening multiple lectures modal', {
+      lecturesCount: lectures.length,
+      periodName,
+      dayName,
+      lectures: lectures.map(l => ({ courseName: l.courseName, slotType: l.slotType }))
+    });
+    setSelectedLectures(lectures);
+    setSelectedPeriodName(periodName);
+    setSelectedDayName(dayName);
+    setModalVisible(true);
+  };
+
+  const handleModalClose = () => {
+    setModalVisible(false);
+    setSelectedLectures([]);
+    setSelectedPeriodName('');
+    setSelectedDayName('');
+  };
+
   useEffect(() => {
     loadNickname();
     // Fetch notifications when dashboard loads
@@ -506,17 +534,27 @@ export default function DashboardScreen() {
                 const periodNumber = ['1st', '2nd', '3rd', '4th', '5th'][index];
                 const timing = getPeriodTiming(periodKey);
                 
+                const PeriodRowComponent = hasMultipleLectures ? TouchableOpacity : View;
+                const periodRowProps = hasMultipleLectures ? {
+                  onPress: () => handleMultipleLecturesPress(classDataArray, periodNumber, dayName || 'Today'),
+                  activeOpacity: 0.7,
+                } : {};
+
                 return (
-                  <View key={periodKey} style={[styles.periodRow, { 
-                    backgroundColor: colorScheme === 'dark' ? '#2A1F1F' : '#FFF5F5',
-                    borderColor: colorScheme === 'dark' ? '#3D2A2A' : '#FFE0E0',
-                    borderRadius: 16,
-                    shadowColor: ScheduleTypeColors.personal,
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 4,
-                    elevation: 3,
-                  }]}>
+                  <PeriodRowComponent 
+                    key={periodKey} 
+                    style={[styles.periodRow, { 
+                      backgroundColor: colorScheme === 'dark' ? '#2A1F1F' : '#FFF5F5',
+                      borderColor: colorScheme === 'dark' ? '#3D2A2A' : '#FFE0E0',
+                      borderRadius: 16,
+                      shadowColor: ScheduleTypeColors.personal,
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 4,
+                      elevation: 3,
+                    }]}
+                    {...periodRowProps}
+                  >
                     <View style={[styles.periodLabel, { 
                       backgroundColor: ScheduleTypeColors.personal + '15', 
                       borderColor: ScheduleTypeColors.personal + '30',
@@ -563,27 +601,12 @@ export default function DashboardScreen() {
                                 return cleanCourseName(classData);
                               })()}
                             </Text>
-                            {(() => {
-                              // Try to get course code from mapped course name first
-                              const mappedCourseName = getCourseNameByMatching(classData.courseName);
-                              let formattedCode = '';
-                              
-                              if (mappedCourseName) {
-                                formattedCode = extractCourseCode(mappedCourseName);
-                              }
-                              
-                              // Fallback: extract from original course name
-                              if (!formattedCode) {
-                                const originalCode = getCourseCode(classData);
-                                formattedCode = extractCourseCode(originalCode || classData.courseName);
-                              }
-                              
-                              return formattedCode ? (
-                                <Text style={[styles.courseCode, { color: colors.secondaryFont }]} numberOfLines={1}>
-                                  {formattedCode}
-                                </Text>
-                              ) : null;
-                            })()}
+                            
+                            {/* Final Course Name (with group identifier) */}
+                            <Text style={[styles.finalCourseName, { color: colors.secondaryFont }]} numberOfLines={1}>
+                              {classData.courseName}
+                            </Text>
+                            
                             {classData.instructor && classData.instructor.trim() && !isTutorialIdentifier(classData.instructor) && (
                               <Text style={[styles.instructor, { color: colors.secondaryFont }]} numberOfLines={1}>
                                 {classData.instructor}
@@ -621,7 +644,7 @@ export default function DashboardScreen() {
                         </View>
                       )}
                     </View>
-                  </View>
+                  </PeriodRowComponent>
                 );
               })
             ) : (
@@ -642,6 +665,15 @@ export default function DashboardScreen() {
         </View>
 
       </ScrollView>
+
+      {/* Multiple Lectures Modal */}
+      <MultipleLecturesModal
+        visible={modalVisible}
+        onClose={handleModalClose}
+        lectures={selectedLectures}
+        periodName={selectedPeriodName}
+        dayName={selectedDayName}
+      />
     </View>
   );
 }
@@ -850,6 +882,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
     lineHeight: 18,
+  },
+  finalCourseName: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 4,
+    lineHeight: 16,
   },
   courseCode: {
     fontSize: 11,
