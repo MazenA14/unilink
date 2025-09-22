@@ -15,12 +15,12 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Animated,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Animated,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function DashboardScreen() {
@@ -343,7 +343,10 @@ export default function DashboardScreen() {
         {/* Quick Actions Grid */}
         <View style={styles.section}>
           <View style={styles.gridContainer}>
-            <TouchableOpacity style={[styles.gridItem, { backgroundColor: ScheduleTypeColors.staff, borderColor: ScheduleTypeColors.staff }]}>
+            <TouchableOpacity 
+              style={[styles.gridItem, { backgroundColor: ScheduleTypeColors.staff, borderColor: ScheduleTypeColors.staff }]}
+              onPress={() => router.push('/instructors')}
+            >
               <Ionicons name="people" size={20} color="white" />
               <Text style={[styles.gridText, { color: 'white' }]}>Instructors</Text>
             </TouchableOpacity>

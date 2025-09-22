@@ -52,3 +52,8 @@ export interface ScheduleData {
     selectedItem?: string;
   };
 }
+
+export interface Instructor {
+  name: string;
+  value: string;
+}

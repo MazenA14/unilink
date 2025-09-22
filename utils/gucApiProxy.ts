@@ -4,9 +4,9 @@ import { GradeCache } from './gradeCache';
 import { getOutstandingPayments, payOutstanding } from './handlers/paymentHandler';
 import { getScheduleData } from './handlers/scheduleHandler';
 import { getAvailableStudyYears, getTranscriptData, resetSession } from './handlers/transcriptHandler';
-import { GradeData, ScheduleData } from './types/gucTypes';
+import { GradeData, Instructor, ScheduleData } from './types/gucTypes';
 
-export { GradeData, PaymentItem, ScheduleClass, ScheduleData, ScheduleDay, ViewStateData } from './types/gucTypes';
+export { GradeData, Instructor, PaymentItem, ScheduleClass, ScheduleData, ScheduleDay, ViewStateData } from './types/gucTypes';
 
 export class GUCAPIProxy {
   private static PROXY_BASE_URL = 'https://guc-connect-login.vercel.app/api';
@@ -98,8 +98,8 @@ export class GUCAPIProxy {
       }
 
       return seasons;
-    } catch (error) {
-      throw error;
+    } catch (err) {
+      throw err;
     }
   }
 
@@ -167,7 +167,7 @@ export class GUCAPIProxy {
         midtermGrades
       };
       
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -210,8 +210,8 @@ export class GUCAPIProxy {
       }
       
       return seasonsWithData;
-    } catch (error) {
-      throw error;
+    } catch (err) {
+      throw err;
     }
   }
 
@@ -276,8 +276,8 @@ export class GUCAPIProxy {
       }
       
       return courses;
-    } catch (error) {
-      throw error;
+    } catch (err) {
+      throw err;
     }
   }
 
@@ -337,7 +337,7 @@ export class GUCAPIProxy {
       const detailedGrades = extractCourseGradeData(courseHtml);
       
       return detailedGrades;
-    } catch (error) {
+    } catch {
       return [];
     }
   }
@@ -410,8 +410,8 @@ export class GUCAPIProxy {
       }
       
       return courseSpecific;
-    } catch (error) {
-      throw error;
+    } catch (err) {
+      throw err;
     }
   }
 
@@ -435,8 +435,8 @@ export class GUCAPIProxy {
       const courses = extractCourses(html);
       
       return courses;
-    } catch (error) {
-      throw error;
+    } catch (err) {
+      throw err;
     }
   }
 
@@ -513,8 +513,8 @@ export class GUCAPIProxy {
       
       
       return allGrades;
-    } catch (error) {
-      throw error;
+    } catch (err) {
+      throw err;
     }
   }
 
@@ -538,8 +538,8 @@ export class GUCAPIProxy {
       const grades = extractGradeData(html);
       
       return grades;
-    } catch (error) {
-      throw error;
+    } catch (err) {
+      throw err;
     }
   }
 
@@ -564,7 +564,7 @@ export class GUCAPIProxy {
       }
 
       return null;
-    } catch (e) {
+    } catch {
       return null;
     }
   }
@@ -598,7 +598,7 @@ export class GUCAPIProxy {
       }
 
       return { userId, faculty };
-    } catch (e) {
+    } catch {
       return { userId: null, faculty: null };
     }
   }
@@ -646,8 +646,468 @@ export class GUCAPIProxy {
       }
 
       return html;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  /**
+   * Get list of instructors from the user profile search page
+   */
+  static async getInstructors(bypassCache: boolean = false): Promise<Instructor[]> {
+    try {
+      // Try to get cached data first (unless bypassing cache)
+      if (!bypassCache) {
+        const cachedData = await GradeCache.getCachedInstructorsList();
+        if (cachedData) {
+          return cachedData;
+        }
+      }
+
+      const data = await this.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx'
+      );
+
+      const html = data.html || data.body;
+      
+      if (!html) {
+        throw new Error('No HTML content received from proxy');
+      }
+
+      // Extract instructor options from the specific instructor dropdown
+      const instructorDropdownMatch = html.match(/<select[^>]*name="ctl00\$ctl00\$ContentPlaceHolderright\$ContentPlaceHoldercontent\$DdlStaffSearch"[^>]*>([\s\S]*?)<\/select>/i);
+      
+      if (!instructorDropdownMatch) {
+        return [];
+      }
+      
+      const instructorDropdownHtml = instructorDropdownMatch[1];
+      const instructorPattern = /<option[^>]*value="([^"]*)"[^>]*>([^<]+)<\/option>/gi;
+      const instructors: Instructor[] = [];
+      
+      let match;
+      while ((match = instructorPattern.exec(instructorDropdownHtml)) !== null) {
+        const value = match[1].trim();
+        const name = match[2].trim();
+        
+        // Skip empty/default option
+        if (value && value !== '' && name && name !== 'Choose Staff') {
+          instructors.push({ value, name });
+        }
+      }
+
+      // Cache the fresh data for 3 months
+      await GradeCache.setCachedInstructorsList(instructors);
+      
+      return instructors;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  /**
+   * Get list of courses from the user profile search page
+   */
+  static async getCourses(bypassCache: boolean = false): Promise<{value: string, text: string}[]> {
+    try {
+      // Try to get cached data first (unless bypassing cache)
+      if (!bypassCache) {
+        const cachedData = await GradeCache.getCachedCoursesList();
+        if (cachedData) {
+          return cachedData;
+        }
+      }
+
+      const data = await this.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx'
+      );
+
+      const html = data.html || data.body;
+      
+      if (!html) {
+        throw new Error('No HTML content received from proxy');
+      }
+
+      // Extract course options from the specific course dropdown
+      const courseDropdownMatch = html.match(/<select[^>]*name="ctl00\$ctl00\$ContentPlaceHolderright\$ContentPlaceHoldercontent\$DdlCourseSearch"[^>]*>([\s\S]*?)<\/select>/i);
+      
+      if (!courseDropdownMatch) {
+        return [];
+      }
+      
+      const courseDropdownHtml = courseDropdownMatch[1];
+      const coursePattern = /<option[^>]*value="([^"]*)"[^>]*>([^<]+)<\/option>/gi;
+      const courses: {value: string, text: string}[] = [];
+      
+      let match;
+      while ((match = coursePattern.exec(courseDropdownHtml)) !== null) {
+        const value = match[1].trim();
+        const text = match[2].trim();
+        
+        // Skip empty/default option
+        if (value && value !== '' && text && text !== 'Choose Course') {
+          courses.push({ value, text });
+        }
+      }
+
+      // Cache the fresh data for 3 months
+      await GradeCache.setCachedCoursesList(courses);
+      
+      return courses;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  /**
+   * Get instructors for a specific course
+   */
+  static async getInstructorsByCourse(courseValue: string, bypassCache: boolean = false): Promise<Instructor[]> {
+    try {
+      // Try to get cached data first (unless bypassing cache)
+      if (!bypassCache) {
+        const cachedData = await GradeCache.getCachedInstructorsByCourse(courseValue);
+        if (cachedData) {
+          return cachedData;
+        }
+      }
+
+      // Step 1: Get initial page to extract view state
+      const initialData = await this.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx'
+      );
+
+      const initialHtml = initialData.html || initialData.body;
+      const viewStateData = extractViewState(initialHtml);
+
+      if (!viewStateData.__VIEWSTATE || !viewStateData.__VIEWSTATEGENERATOR || !viewStateData.__EVENTVALIDATION) {
+        throw new Error('Failed to extract required view state data');
+      }
+
+      // Step 2: Select the course to get instructors
+      const formBody = new URLSearchParams({
+        ...viewStateData,
+        'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$DdlCourseSearch': courseValue,
+        '__EVENTTARGET': 'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$DdlCourseSearch',
+        '__EVENTARGUMENT': '',
+      });
+
+      const responseData = await this.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx',
+        'POST',
+        formBody.toString(),
+        { allowNon200: true }
+      );
+
+      const html = responseData.html || responseData.body;
+      
+      if (!html) {
+        throw new Error('No HTML content received from proxy');
+      }
+
+      // Extract instructors from the table that appears after course selection
+      const tableMatch = html.match(/<table[^>]*id="ContentPlaceHolderright_ContentPlaceHoldercontent_GvStaff"[^>]*>([\s\S]*?)<\/table>/i);
+      
+      if (!tableMatch) {
+        return [];
+      }
+      
+      const tableHtml = tableMatch[1];
+      const instructorPattern = /<tr[^>]*>[\s\S]*?<td[^>]*>([^<]+)<\/td>[\s\S]*?<\/tr>/gi;
+      const instructors: Instructor[] = [];
+      
+      let match;
+      while ((match = instructorPattern.exec(tableHtml)) !== null) {
+        const name = match[1].trim();
+        
+        // Skip header row and empty rows
+        if (name && name !== 'Staff Full Name' && name !== 'View Profile') {
+          instructors.push({ value: name, name });
+        }
+      }
+
+      // Cache the fresh data for 1 hour (shorter cache since it's course-specific)
+      await GradeCache.setCachedInstructorsByCourse(courseValue, instructors);
+      
+      return instructors;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  /**
+   * Get instructor profile data from course instructor table
+   */
+  static async getCourseInstructorProfile(courseValue: string, instructorName: string): Promise<{
+    name: string;
+    email?: string;
+    office?: string;
+    courses?: string;
+  } | null> {
+    try {
+      // Step 1: Get the course instructor page to extract view state and find the instructor button
+      const courseData = await this.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx'
+      );
+
+      const courseHtml = courseData.html || courseData.body;
+      const viewStateData = extractViewState(courseHtml);
+
+      if (!viewStateData.__VIEWSTATE || !viewStateData.__VIEWSTATEGENERATOR || !viewStateData.__EVENTVALIDATION) {
+        throw new Error('Failed to extract required view state data');
+      }
+
+      // Step 2: Select the course to get the instructor table
+      const courseFormBody = new URLSearchParams({
+        ...viewStateData,
+        'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$DdlCourseSearch': courseValue,
+        '__EVENTTARGET': 'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$DdlCourseSearch',
+        '__EVENTARGUMENT': '',
+      });
+
+      const courseResponseData = await this.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx',
+        'POST',
+        courseFormBody.toString(),
+        { allowNon200: true }
+      );
+
+      const courseResponseHtml = courseResponseData.html || courseResponseData.body;
+      const courseViewStateData = extractViewState(courseResponseHtml);
+
+      // Step 3: Find the instructor's button name in the table
+      const tableMatch = courseResponseHtml.match(/<table[^>]*id="ContentPlaceHolderright_ContentPlaceHoldercontent_GvStaff"[^>]*>([\s\S]*?)<\/table>/i);
+      
+      if (!tableMatch) {
+        throw new Error('Could not find instructor table');
+      }
+      
+      const tableHtml = tableMatch[1];
+      const instructorRowPattern = /<tr[^>]*>[\s\S]*?<td[^>]*>([^<]+)<\/td>[\s\S]*?<input[^>]*name="([^"]*)"[^>]*value="View Profile"[^>]*>[\s\S]*?<\/tr>/gi;
+      
+      let instructorButtonName = null;
+      let match;
+      while ((match = instructorRowPattern.exec(tableHtml)) !== null) {
+        const name = match[1].trim();
+        const buttonName = match[2].trim();
+        
+        if (name === instructorName) {
+          instructorButtonName = buttonName;
+          break;
+        }
+      }
+
+      if (!instructorButtonName) {
+        throw new Error('Could not find instructor button');
+      }
+
+      // Step 4: Click the instructor's View Profile button
+      const instructorFormBody = new URLSearchParams({
+        ...courseViewStateData,
+        [instructorButtonName]: 'View Profile',
+        '__EVENTTARGET': '',
+        '__EVENTARGUMENT': '',
+      });
+
+      const instructorResponseData = await this.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx',
+        'POST',
+        instructorFormBody.toString(),
+        { allowNon200: true }
+      );
+
+      let instructorHtml = instructorResponseData.html || instructorResponseData.body;
+      
+      // Handle redirect if present
+      const redirectMatch = instructorHtml.match(/Object moved to <a href="([^"]+)">here<\/a>/i);
+      if (redirectMatch) {
+        const redirectUrl = redirectMatch[1];
+        
+        const redirectResponseData = await this.makeProxyRequest(
+          `https://apps.guc.edu.eg${redirectUrl}`,
+          'GET',
+          undefined,
+          { allowNon200: true }
+        );
+        
+        instructorHtml = redirectResponseData.html || redirectResponseData.body;
+      }
+      
+      
+      // Step 5: Extract instructor profile data (course instructor specific patterns)
+      const profileData: any = {
+        name: instructorName,
+      };
+
+      // Extract email from HyperLinkEmail element - try multiple patterns
+      let emailMatch = instructorHtml.match(/id="ContentPlaceHolderright_ContentPlaceHoldercontent_HyperLinkEmail"[^>]*>([^<]+)</i);
+      if (!emailMatch) {
+        // Try alternative pattern
+        emailMatch = instructorHtml.match(/ContentPlaceHolderright_ContentPlaceHoldercontent_HyperLinkEmail[^>]*>([^<]+)</i);
+      }
+      if (!emailMatch) {
+        // Try even more flexible pattern
+        emailMatch = instructorHtml.match(/HyperLinkEmail[^>]*>([^<]+)</i);
+      }
+      if (emailMatch && emailMatch[1].trim()) {
+        profileData.email = emailMatch[1].trim();
+      }
+
+      // Extract office from LblOffice element - try multiple patterns
+      let officeMatch = instructorHtml.match(/id="ContentPlaceHolderright_ContentPlaceHoldercontent_LblOffice"[^>]*>([^<]+)</i);
+      if (!officeMatch) {
+        // Try alternative pattern
+        officeMatch = instructorHtml.match(/ContentPlaceHolderright_ContentPlaceHoldercontent_LblOffice[^>]*>([^<]+)</i);
+      }
+      if (!officeMatch) {
+        // Try even more flexible pattern
+        officeMatch = instructorHtml.match(/LblOffice[^>]*>([^<]+)</i);
+      }
+      if (officeMatch && officeMatch[1].trim()) {
+        profileData.office = officeMatch[1].trim();
+      }
+
+      // Extract courses from LblCourses element - try multiple patterns
+      let coursesMatch = instructorHtml.match(/id="ContentPlaceHolderright_ContentPlaceHoldercontent_LblCourses"[^>]*>([^<]+)</i);
+      if (!coursesMatch) {
+        // Try alternative pattern
+        coursesMatch = instructorHtml.match(/ContentPlaceHolderright_ContentPlaceHoldercontent_LblCourses[^>]*>([^<]+)</i);
+      }
+      if (!coursesMatch) {
+        // Try even more flexible pattern
+        coursesMatch = instructorHtml.match(/LblCourses[^>]*>([^<]+)</i);
+      }
+      if (coursesMatch && coursesMatch[1].trim()) {
+        profileData.courses = coursesMatch[1].trim();
+      }
+
+
+      return profileData;
     } catch (error) {
-      throw error;
+      console.error('Error fetching course instructor profile:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get instructor profile data by selecting instructor and clicking view profile
+   */
+  static async getInstructorProfile(instructorName: string): Promise<{
+    name: string;
+    email?: string;
+    office?: string;
+    courses?: string;
+  } | null> {
+    try {
+      // Step 1: Get initial page to extract view state
+      const initialData = await GUCAPIProxy.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx'
+      );
+
+      const initialHtml = initialData.html || initialData.body;
+      const viewStateData = extractViewState(initialHtml);
+
+      if (!viewStateData.__VIEWSTATE || !viewStateData.__VIEWSTATEGENERATOR || !viewStateData.__EVENTVALIDATION) {
+        throw new Error('Failed to extract required view state data');
+      }
+
+      // Step 2: Select the instructor
+      const formBody = new URLSearchParams({
+        ...viewStateData,
+        'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$DdlStaffSearch': instructorName,
+        'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$BtnViewProfile': 'View Profile',
+        '__EVENTTARGET': '',
+        '__EVENTARGUMENT': '',
+      });
+
+      const responseData = await GUCAPIProxy.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx',
+        'POST',
+        formBody.toString(),
+        { allowNon200: true }
+      );
+
+      const html = responseData.html || responseData.body;
+      
+      
+      if (!html) {
+        throw new Error('No HTML content received from profile request');
+      }
+
+      // Step 3: Check if we got a redirect and follow it
+      if (responseData.status === 302 || html.includes('Object moved')) {
+        const redirectMatch = html.match(/href="([^"]*)"/);
+        if (redirectMatch) {
+          const redirectPath = redirectMatch[1];
+          const fullRedirectUrl = redirectPath.startsWith('http') 
+            ? redirectPath 
+            : `https://apps.guc.edu.eg${redirectPath}`;
+          
+          
+          // Follow the redirect
+          const profileResponse = await GUCAPIProxy.makeProxyRequest(fullRedirectUrl);
+          const profileHtml = profileResponse.html || profileResponse.body;
+          
+          
+          if (!profileHtml) {
+            throw new Error('No HTML content received from profile page');
+          }
+
+          // Parse the profile data from the actual profile page
+          const profileData = GUCAPIProxy.parseInstructorProfile(profileHtml);
+          return profileData;
+        }
+      }
+
+      // Step 4: Parse the profile data (fallback for non-redirect responses)
+      const profileData = GUCAPIProxy.parseInstructorProfile(html);
+      
+      return profileData;
+    } catch (error) {
+      console.error('Error fetching instructor profile:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Parse instructor profile data from HTML
+   */
+  private static parseInstructorProfile(html: string): {
+    name: string;
+    email?: string;
+    office?: string;
+    courses?: string;
+  } | null {
+    try {
+      // Extract name
+      const nameMatch = html.match(/<span[^>]*id="ContentPlaceHolderright_ContentPlaceHoldercontent_LblName"[^>]*>([^<]+)<\/span>/i);
+      const name = nameMatch ? nameMatch[1].trim() : '';
+
+      // Extract email
+      const emailMatch = html.match(/<a[^>]*id="ContentPlaceHolderright_ContentPlaceHoldercontent_HyperLinkEmail"[^>]*href="mailto:([^"]*)"[^>]*>([^<]+)<\/a>/i);
+      const email = emailMatch ? emailMatch[1].trim() : undefined;
+
+      // Extract office
+      const officeMatch = html.match(/<span[^>]*id="ContentPlaceHolderright_ContentPlaceHoldercontent_LblOffice"[^>]*>([^<]+)<\/span>/i);
+      const office = officeMatch ? officeMatch[1].trim() : undefined;
+
+      // Extract courses
+      const coursesMatch = html.match(/<span[^>]*id="ContentPlaceHolderright_ContentPlaceHoldercontent_LblCourses"[^>]*>([^<]+)<\/span>/i);
+      const courses = coursesMatch ? coursesMatch[1].trim() : undefined;
+
+      if (!name) {
+        return null;
+      }
+
+      return {
+        name,
+        email,
+        office,
+        courses: courses && courses !== '' ? courses : undefined
+      };
+    } catch (error) {
+      console.error('Error parsing instructor profile:', error);
+      return null;
     }
   }
 

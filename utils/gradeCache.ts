@@ -20,6 +20,14 @@ const TRANSCRIPT_CACHE_EXPIRY_MS = TRANSCRIPT_CACHE_EXPIRY_DAYS * 24 * 60 * 60 *
 const SCHEDULE_CACHE_EXPIRY_DAYS = 60; // 2 months for schedule data
 const SCHEDULE_CACHE_EXPIRY_MS = SCHEDULE_CACHE_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
 
+// Instructor and course cache configuration (3 months since this data changes very infrequently)
+const INSTRUCTOR_CACHE_EXPIRY_DAYS = 90; // 3 months for instructor and course data
+const INSTRUCTOR_CACHE_EXPIRY_MS = INSTRUCTOR_CACHE_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+
+// Instructors by course cache configuration (1 hour since this data is more dynamic)
+const INSTRUCTORS_BY_COURSE_CACHE_EXPIRY_HOURS = 1; // 1 hour for instructors by course data
+const INSTRUCTORS_BY_COURSE_CACHE_EXPIRY_MS = INSTRUCTORS_BY_COURSE_CACHE_EXPIRY_HOURS * 60 * 60 * 1000;
+
 // Previous grades cache configuration (permanent - never expires)
 // Previous grades data is cached permanently since it represents historical data that doesn't change
 
@@ -39,6 +47,10 @@ const CACHE_KEYS = {
   TRANSCRIPT_DATA: 'guc_cache_transcript_data',
   // Schedule cache keys
   SCHEDULE_DATA: 'guc_cache_schedule_data',
+  // Instructor and course cache keys
+  INSTRUCTORS: 'guc_cache_instructors',
+  COURSES_LIST: 'guc_cache_courses_list',
+  INSTRUCTORS_BY_COURSE: 'guc_cache_instructors_by_course',
 } as const;
 
 // Interface definitions
@@ -119,6 +131,13 @@ interface CachedTranscriptData {
   };
 }
 
+interface CachedInstructorsByCourseData {
+  [courseValue: string]: {
+    instructors: {value: string, name: string}[];
+    timestamp: number;
+  };
+}
+
 export class GradeCache {
   /**
    * Check if cached data is still valid
@@ -145,6 +164,24 @@ export class GradeCache {
     const now = Date.now();
     const cacheAge = now - timestamp;
     return cacheAge < SCHEDULE_CACHE_EXPIRY_MS;
+  }
+
+  /**
+   * Check if instructor/course cached data is still valid
+   */
+  private static isInstructorCacheValid(timestamp: number): boolean {
+    const now = Date.now();
+    const cacheAge = now - timestamp;
+    return cacheAge < INSTRUCTOR_CACHE_EXPIRY_MS;
+  }
+
+  /**
+   * Check if instructors by course cached data is still valid
+   */
+  private static isInstructorsByCourseCacheValid(timestamp: number): boolean {
+    const now = Date.now();
+    const cacheAge = now - timestamp;
+    return cacheAge < INSTRUCTORS_BY_COURSE_CACHE_EXPIRY_MS;
   }
 
   /**
@@ -828,7 +865,8 @@ export class GradeCache {
         CACHE_KEYS.COURSE_ID_TO_NAME,
         CACHE_KEYS.STUDY_YEARS,
         CACHE_KEYS.TRANSCRIPT_DATA,
-        CACHE_KEYS.SCHEDULE_DATA
+        CACHE_KEYS.SCHEDULE_DATA,
+        CACHE_KEYS.INSTRUCTORS_BY_COURSE
       ];
       
       await Promise.all(keysToClear.map(key => AsyncStorage.removeItem(key)));
@@ -843,6 +881,186 @@ export class GradeCache {
     try {
       const keys = Object.values(CACHE_KEYS);
       await Promise.all(keys.map(key => AsyncStorage.removeItem(key)));
+    } catch (error) {
+    }
+  }
+
+  // ===== INSTRUCTOR CACHE =====
+
+  /**
+   * Get cached instructors list
+   */
+  static async getCachedInstructorsList(): Promise<{value: string, name: string}[] | null> {
+    try {
+      const cachedData = await AsyncStorage.getItem(CACHE_KEYS.INSTRUCTORS);
+      if (!cachedData) {
+        return null;
+      }
+
+      const parsed: CachedData<{value: string, name: string}[]> = JSON.parse(cachedData);
+      
+      if (!this.isInstructorCacheValid(parsed.timestamp)) {
+        await AsyncStorage.removeItem(CACHE_KEYS.INSTRUCTORS);
+        return null;
+      }
+
+      return parsed.data;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Set cached instructors list
+   */
+  static async setCachedInstructorsList(instructors: {value: string, name: string}[]): Promise<void> {
+    try {
+      const cachedData: CachedData<{value: string, name: string}[]> = {
+        data: instructors,
+        timestamp: Date.now(),
+      };
+      
+      await AsyncStorage.setItem(CACHE_KEYS.INSTRUCTORS, JSON.stringify(cachedData));
+    } catch (error) {
+    }
+  }
+
+  /**
+   * Clear instructors list cache
+   */
+  static async clearInstructorsListCache(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(CACHE_KEYS.INSTRUCTORS);
+    } catch (error) {
+    }
+  }
+
+  // ===== COURSES LIST CACHE =====
+
+  /**
+   * Get cached courses list (for instructor page)
+   */
+  static async getCachedCoursesList(): Promise<{value: string, text: string}[] | null> {
+    try {
+      const cachedData = await AsyncStorage.getItem(CACHE_KEYS.COURSES_LIST);
+      if (!cachedData) {
+        return null;
+      }
+
+      const parsed: CachedData<{value: string, text: string}[]> = JSON.parse(cachedData);
+      
+      if (!this.isInstructorCacheValid(parsed.timestamp)) {
+        await AsyncStorage.removeItem(CACHE_KEYS.COURSES_LIST);
+        return null;
+      }
+
+      return parsed.data;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Set cached courses list (for instructor page)
+   */
+  static async setCachedCoursesList(courses: {value: string, text: string}[]): Promise<void> {
+    try {
+      const cachedData: CachedData<{value: string, text: string}[]> = {
+        data: courses,
+        timestamp: Date.now(),
+      };
+      
+      await AsyncStorage.setItem(CACHE_KEYS.COURSES_LIST, JSON.stringify(cachedData));
+    } catch (error) {
+    }
+  }
+
+  /**
+   * Clear courses list cache (for instructor page)
+   */
+  static async clearCoursesListCache(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(CACHE_KEYS.COURSES_LIST);
+    } catch (error) {
+    }
+  }
+
+  // ===== INSTRUCTORS BY COURSE CACHE =====
+
+  /**
+   * Get cached instructors for a specific course
+   */
+  static async getCachedInstructorsByCourse(courseValue: string): Promise<{value: string, name: string}[] | null> {
+    try {
+      const cachedData = await AsyncStorage.getItem(CACHE_KEYS.INSTRUCTORS_BY_COURSE);
+      if (!cachedData) {
+        return null;
+      }
+
+      const parsed: CachedInstructorsByCourseData = JSON.parse(cachedData);
+      if (!parsed[courseValue]) {
+        return null;
+      }
+      
+      const courseData = parsed[courseValue];
+      
+      if (!this.isInstructorsByCourseCacheValid(courseData.timestamp)) {
+        delete parsed[courseValue];
+        await AsyncStorage.setItem(CACHE_KEYS.INSTRUCTORS_BY_COURSE, JSON.stringify(parsed));
+        return null;
+      }
+
+      return courseData.instructors;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Set cached instructors for a specific course
+   */
+  static async setCachedInstructorsByCourse(courseValue: string, instructors: {value: string, name: string}[]): Promise<void> {
+    try {
+      // Get existing cached data directly from AsyncStorage to avoid expiry checks
+      let cachedData: CachedInstructorsByCourseData = {};
+      try {
+        const existingData = await AsyncStorage.getItem(CACHE_KEYS.INSTRUCTORS_BY_COURSE);
+        if (existingData) {
+          cachedData = JSON.parse(existingData);
+        }
+      } catch {
+      }
+      
+      cachedData[courseValue] = {
+        instructors,
+        timestamp: Date.now(),
+      };
+      
+      await AsyncStorage.setItem(CACHE_KEYS.INSTRUCTORS_BY_COURSE, JSON.stringify(cachedData));
+    } catch (error) {
+    }
+  }
+
+  /**
+   * Clear instructors by course cache for a specific course
+   */
+  static async clearInstructorsByCourseCache(courseValue: string): Promise<void> {
+    try {
+      const cachedData = await this.getCachedData<CachedInstructorsByCourseData>(CACHE_KEYS.INSTRUCTORS_BY_COURSE);
+      if (cachedData && cachedData[courseValue]) {
+        delete cachedData[courseValue];
+        await this.setCachedData(CACHE_KEYS.INSTRUCTORS_BY_COURSE, cachedData);
+      }
+    } catch (error) {
+    }
+  }
+
+  /**
+   * Clear all instructors by course cache
+   */
+  static async clearAllInstructorsByCourseCache(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(CACHE_KEYS.INSTRUCTORS_BY_COURSE);
     } catch (error) {
     }
   }

@@ -12,15 +12,15 @@
 + Add slot timing shift for BI/Architecture/... in the settings page (Should change the slot timing in the schedule page)
 + Update alert + update Changelog
 + Reset Password # See Outlook
++ Search for Staff https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx
 
-- View Attendance https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx?v=NXM874921
-- Search for Staff https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx
 - Staff Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
 - Course Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
 - General Group Schedule https://apps.guc.edu.eg/student_ext/Scheduling/GeneralGroupSchedule.aspx
-- Add skeletons for everything that loads
+- View Attendance https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx?v=NXM874921
 - GUC Notifications https://apps.guc.edu.eg/student_ext/Main/Notifications.aspx
 - Mobile Notifications (Slot Reminder)
+- Add skeletons for everything that loads
 - Empty Slots (Rooms) https://gucroomschedule.web.app/
 
 ## To-Do List (Optional)
@@ -36,8 +36,8 @@
 + Today's Schedule
 + Exam Seats
 + CMS button
++ Your Instructors this semester (List of view profiles separated by course)
 
-- Your Instructors this semester (List of view profiles separated by course)
 - View Attendance
 - CMS
 

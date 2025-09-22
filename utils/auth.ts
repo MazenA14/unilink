@@ -139,9 +139,10 @@ export class AuthManager {
   /**
    * Store the user's joined season (extracted from user ID)
    */
-  static async storeJoinedSeason(joinedSeason: string): Promise<void> {
+  static async storeJoinedSeason(joinedSeason: string | number): Promise<void> {
     try {
-      await AsyncStorage.setItem(this.JOINED_SEASON_KEY, joinedSeason);
+      // Ensure the value is always stored as a string
+      await AsyncStorage.setItem(this.JOINED_SEASON_KEY, String(joinedSeason));
     } catch (error) {
     }
   }
