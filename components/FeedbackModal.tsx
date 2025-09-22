@@ -74,7 +74,6 @@ export default function FeedbackModal({ visible, onClose, onSuccess, onError }: 
       onSuccess?.();
       onClose();
     } catch (error) {
-      console.error('Error submitting feedback:', error);
       onError?.('Failed to submit feedback. Please try again later.');
     } finally {
       setIsSubmitting(false);

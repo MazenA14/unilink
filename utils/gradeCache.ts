@@ -24,6 +24,10 @@ const SCHEDULE_CACHE_EXPIRY_MS = SCHEDULE_CACHE_EXPIRY_DAYS * 24 * 60 * 60 * 100
 const INSTRUCTOR_CACHE_EXPIRY_DAYS = 90; // 3 months for instructor and course data
 const INSTRUCTOR_CACHE_EXPIRY_MS = INSTRUCTOR_CACHE_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
 
+// Attendance cache configuration (3 months since attendance data changes infrequently)
+const ATTENDANCE_CACHE_EXPIRY_DAYS = 90; // 3 months for attendance data
+const ATTENDANCE_CACHE_EXPIRY_MS = ATTENDANCE_CACHE_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+
 // Instructors by course cache configuration (1 hour since this data is more dynamic)
 const INSTRUCTORS_BY_COURSE_CACHE_EXPIRY_HOURS = 1; // 1 hour for instructors by course data
 const INSTRUCTORS_BY_COURSE_CACHE_EXPIRY_MS = INSTRUCTORS_BY_COURSE_CACHE_EXPIRY_HOURS * 60 * 60 * 1000;
@@ -51,6 +55,9 @@ const CACHE_KEYS = {
   INSTRUCTORS: 'guc_cache_instructors',
   COURSES_LIST: 'guc_cache_courses_list',
   INSTRUCTORS_BY_COURSE: 'guc_cache_instructors_by_course',
+  // Attendance cache keys
+  ATTENDANCE_DATA: 'guc_cache_attendance_data',
+  COURSE_ATTENDANCE: 'guc_cache_course_attendance',
 } as const;
 
 // Interface definitions
@@ -76,6 +83,33 @@ interface Course {
 
 interface CourseIdToNameMapping {
   [courseId: string]: string;
+}
+
+// Attendance interfaces
+interface AttendanceSummary {
+  absenceReport: {
+    settingsTitle: string;
+    code: string;
+    name: string;
+    absenceLevel: string;
+  }[];
+}
+
+interface AttendanceRecord {
+  rowNumber: number;
+  attendance: 'Present' | 'Absent';
+  sessionDescription: string;
+}
+
+interface CourseAttendance {
+  courseId: string;
+  courseName: string;
+  attendanceRecords: AttendanceRecord[];
+}
+
+interface AttendanceData {
+  summary: AttendanceSummary;
+  courses: CourseAttendance[];
 }
 
 interface CachedData<T> {
@@ -1061,6 +1095,107 @@ export class GradeCache {
   static async clearAllInstructorsByCourseCache(): Promise<void> {
     try {
       await AsyncStorage.removeItem(CACHE_KEYS.INSTRUCTORS_BY_COURSE);
+    } catch (error) {
+    }
+  }
+
+  // ==================== ATTENDANCE CACHE METHODS ====================
+
+  /**
+   * Get cached attendance data
+   */
+  static async getCachedAttendanceData(): Promise<AttendanceData | null> {
+    try {
+      const cachedData = await AsyncStorage.getItem(CACHE_KEYS.ATTENDANCE_DATA);
+      if (!cachedData) return null;
+
+      const parsed: CachedData<AttendanceData> = JSON.parse(cachedData);
+      const now = Date.now();
+      
+      if (now - parsed.timestamp > ATTENDANCE_CACHE_EXPIRY_MS) {
+        await AsyncStorage.removeItem(CACHE_KEYS.ATTENDANCE_DATA);
+        return null;
+      }
+
+      return parsed.data;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Set cached attendance data
+   */
+  static async setCachedAttendanceData(data: AttendanceData): Promise<void> {
+    try {
+      const cachedData: CachedData<AttendanceData> = {
+        data,
+        timestamp: Date.now(),
+      };
+      await AsyncStorage.setItem(CACHE_KEYS.ATTENDANCE_DATA, JSON.stringify(cachedData));
+    } catch (error) {
+    }
+  }
+
+  /**
+   * Get cached course attendance data
+   */
+  static async getCachedCourseAttendance(courseId: string): Promise<CourseAttendance | null> {
+    try {
+      const cachedData = await AsyncStorage.getItem(CACHE_KEYS.COURSE_ATTENDANCE);
+      if (!cachedData) return null;
+
+      const parsed: { [courseId: string]: CachedData<CourseAttendance> } = JSON.parse(cachedData);
+      const courseData = parsed[courseId];
+      
+      if (!courseData) return null;
+
+      const now = Date.now();
+      if (now - courseData.timestamp > ATTENDANCE_CACHE_EXPIRY_MS) {
+        // Remove expired data
+        delete parsed[courseId];
+        await AsyncStorage.setItem(CACHE_KEYS.COURSE_ATTENDANCE, JSON.stringify(parsed));
+        return null;
+      }
+
+      return courseData.data;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Set cached course attendance data
+   */
+  static async setCachedCourseAttendance(courseId: string, data: CourseAttendance): Promise<void> {
+    try {
+      // Get existing cached data
+      let cachedData: { [courseId: string]: CachedData<CourseAttendance> } = {};
+      try {
+        const existingData = await AsyncStorage.getItem(CACHE_KEYS.COURSE_ATTENDANCE);
+        if (existingData) {
+          cachedData = JSON.parse(existingData);
+        }
+      } catch {
+      }
+      
+      cachedData[courseId] = {
+        data,
+        timestamp: Date.now(),
+      };
+      
+      await AsyncStorage.setItem(CACHE_KEYS.COURSE_ATTENDANCE, JSON.stringify(cachedData));
+    } catch (error) {
+    }
+  }
+
+  /**
+   * Clear attendance data cache
+   */
+  static async clearAttendanceCache(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(CACHE_KEYS.ATTENDANCE_DATA);
+      await AsyncStorage.removeItem(CACHE_KEYS.COURSE_ATTENDANCE);
     } catch (error) {
     }
   }

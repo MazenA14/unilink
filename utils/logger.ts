@@ -37,35 +37,29 @@ export class Logger {
 
   static debug(category: string, message: string, data?: any) {
     if (this.shouldLog('debug')) {
-      console.log(this.formatMessage('debug', category, message, data));
     }
   }
 
   static info(category: string, message: string, data?: any) {
     if (this.shouldLog('info')) {
-      console.log(this.formatMessage('info', category, message, data));
     }
   }
 
   static warn(category: string, message: string, data?: any) {
     if (this.shouldLog('warn')) {
-      console.warn(this.formatMessage('warn', category, message, data));
     }
   }
 
   static error(category: string, message: string, data?: any) {
     if (this.shouldLog('error')) {
-      console.error(this.formatMessage('error', category, message, data));
     }
   }
 
   // Specific logging methods for user tracking
   static userTracking(message: string, data?: any) {
-    this.info('UserTracking', message, data);
   }
 
   static authManager(message: string, data?: any) {
-    this.info('AuthManager', message, data);
   }
 
   static supabase(message: string, data?: any) {

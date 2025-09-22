@@ -359,7 +359,10 @@ export default function DashboardScreen() {
               <Text style={[styles.gridText, { color: 'white' }]}>Exam Seats</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={[styles.gridItem, { backgroundColor: colors.gradeGood, borderColor: colors.gradeGood, justifyContent: 'center', alignItems: 'center' }]}>
+            <TouchableOpacity 
+              style={[styles.gridItem, { backgroundColor: colors.gradeGood, borderColor: colors.gradeGood, justifyContent: 'center', alignItems: 'center' }]}
+              onPress={() => router.push('/attendance')}
+            >
               <Feather name="check-circle" size={20} color="white" />
               <Text style={[styles.gridText, { color: 'white' }]}>Attendance</Text>
             </TouchableOpacity>

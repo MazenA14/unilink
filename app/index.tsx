@@ -33,6 +33,11 @@ export default function Index() {
             GradesPreloader.preloadCurrentGrades().catch(error => {
               // Don't show error to user - preloading is optional
             });
+            
+            const { AttendancePreloader } = await import('@/utils/attendancePreloader');
+            AttendancePreloader.preloadAttendance().catch(error => {
+              // Don't show error to user - preloading is optional
+            });
           }
         }
       } finally {

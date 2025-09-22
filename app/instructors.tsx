@@ -56,7 +56,6 @@ export default function InstructorsScreen() {
       setCourses(coursesData);
     } catch (err: any) {
       setError(err.message || 'Failed to load data');
-      console.error('Error fetching data:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -98,7 +97,6 @@ export default function InstructorsScreen() {
       setCourseInstructors(prev => ({ ...prev, [course.value]: instructors }));
     } catch (err: any) {
       setError(err.message || 'Failed to load course instructors');
-      console.error('Error fetching course instructors:', err);
     } finally {
       setLoadingCourseInstructors(prev => ({ ...prev, [course.value]: false }));
     }

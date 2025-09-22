@@ -984,7 +984,6 @@ export class GUCAPIProxy {
 
       return profileData;
     } catch (error) {
-      console.error('Error fetching course instructor profile:', error);
       return null;
     }
   }
@@ -1064,7 +1063,6 @@ export class GUCAPIProxy {
       
       return profileData;
     } catch (error) {
-      console.error('Error fetching instructor profile:', error);
       return null;
     }
   }
@@ -1106,9 +1104,337 @@ export class GUCAPIProxy {
         courses: courses && courses !== '' ? courses : undefined
       };
     } catch (error) {
-      console.error('Error parsing instructor profile:', error);
       return null;
     }
+  }
+
+  /**
+   * Get attendance data from GUC attendance page
+   */
+  static async getAttendanceData(): Promise<{
+    summary: {
+      absenceReport: {
+        settingsTitle: string;
+        code: string;
+        name: string;
+        absenceLevel: string;
+      }[];
+    };
+    courses: {
+      courseId: string;
+      courseName: string;
+      attendanceRecords: {
+        rowNumber: number;
+        attendance: 'Present' | 'Absent';
+        sessionDescription: string;
+      }[];
+    }[];
+  }> {
+    try {
+      // First, get the initial attendance page
+      const initialData = await this.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx'
+      );
+
+      let html = initialData.html || initialData.body;
+      
+      // Check if we got a redirect response
+      if (initialData.status === 302 || html.includes('Object moved') || html.includes('sTo(')) {
+        try {
+          // Extract redirect parameter from JavaScript
+          const redirectParam = GUCAPIProxy.extractRedirectParam(html);
+          
+          // Update URL with redirect parameter
+          const redirectUrl = `https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx?v=${redirectParam}`;
+          
+          // Make request to redirected URL
+          const redirectData = await this.makeProxyRequest(redirectUrl);
+          html = redirectData.html || redirectData.body;
+          
+          if (!html) {
+            throw new Error('No HTML content from redirect');
+          }
+        } catch (redirectError: any) {
+          throw new Error(`Failed to handle attendance page redirect: ${redirectError.message}`);
+        }
+      }
+
+      // Parse the attendance data from the final page
+      const attendanceData = this.parseAttendanceData(html);
+
+      return attendanceData;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get detailed attendance for a specific course
+   */
+  static async getCourseAttendance(courseId: string): Promise<{
+    courseId: string;
+    courseName: string;
+    attendanceRecords: {
+      rowNumber: number;
+      attendance: 'Present' | 'Absent';
+      sessionDescription: string;
+    }[];
+  }> {
+    try {
+      // First, get the initial attendance page
+      const initialData = await this.makeProxyRequest(
+        'https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx'
+      );
+
+      let html = initialData.html || initialData.body;
+      let baseUrl = 'https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx';
+      
+      // Check if we got a redirect response
+      if (initialData.status === 302 || html.includes('Object moved') || html.includes('sTo(')) {
+        try {
+          // Extract redirect parameter from JavaScript
+          const redirectParam = GUCAPIProxy.extractRedirectParam(html);
+          
+          // Update URL with redirect parameter
+          baseUrl = `https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx?v=${redirectParam}`;
+          
+          // Make request to redirected URL
+          const redirectData = await this.makeProxyRequest(baseUrl);
+          html = redirectData.html || redirectData.body;
+          
+          if (!html) {
+            throw new Error('No HTML content from redirect');
+          }
+        } catch (redirectError: any) {
+          throw new Error(`Failed to handle course attendance page redirect: ${redirectError.message}`);
+        }
+      }
+
+      const viewStateData = extractViewState(html);
+
+      if (!viewStateData.__VIEWSTATE || !viewStateData.__VIEWSTATEGENERATOR || !viewStateData.__EVENTVALIDATION) {
+        throw new Error('Failed to extract required view state data');
+      }
+
+      // Select the specific course
+      const courseFormBody = new URLSearchParams({
+        ...viewStateData,
+        'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$DDL_Courses': courseId,
+        '__EVENTTARGET': 'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$DDL_Courses',
+        '__EVENTARGUMENT': '',
+      });
+
+      const courseResponse = await this.makeProxyRequest(
+        baseUrl,
+        'POST',
+        courseFormBody.toString()
+      );
+
+      const courseHtml = courseResponse.html || courseResponse.body;
+      const courseData = this.parseCourseAttendanceData(courseHtml, courseId);
+
+      return courseData;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Parse attendance data from HTML
+   */
+  private static parseAttendanceData(html: string): {
+    summary: {
+      absenceReport: {
+        settingsTitle: string;
+        code: string;
+        name: string;
+        absenceLevel: string;
+      }[];
+    };
+    courses: {
+      courseId: string;
+      courseName: string;
+      attendanceRecords: {
+        rowNumber: number;
+        attendance: 'Present' | 'Absent';
+        sessionDescription: string;
+      }[];
+    }[];
+  } {
+    try {
+      // Parse absence report table
+      const absenceReport: {
+        settingsTitle: string;
+        code: string;
+        name: string;
+        absenceLevel: string;
+      }[] = [];
+
+      // Extract absence report table rows
+      const absenceTableMatch = html.match(/<table[^>]*id="DG_AbsenceReport"[^>]*>(.*?)<\/table>/s);
+      if (absenceTableMatch) {
+        const tableContent = absenceTableMatch[1];
+        const rowMatches = tableContent.match(/<tr[^>]*>(.*?)<\/tr>/gs);
+        
+        if (rowMatches && rowMatches.length > 1) {
+          // Skip header row, process data rows
+          for (let i = 1; i < rowMatches.length; i++) {
+            const row = rowMatches[i];
+            const cellMatches = row.match(/<td[^>]*>(.*?)<\/td>/gs);
+            
+            if (cellMatches && cellMatches.length >= 4) {
+              absenceReport.push({
+                settingsTitle: this.stripHtmlTags(cellMatches[0]),
+                code: this.stripHtmlTags(cellMatches[1]),
+                name: this.stripHtmlTags(cellMatches[2]),
+                absenceLevel: this.stripHtmlTags(cellMatches[3])
+              });
+            }
+          }
+        }
+      }
+
+      // Parse course dropdown options
+      const courses: {
+        courseId: string;
+        courseName: string;
+        attendanceRecords: {
+          rowNumber: number;
+          attendance: 'Present' | 'Absent';
+          sessionDescription: string;
+        }[];
+      }[] = [];
+
+      const courseSelectMatch = html.match(/<select[^>]*id="ContentPlaceHolderright_ContentPlaceHoldercontent_DDL_Courses"[^>]*>(.*?)<\/select>/s);
+      if (courseSelectMatch) {
+        const selectContent = courseSelectMatch[1];
+        const optionMatches = selectContent.match(/<option[^>]*value="([^"]*)"[^>]*>(.*?)<\/option>/gs);
+        
+        if (optionMatches) {
+          for (const optionMatch of optionMatches) {
+            const valueMatch = optionMatch.match(/value="([^"]*)"/);
+            const textMatch = optionMatch.match(/>([^<]*)</);
+            
+            if (valueMatch && textMatch && valueMatch[1] !== '0') {
+              const courseId = valueMatch[1];
+              const courseName = textMatch[1].trim();
+              
+              courses.push({
+                courseId,
+                courseName,
+                attendanceRecords: [] // Will be populated when course is selected
+              });
+            }
+          }
+        }
+      }
+
+      return {
+        summary: {
+          absenceReport
+        },
+        courses
+      };
+    } catch (error) {
+      return {
+        summary: { absenceReport: [] },
+        courses: []
+      };
+    }
+  }
+
+  /**
+   * Parse course attendance data from HTML
+   */
+  private static parseCourseAttendanceData(html: string, courseId: string): {
+    courseId: string;
+    courseName: string;
+    attendanceRecords: {
+      rowNumber: number;
+      attendance: 'Present' | 'Absent';
+      sessionDescription: string;
+    }[];
+  } {
+    try {
+      // Get course name from the selected option
+      let courseName = '';
+      const selectedOptionMatch = html.match(/<option[^>]*selected="selected"[^>]*value="[^"]*"[^>]*>(.*?)<\/option>/);
+      if (selectedOptionMatch) {
+        courseName = selectedOptionMatch[1].trim();
+      }
+
+      const attendanceRecords: {
+        rowNumber: number;
+        attendance: 'Present' | 'Absent';
+        sessionDescription: string;
+      }[] = [];
+
+      // Extract attendance table rows
+      const attendanceTableMatch = html.match(/<table[^>]*id="DG_StudentCourseAttendance"[^>]*>(.*?)<\/table>/s);
+      if (attendanceTableMatch) {
+        const tableContent = attendanceTableMatch[1];
+        const rowMatches = tableContent.match(/<tr[^>]*>(.*?)<\/tr>/gs);
+        
+        if (rowMatches && rowMatches.length > 1) {
+          // Skip header row, process data rows
+          for (let i = 1; i < rowMatches.length; i++) {
+            const row = rowMatches[i];
+            const cellMatches = row.match(/<td[^>]*>(.*?)<\/td>/gs);
+            
+            if (cellMatches && cellMatches.length >= 3) {
+              const rowNumber = parseInt(this.stripHtmlTags(cellMatches[0])) || 0;
+              const attendance = this.stripHtmlTags(cellMatches[1]) === 'Present' ? 'Present' : 'Absent';
+              const sessionDescription = this.stripHtmlTags(cellMatches[2]);
+              
+              attendanceRecords.push({
+                rowNumber,
+                attendance,
+                sessionDescription
+              });
+            }
+          }
+        }
+      }
+
+      return {
+        courseId,
+        courseName,
+        attendanceRecords
+      };
+    } catch (error) {
+      return {
+        courseId,
+        courseName: '',
+        attendanceRecords: []
+      };
+    }
+  }
+
+  /**
+   * Extract redirect parameter from JavaScript
+   */
+  static extractRedirectParam(html: string): string {
+    const patterns = [
+      /sTo\('([^']+)'\)/,
+      /sTo\("([^"]+)"\)/,
+      /sTo\(['"]([^'"]+)['"]\)/,
+      /callBack_func\(['"]([^'"]+)['"]\)/,
+      /eval.*?sTo\(['"]([^'"]+)['"]\)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = html.match(pattern);
+      if (match) return match[1];
+    }
+    
+    throw new Error('Could not extract redirect parameter');
+  }
+
+  /**
+   * Strip HTML tags from text
+   */
+  private static stripHtmlTags(html: string): string {
+    return html.replace(/<[^>]*>/g, '').trim();
   }
 
   // New session reset methods

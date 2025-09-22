@@ -522,7 +522,6 @@ export class AuthManager {
       const firstTimeOpen = await AsyncStorage.getItem(this.FIRST_TIME_OPEN_KEY);
       return firstTimeOpen === null; // null means first time
     } catch (error) {
-      console.error('Error checking first time open:', error);
       return true; // Default to first time if error
     }
   }
@@ -534,7 +533,6 @@ export class AuthManager {
     try {
       await AsyncStorage.setItem(this.FIRST_TIME_OPEN_KEY, 'false');
     } catch (error) {
-      console.error('Error marking app as opened:', error);
     }
   }
 
@@ -545,7 +543,6 @@ export class AuthManager {
     try {
       await AsyncStorage.removeItem(this.FIRST_TIME_OPEN_KEY);
     } catch (error) {
-      console.error('Error resetting first time open:', error);
     }
   }
 }

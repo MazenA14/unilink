@@ -13,11 +13,11 @@
 + Update alert + update Changelog
 + Reset Password # See Outlook
 + Search for Staff https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx
++ View Attendance https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx?v=NXM874921
 
 - Staff Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
 - Course Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
 - General Group Schedule https://apps.guc.edu.eg/student_ext/Scheduling/GeneralGroupSchedule.aspx
-- View Attendance https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx?v=NXM874921
 - GUC Notifications https://apps.guc.edu.eg/student_ext/Main/Notifications.aspx
 - Mobile Notifications (Slot Reminder)
 - Add skeletons for everything that loads
@@ -37,8 +37,8 @@
 + Exam Seats
 + CMS button
 + Your Instructors this semester (List of view profiles separated by course)
++ View Attendance
 
-- View Attendance
 - CMS
 
 -------------------------- -------------------------- -------------------------- --------------------------
@@ -71,6 +71,7 @@
 - Solve notifcations error if possible
 
 - Check first time production app open, opens on the login screen
+- Add the attendance level when I have one (Now there is commented static badge)
 
 - Wraping up the app:
     - Make it more efficient
@@ -114,6 +115,7 @@
 + Multiple slots module & the information needs to open 90% (Like the notification modal)
 + Settings page is shifted up
 + Check consistency of modals in the whole app
++ Preload the attendance on opening dashboard (Rehandle all preloading and there order)
 
 ## Run these next time
 - npx expo install @expo/metro-runtime react-native-worklets
