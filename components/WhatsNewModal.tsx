@@ -1,14 +1,12 @@
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import {
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface WhatsNewModalProps {
@@ -32,54 +30,73 @@ export default function WhatsNewModal({
       visible={visible}
       transparent
       animationType="fade"
-      statusBarTranslucent
+      onRequestClose={onClose}
     >
-      <BlurView intensity={20} style={styles.overlay}>
-        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+      <View style={styles.overlay}>
+        <View style={[
+          styles.modalContainer,
+          {
+            backgroundColor: colorScheme === 'dark' ? '#232323' : '#ffffff',
+            borderColor: colors.border,
+          }
+        ]}>
           <View style={styles.header}>
-            <View style={[styles.iconContainer, { backgroundColor: colors.tint }]}>
-              <Ionicons name="sparkles" size={24} color="white" />
+            <View style={styles.titleContainer}>
+              {/* <View style={[styles.iconContainer, { backgroundColor: colors.tabColor }]}>
+                <Ionicons name="sparkles" size={20} color="white" />
+              </View> */}
+              <View style={styles.titleTextContainer}>
+                <Text style={[styles.title, { color: colors.mainFont }]}>
+                  What&apos;s New
+                </Text>
+                <Text style={[styles.version, { color: colors.secondaryFont }]}>
+                  Version {version}
+                </Text>
+              </View>
             </View>
-            <Text style={[styles.title, { color: colors.text }]}>
-              What&apos;s New
-            </Text>
-            <Text style={[styles.version, { color: colors.secondaryFont }]}>
-              Version {version}
-            </Text>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={onClose}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              {/* <Ionicons name="close" size={24} color={colors.secondaryFont} /> */}
+            </TouchableOpacity>
           </View>
           
           <ScrollView 
-            style={styles.content}
+            style={styles.scrollView}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
           >
-            <Text style={[styles.subtitle, { color: colors.text }]}>
-              Here&apos;s what&apos;s new in this update:
-            </Text>
-            
-            <View style={styles.featuresList}>
-              {features.map((feature, index) => (
-                <View key={index} style={styles.featureItem}>
-                  <View style={[styles.bulletPoint, { backgroundColor: colors.tint }]} />
-                  <Text style={[styles.featureText, { color: colors.text }]}>
-                    {feature}
-                  </Text>
-                </View>
-              ))}
+            <View style={styles.content}>
+              <Text style={[styles.description, { color: colors.mainFont }]}>
+                Here&apos;s what&apos;s new in this update:
+              </Text>
+              
+              <View style={styles.featuresList}>
+                {features.map((feature, index) => (
+                  <View key={index} style={styles.featureItem}>
+                    <View style={[styles.bulletPoint, { backgroundColor: colors.tabColor }]} />
+                    <Text style={[styles.featureText, { color: colors.mainFont }]}>
+                      {feature}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             </View>
           </ScrollView>
           
-          <View style={styles.footer}>
+          <View style={styles.buttonContainer}>
             <TouchableOpacity
-              style={[styles.button, { backgroundColor: colors.tint }]}
+              style={[styles.gotItButton, { backgroundColor: colors.tabColor }]}
               onPress={onClose}
-              activeOpacity={0.8}
             >
-              <Text style={styles.buttonText}>Got it!</Text>
+              <Text style={[styles.gotItButtonText, { color: colors.background }]}>
+                Got it!
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
-      </BlurView>
+      </View>
     </Modal>
   );
 }
@@ -87,59 +104,74 @@ export default function WhatsNewModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 40,
   },
   modalContainer: {
-    margin: 20,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '90%',
     borderRadius: 20,
-    maxHeight: '80%',
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 10,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 15,
   },
   header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 24,
     paddingHorizontal: 24,
+    paddingTop: 24,
     paddingBottom: 16,
   },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginRight: 12,
+  },
+  titleTextContainer: {
+    flex: 1,
+    alignItems: 'center',
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 2,
   },
   version: {
     fontSize: 14,
     opacity: 0.7,
-    textAlign: 'center',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  scrollView: {
+    flexGrow: 1,
   },
   content: {
-    flex: 1,
     paddingHorizontal: 24,
+    paddingBottom: 24,
   },
-  scrollContent: {
-    paddingBottom: 16,
-  },
-  subtitle: {
+  description: {
     fontSize: 16,
+    lineHeight: 24,
     marginBottom: 20,
-    textAlign: 'center',
-    opacity: 0.8,
   },
   featuresList: {
     gap: 16,
@@ -162,19 +194,18 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     flex: 1,
   },
-  footer: {
-    padding: 24,
-    paddingTop: 16,
-  },
-  button: {
-    paddingVertical: 14,
+  buttonContainer: {
     paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  gotItButton: {
+    height: 48,
     borderRadius: 12,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  buttonText: {
-    color: '#FFFFFF',
+  gotItButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

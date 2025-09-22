@@ -70,11 +70,12 @@ class UserTrackingService {
 
   /**
    * Track user login - add user to database if not exists, update last opened date
+   * Returns the joined season if available for caching
    */
-  async trackUserLogin(username: string, gucId?: string, userId?: string): Promise<void> {
+  async trackUserLogin(username: string, gucId?: string, userId?: string): Promise<string | null> {
     // Prevent multiple simultaneous tracking calls for the same user
     if (this.trackingInProgress.has(username)) {
-      return;
+      return null;
     }
     
     this.trackingInProgress.add(username);
@@ -106,13 +107,19 @@ class UserTrackingService {
           .from(SUPABASE_CONFIG.TABLES.USERDATA)
           .insert([newUser])
           .select();
+        
+        // Return joined season for caching
+        return academicData.joined_season || null;
       } else if (existingUser) {
-        // User already exists in database
+        // User already exists in database, return their joined season
+        return existingUser.joined_season || null;
       } else {
         // Unexpected state: No user found but no error either
+        return null;
       }
     } catch {
       // Unexpected error in trackUserLogin
+      return null;
     } finally {
       // Always release the lock
       this.trackingInProgress.delete(username);

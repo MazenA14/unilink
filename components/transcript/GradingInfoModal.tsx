@@ -1,7 +1,18 @@
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  Animated,
+  Dimensions,
+  Modal,
+  PanResponder,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 interface GradingInfoModalProps {
   visible: boolean;
@@ -11,6 +22,92 @@ interface GradingInfoModalProps {
 export default function GradingInfoModal({ visible, onClose }: GradingInfoModalProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  
+  // Animation values
+  const translateY = useState(new Animated.Value(0))[0];
+  const opacity = useState(new Animated.Value(0))[0];
+  const { height: screenHeight } = Dimensions.get('window');
+  
+  // Header pan responder for swipe down gesture
+  const dragHandlePanResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: (evt, gestureState) => {
+      // Only respond to downward swipes
+      const isDownwardSwipe = gestureState.dy > 0;
+      const isVerticalSwipe = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+      
+      return isDownwardSwipe && isVerticalSwipe;
+    },
+    onPanResponderGrant: () => {
+      // Don't set offset - start from current position
+      translateY.setValue(0);
+    },
+    onPanResponderMove: (evt, gestureState) => {
+      if (gestureState.dy > 0) {
+        translateY.setValue(gestureState.dy);
+        const progress = Math.min(gestureState.dy / 200, 1);
+        opacity.setValue(1 - progress);
+      }
+    },
+    onPanResponderRelease: (evt, gestureState) => {
+      if (gestureState.dy > 100) {
+        closeModal();
+      } else {
+        Animated.parallel([
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+          }),
+          Animated.spring(opacity, {
+            toValue: 1,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    },
+  });
+
+  const closeModal = () => {
+    // Animate modal out
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: screenHeight,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onClose();
+      // Reset values for next time
+      translateY.setValue(0);
+      opacity.setValue(0);
+    });
+  };
+
+  // Handle modal opening animation
+  useEffect(() => {
+    if (visible) {
+      // Animate modal in
+      translateY.setValue(screenHeight);
+      opacity.setValue(0);
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible]);
 
   const gradingRanges = [
     { range: '0.7 - 1.54', grade: 'Excellent', color: colors.gradeExcellent },
@@ -34,23 +131,90 @@ export default function GradingInfoModal({ visible, onClose }: GradingInfoModalP
     { range: '4.3 - 5.0', grade: 'Failing', color: colors.gradeFailing },
   ];
 
+  const gradingScheme = [
+    { scoreRange: '94 - 100', letterGrade: 'A+', gpaRange: '0.99 - 0.7' },
+    { scoreRange: '90 - 93.9', letterGrade: 'A', gpaRange: '1.29 - 1.0' },
+    { scoreRange: '86 - 89.9', letterGrade: 'A-', gpaRange: '1.69 - 1.3' },
+    { scoreRange: '82 - 85.9', letterGrade: 'B+', gpaRange: '1.99 - 1.7' },
+    { scoreRange: '78 - 81.9', letterGrade: 'B', gpaRange: '2.29 - 2.0' },
+    { scoreRange: '74 - 77.9', letterGrade: 'B-', gpaRange: '2.69 - 2.3' },
+    { scoreRange: '70 - 73.9', letterGrade: 'C+', gpaRange: '2.99 - 2.7' },
+    { scoreRange: '65 - 69.9', letterGrade: 'C', gpaRange: '3.29 - 3.0' },
+    { scoreRange: '60 - 64.9', letterGrade: 'C-', gpaRange: '3.69 - 3.3' },
+    { scoreRange: '55 - 59.9', letterGrade: 'D+', gpaRange: '3.99 - 3.7' },
+    { scoreRange: '50 - 54.9', letterGrade: 'D', gpaRange: '4.99 - 4.0' },
+    { scoreRange: '0 - 49.9', letterGrade: 'F', gpaRange: '6.0 - 5.0' },
+  ];
+
+  const getGradeColor = (letterGrade: string) => {
+    if (letterGrade.startsWith('A')) return colors.gradeExcellent;
+    if (letterGrade.startsWith('B')) return colors.gradeGood;
+    if (letterGrade.startsWith('C')) return colors.gradeAverage;
+    if (letterGrade.startsWith('D')) return colors.gradeBelowAverage;
+    return colors.gradeFailing;
+  };
+
   return (
     <Modal
+      animationType="none"
+      transparent={true}
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
+      onRequestClose={closeModal}
     >
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.title, { color: colors.mainFont }]}>GUC Grading System</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={colors.mainFont} />
-          </TouchableOpacity>
-        </View>
+      <Animated.View style={[styles.modalOverlay, { opacity }]}>
+        <Animated.View 
+          style={[
+            styles.modalContainer, 
+            { 
+              backgroundColor: colors.cardBackground,
+              transform: [{ translateY }]
+            }
+          ]}
+        >
+          {/* Modal Header */}
+          <View 
+            style={[styles.modalHeader, { borderBottomColor: colors.border }]}
+            {...dragHandlePanResponder.panHandlers}
+          >
+            {/* Drag Handle */}
+            <View style={[styles.dragHandle, { backgroundColor: colors.border }]} />
+            
+            <View style={styles.headerContent}>
+              <Text style={[styles.title, { color: colors.mainFont }]}>Grading System</Text>
+              {/* <TouchableOpacity onPress={closeModal} style={styles.closeButton}>
+                <Ionicons name="close" size={24} color={colors.mainFont} />
+              </TouchableOpacity> */}
+            </View>
+          </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+          {/* Grading Scheme */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.mainFont }]}>Grading Scheme</Text>
+            <View style={[styles.gradingSchemeTable, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <View style={[styles.gradingSchemeHeader, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3' }]}>
+                <Text style={[styles.gradingSchemeHeaderText, { color: colors.secondaryFont }]}>Score Range</Text>
+                <Text style={[styles.gradingSchemeHeaderText, { color: colors.secondaryFont }]}>Letter Grade</Text>
+                <Text style={[styles.gradingSchemeHeaderText, { color: colors.secondaryFont }]}>GPA Range</Text>
+              </View>
+              {gradingScheme.map((item, index) => (
+                <View key={index} style={[styles.gradingSchemeRow, { borderBottomColor: colors.border }]}>
+                  <View style={styles.gradingSchemeCell}>
+                    <Text style={[styles.gradingSchemeText, { color: colors.mainFont }]}>{item.scoreRange}</Text>
+                  </View>
+                  <View style={styles.gradingSchemeCell}>
+                    <View style={[styles.gradingSchemeGradeBadge, { backgroundColor: getGradeColor(item.letterGrade) }]}>
+                      <Text style={[styles.gradingSchemeGradeText, { color: '#FFFFFF' }]}>{item.letterGrade}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.gradingSchemeCell}>
+                    <Text style={[styles.gradingSchemeText, { color: colors.mainFont }]}>{item.gpaRange}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+
           {/* Cumulative Grading System */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.mainFont }]}>
@@ -143,23 +307,47 @@ export default function GradingInfoModal({ visible, onClose }: GradingInfoModalP
               </Text>
             </View>
           </View>
-        </ScrollView>
-      </View>
+          </ScrollView>
+        </Animated.View>
+      </Animated.View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  // Modal styles
+  modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
   },
-  header: {
+  modalContainer: {
+    height: '95%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalHeader: {
+    paddingTop: 12,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
   },
   title: {
     fontSize: 20,
@@ -168,7 +356,7 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 4,
   },
-  content: {
+  modalContent: {
     flex: 1,
     paddingHorizontal: 20,
   },
@@ -194,6 +382,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     flex: 1,
+    textAlign: 'center',
   },
   tableRow: {
     flexDirection: 'row',
@@ -208,10 +397,11 @@ const styles = StyleSheet.create({
   rangeText: {
     fontSize: 16,
     fontWeight: '500',
+    textAlign: 'center',
   },
   gradeCell: {
     flex: 1,
-    alignItems: 'flex-end',
+    alignItems: 'center',
   },
   gradeBadge: {
     paddingHorizontal: 12,
@@ -234,5 +424,50 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 8,
+  },
+  // Grading Scheme Table Styles
+  gradingSchemeTable: {
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  gradingSchemeHeader: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+  },
+  gradingSchemeHeaderText: {
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
+  },
+  gradingSchemeRow: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+  },
+  gradingSchemeCell: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gradingSchemeText: {
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  gradingSchemeGradeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    minWidth: 35,
+    alignItems: 'center',
+  },
+  gradingSchemeGradeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

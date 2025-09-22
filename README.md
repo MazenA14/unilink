@@ -11,6 +11,7 @@
 + Exam Seats https://apps.guc.edu.eg/student_ext/Exam/ViewExamSeat_01.aspx
 + Add slot timing shift for BI/Architecture/... in the settings page (Should change the slot timing in the schedule page)
 + Update alert + update Changelog
++ Reset Password # See Outlook
 
 - View Attendance https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx?v=NXM874921
 - Search for Staff https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx
@@ -23,13 +24,11 @@
 - Empty Slots (Rooms) https://gucroomschedule.web.app/
 
 ## To-Do List (Optional)
-- Evaluate Course
-- Evaluate Staff
+- Evaluate Course (Release update when the university releases it)
+- Evaluate Staff (Release update when the university releases it)
 - Bachelor endpoint
-- Calendar
-- Force Reset Password
-- Reset Password # See Outlook
 - Reminder for Password Reset
+- Calendar
 - Game
 
 ## Dashboard should contain:
@@ -40,6 +39,7 @@
 
 - Your Instructors this semester (List of view profiles separated by course)
 - View Attendance
+- CMS
 
 -------------------------- -------------------------- -------------------------- --------------------------
 
@@ -60,9 +60,8 @@
 -------------------------- -------------------------- -------------------------- --------------------------
 
 ## To-Do (Notes)
-- Clear Course grades cache on pull to refresh and not be visibile while refreshing
+- Clear Course previous grades cache on pull to refresh and not be visibile while refreshing
 - ReApply All cache timings
-- Clear all cache on logout
 - Apply smart fetching, fetch grades & attendance on loading dashboard (See if something else needs smart fetching)
 - Make notification cached and fetch on loading dashboard, on fetching don't remove the old notifications
 
@@ -71,19 +70,14 @@
 - On loading don't show loading state, show cached data and after fetching is complete, replace notifications
 - Solve notifcations error if possible
 
-- See how all aspects of the app works (Caching,...)
-- On selecting the default screen don't go there
-- Namin isn't working with new parser
-- Lecture Location isn't parsed correctly
-- Add to the login modal popup that the username/password might be incorrect or the password expired
-- Add reset password feature on the login screen and in the settings
-- Change sign in button (Make it smaller)
+- Check first time production app open, opens on the login screen
 
-- Wraping up the app
+- Wraping up the app:
     - Make it more efficient
     - Remove the unneeded dependencies (Smaller file size)
     - Remove any console logs/wars/errors
     - Replace Alert.alert with custom alert component
+    - See how all aspects of the app works (Caching,...)
 
 + Remove the effect that occurs on pressing on the tabs at the bottom
 + Change animation for the hamburger menu to Fade in
@@ -106,6 +100,20 @@
 + Previous grades page is broken
 + Adjust Colouring of transcript semester gpa (All grade colour ranges)
 + Make links in notifications be clickable
++ On selecting the default screen don't go there
++ Naming isn't working with new parser
++ Lecture Location isn't parsed correctly
++ Add to the login modal popup that the username/password might be incorrect or the password expired
++ Add reset password feature on the login screen and in the settings
++ Change sign in button (Make it smaller)
++ Change signing in... loading
++ Clear all cache on logout
++ On downloading the apk can't retrieve items
++ Add the grade beside the GPA in the grading system and handle the 'Grade' offset
++ Move the 'i' button in the transcipt page
++ Multiple slots module & the information needs to open 90% (Like the notification modal)
++ Settings page is shifted up
++ Check consistency of modals in the whole app
 
 ## Run these next time
 - npx expo install @expo/metro-runtime react-native-worklets

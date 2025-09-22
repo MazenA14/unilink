@@ -7,8 +7,10 @@ export class AuthManager {
   private static PASSWORD_KEY = 'gucPassword';
   private static NICKNAME_KEY = 'displayNickname';
   private static USER_ID_KEY = 'gucUserId';
+  private static JOINED_SEASON_KEY = 'joinedSeason';
   private static SHIFTED_SCHEDULE_KEY = 'shiftedScheduleEnabled';
   private static DEFAULT_SCREEN_KEY = 'defaultScreen';
+  private static FIRST_TIME_OPEN_KEY = 'isFirstTimeOpen';
 
   /**
    * Store session cookie from login response
@@ -131,6 +133,56 @@ export class AuthManager {
     try {
       await AsyncStorage.removeItem(this.USER_ID_KEY);
     } catch (error) {
+    }
+  }
+
+  /**
+   * Store the user's joined season (extracted from user ID)
+   */
+  static async storeJoinedSeason(joinedSeason: string): Promise<void> {
+    try {
+      await AsyncStorage.setItem(this.JOINED_SEASON_KEY, joinedSeason);
+    } catch (error) {
+    }
+  }
+
+  /**
+   * Retrieve the stored joined season
+   */
+  static async getJoinedSeason(): Promise<string | null> {
+    try {
+      return await AsyncStorage.getItem(this.JOINED_SEASON_KEY);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Clear the stored joined season
+   */
+  static async clearJoinedSeason(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(this.JOINED_SEASON_KEY);
+    } catch (error) {
+    }
+  }
+
+  /**
+   * Get the user's academic year based on joined season
+   * Returns the academic year (e.g., "2024" for "Fall 2024" joined season)
+   */
+  static async getAcademicYear(): Promise<string | null> {
+    try {
+      const joinedSeason = await this.getJoinedSeason();
+      if (!joinedSeason) {
+        return null;
+      }
+      
+      // Extract year from joined season (e.g., "Fall 2024" -> "2024")
+      const yearMatch = joinedSeason.match(/(\d{4})/);
+      return yearMatch ? yearMatch[1] : null;
+    } catch (error) {
+      return null;
     }
   }
 
@@ -290,6 +342,7 @@ export class AuthManager {
           this.clearCredentials(),
           this.clearNickname(),
           this.clearUserId(),
+          this.clearJoinedSeason(),
           this.clearShiftedSchedulePreference(),
           this.clearDefaultScreen()
         ]);
@@ -315,6 +368,7 @@ export class AuthManager {
         this.clearCredentials(),
         this.clearNickname(),
         this.clearUserId(),
+        this.clearJoinedSeason(),
         this.clearShiftedSchedulePreference(),
         this.clearDefaultScreen()
       ]);
@@ -398,7 +452,12 @@ export class AuthManager {
             const { GUCAPIProxy } = await import('./gucApiProxy');
             const userId = await GUCAPIProxy.getUserId();
             
-            await userTrackingService.trackUserLogin(username.trim(), undefined, userId || undefined);
+            const joinedSeason = await userTrackingService.trackUserLogin(username.trim(), undefined, userId || undefined);
+            
+            // Cache the joined season if available
+            if (joinedSeason) {
+              await this.storeJoinedSeason(joinedSeason);
+            }
           } catch (error) {
             // Don't fail login if tracking fails
           }
@@ -451,6 +510,41 @@ export class AuthManager {
       return loginSuccess;
     } catch (error) {
       return false;
+    }
+  }
+
+  /**
+   * Check if this is the first time the app is being opened
+   */
+  static async isFirstTimeOpen(): Promise<boolean> {
+    try {
+      const firstTimeOpen = await AsyncStorage.getItem(this.FIRST_TIME_OPEN_KEY);
+      return firstTimeOpen === null; // null means first time
+    } catch (error) {
+      console.error('Error checking first time open:', error);
+      return true; // Default to first time if error
+    }
+  }
+
+  /**
+   * Mark that the app has been opened before (call this after successful login)
+   */
+  static async markAppOpened(): Promise<void> {
+    try {
+      await AsyncStorage.setItem(this.FIRST_TIME_OPEN_KEY, 'false');
+    } catch (error) {
+      console.error('Error marking app as opened:', error);
+    }
+  }
+
+  /**
+   * Reset first time open flag (useful for testing or if you want to show onboarding again)
+   */
+  static async resetFirstTimeOpen(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(this.FIRST_TIME_OPEN_KEY);
+    } catch (error) {
+      console.error('Error resetting first time open:', error);
     }
   }
 }

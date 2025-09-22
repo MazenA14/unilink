@@ -7,15 +7,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 const LoginScreen = () => {
@@ -98,6 +98,9 @@ const LoginScreen = () => {
           // also store creds for NTLM mode in proxy requests
           await AuthManager.storeCredentials(username.trim(), password);
           
+          // Mark that the app has been opened (not first time anymore)
+          await AuthManager.markAppOpened();
+          
           // Redirect to dashboard immediately for fast user experience
           router.replace('/(tabs)/dashboard');
           
@@ -111,7 +114,12 @@ const LoginScreen = () => {
               
               // Import and call user tracking service
               const { userTrackingService } = await import('@/utils/services/userTrackingService');
-              await userTrackingService.trackUserLogin(username.trim(), undefined, userInfo.userId || undefined);
+              const joinedSeason = await userTrackingService.trackUserLogin(username.trim(), undefined, userInfo.userId || undefined);
+              
+              // Cache the joined season if available
+              if (joinedSeason) {
+                await AuthManager.storeJoinedSeason(joinedSeason);
+              }
             } catch {
               // Don't fail login if tracking fails
             }
@@ -251,7 +259,7 @@ const LoginScreen = () => {
               {isLoading ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator color={colors.background} size="small" />
-                  <Text style={[styles.loadingText, { color: colors.background }]}>Signing In...</Text>
+                  {/* <Text style={[styles.loadingText, { color: colors.background }]}>Signing In</Text> */}
                 </View>
               ) : (
                 <View style={styles.buttonContent}>

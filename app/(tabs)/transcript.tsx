@@ -64,6 +64,12 @@ export default function TranscriptScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.mainFont }]}>Transcript</Text>
+        <TouchableOpacity 
+          onPress={() => setShowGradingInfo(true)}
+          style={styles.gradingInfoButton}
+        >
+          <Ionicons name="information-circle-outline" size={27} color={colors.tint} />
+        </TouchableOpacity>
       </View>
 
       {/* Study Years Section */}
@@ -105,12 +111,6 @@ export default function TranscriptScreen() {
               <View style={[styles.gpaCard, { backgroundColor: parsedTranscript?.cumulativeGPA ? getCumulativeGPAColor(parsedTranscript.cumulativeGPA, colors) : colors.tabColor }]}>
                 <View style={styles.gpaHeader}>
                   <Text style={[styles.gpaLabel, { color: '#FFFFFF' }]}>Cumulative GPA</Text>
-                  <TouchableOpacity 
-                    onPress={() => setShowGradingInfo(true)}
-                    style={styles.infoButton}
-                  >
-                    <Ionicons name="information-circle-outline" size={18} color="#FFFFFF" />
-                  </TouchableOpacity>
                 </View>
                 <Text style={[styles.gpaValue, { color: '#FFFFFF' }]}>
                   {parsedTranscript?.cumulativeGPA || '--'}
@@ -163,6 +163,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 20,
     paddingBottom: 10,
     paddingTop: 60,
@@ -171,6 +174,9 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '700',
     marginBottom: 8,
+  },
+  gradingInfoButton: {
+    padding: 8,
   },
   subtitle: {
     fontSize: 16,

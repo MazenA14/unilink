@@ -1,10 +1,10 @@
 import {
-  CourseWithGrades,
-  CurrentGradesSection,
-  GradeType,
-  PreviousGradesSection,
-  Season,
-  YearGroup
+    CourseWithGrades,
+    CurrentGradesSection,
+    GradeType,
+    PreviousGradesSection,
+    Season,
+    YearGroup
 } from '@/components/grades';
 import { GradesMenu } from '@/components/GradesMenu';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
@@ -170,6 +170,11 @@ export default function GradesScreen() {
         }
         yearGroupsMap.get(year)!.push(season);
       });
+      
+      // TODO: Use cached joined season to highlight user's academic year
+      // const { AuthManager } = await import('@/utils/auth');
+      // const userAcademicYear = await AuthManager.getAcademicYear();
+      // This can be used to prioritize or highlight seasons from the user's academic year
       
       // Convert to array and sort by year (newest first)
       const groupedYears = Array.from(yearGroupsMap.entries())

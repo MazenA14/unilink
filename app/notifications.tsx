@@ -413,7 +413,7 @@ export default function NotificationsScreen() {
                     style={styles.closeButton}
                     onPress={closeModal}
                   >
-                    <Ionicons name="close" size={24} color={colors.mainFont} />
+                    {/* <Ionicons name="close" size={24} color={colors.mainFont} /> */}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -663,7 +663,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContainer: {
-    height: '85%',
+    height: '95%',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     elevation: 5,

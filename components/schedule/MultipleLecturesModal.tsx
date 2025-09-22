@@ -2,13 +2,17 @@ import { Colors } from '@/constants/Colors';
 import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
 import {
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Animated,
+    Dimensions,
+    Modal,
+    PanResponder,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { ScheduleClass } from './types';
 
@@ -30,6 +34,92 @@ export function MultipleLecturesModal({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { isShiftedScheduleEnabled } = useShiftedSchedule();
+  
+  // Animation values
+  const translateY = useState(new Animated.Value(0))[0];
+  const opacity = useState(new Animated.Value(0))[0];
+  const { height: screenHeight } = Dimensions.get('window');
+  
+  // Header pan responder for swipe down gesture
+  const dragHandlePanResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: (evt, gestureState) => {
+      // Only respond to downward swipes
+      const isDownwardSwipe = gestureState.dy > 0;
+      const isVerticalSwipe = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+      
+      return isDownwardSwipe && isVerticalSwipe;
+    },
+    onPanResponderGrant: () => {
+      // Don't set offset - start from current position
+      translateY.setValue(0);
+    },
+    onPanResponderMove: (evt, gestureState) => {
+      if (gestureState.dy > 0) {
+        translateY.setValue(gestureState.dy);
+        const progress = Math.min(gestureState.dy / 200, 1);
+        opacity.setValue(1 - progress);
+      }
+    },
+    onPanResponderRelease: (evt, gestureState) => {
+      if (gestureState.dy > 100) {
+        closeModal();
+      } else {
+        Animated.parallel([
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+          }),
+          Animated.spring(opacity, {
+            toValue: 1,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    },
+  });
+
+  const closeModal = () => {
+    // Animate modal out
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: screenHeight,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onClose();
+      // Reset values for next time
+      translateY.setValue(0);
+      opacity.setValue(0);
+    });
+  };
+
+  // Handle modal opening animation
+  useEffect(() => {
+    if (visible) {
+      // Animate modal in
+      translateY.setValue(screenHeight);
+      opacity.setValue(0);
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible]);
 
   // Function to get period timing based on period name
   const getPeriodTiming = (period: string): string => {
@@ -92,35 +182,52 @@ export function MultipleLecturesModal({
 
   return (
     <Modal
+      animationType="none"
+      transparent={true}
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
+      onRequestClose={closeModal}
     >
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <View style={styles.headerContent}>
-            <Text style={[styles.title, { color: colors.text }]}>
-              {dayName} - {periodName}
-            </Text>
-            <Text style={[styles.timing, { color: colors.secondaryFont }]}>
-              {getPeriodTiming(periodName)}
-            </Text>
-            <Text style={[styles.subtitle, { color: colors.secondaryFont }]}>
-              {lectures.length} {lectures.length === 1 ? 'Slot' : 'Slots'}
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.closeButton, { backgroundColor: colors.border }]}
-            onPress={onClose}
+      <Animated.View style={[styles.modalOverlay, { opacity }]}>
+        <Animated.View 
+          style={[
+            styles.modalContainer, 
+            { 
+              backgroundColor: colors.cardBackground,
+              transform: [{ translateY }]
+            }
+          ]}
+        >
+          {/* Modal Header */}
+          <View 
+            style={[styles.modalHeader, { borderBottomColor: colors.border }]}
+            {...dragHandlePanResponder.panHandlers}
           >
-            <Ionicons name="close" size={24} color={colors.text} />
-          </TouchableOpacity>
-        </View>
+            {/* Drag Handle */}
+            <View style={[styles.dragHandle, { backgroundColor: colors.border }]} />
+            
+            <View style={styles.headerContent}>
+              <View style={styles.headerTextContainer}>
+                <Text style={[styles.title, { color: colors.mainFont }]}>
+                  {dayName} - {periodName}
+                </Text>
+                <Text style={[styles.timing, { color: colors.secondaryFont }]}>
+                  {getPeriodTiming(periodName)}
+                </Text>
+                <Text style={[styles.subtitle, { color: colors.secondaryFont }]}>
+                  {lectures.length} {lectures.length === 1 ? 'Slot' : 'Slots'}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={closeModal}
+              >
+                {/* <Ionicons name="close" size={24} color={colors.mainFont} /> */}
+              </TouchableOpacity>
+            </View>
+          </View>
 
-        {/* Content */}
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Modal Content */}
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
           {lectures.map((lecture, index) => {
             const typeColor = getSlotTypeColor(lecture.slotType);
             
@@ -187,25 +294,49 @@ export function MultipleLecturesModal({
               </View>
             );
           })}
-        </ScrollView>
-      </View>
+          </ScrollView>
+        </Animated.View>
+      </Animated.View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  // Modal styles
+  modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+  modalContainer: {
+    height: '95%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalHeader: {
+    paddingTop: 12,
+    paddingBottom: 16,
     borderBottomWidth: 1,
   },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
   headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  headerTextContainer: {
     flex: 1,
   },
   title: {
@@ -223,15 +354,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 4,
   },
-  content: {
+  modalContent: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
   },
   lectureCard: {
     borderWidth: 1,

@@ -1,4 +1,5 @@
 import { useCustomAlert } from '@/components/CustomAlert';
+import FeedbackModal from '@/components/FeedbackModal';
 import NotificationTest from '@/components/NotificationTest';
 import ResetPasswordModal from '@/components/ResetPasswordModal';
 import UpdateModal from '@/components/UpdateModal';
@@ -43,6 +44,7 @@ export default function SettingsScreen() {
   const [showWhatsNewModal, setShowWhatsNewModal] = useState(false);
   const [isNotificationLoading, setIsNotificationLoading] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   const testUserTracking = async () => {
     try {
@@ -275,8 +277,10 @@ export default function SettingsScreen() {
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={{ paddingBottom: 32 }}>
-      <View style={styles.content}>
+      <View style={styles.header}>
         <Text style={[styles.title, { color: colors.mainFont }]}>Settings</Text>
+      </View>
+      <View style={styles.content}>
 
         {/* Profile Section */}
         <Text style={[styles.sectionTitle, { color: colors.secondaryFont, marginTop: 0 }]}>PROFILE</Text>
@@ -428,6 +432,26 @@ export default function SettingsScreen() {
           </View>
           
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+          <TouchableOpacity
+            style={styles.rowBetween}
+            onPress={() => setShowResetPasswordModal(true)}
+          >
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+              {/* <Ionicons name="key-outline" size={20} color={colors.tabColor} style={{ marginRight: 12 }} /> */}
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.primaryText, { color: colors.mainFont }]}>
+                  Reset Password
+                </Text>
+                <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>
+                  Change your account password
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.secondaryFont} />
+          </TouchableOpacity>
+
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
           
           <View style={styles.rowBetween}>
             <View style={{ flex: 1 }}>
@@ -455,26 +479,6 @@ export default function SettingsScreen() {
             <Text style={[styles.infoButtonText, { color: colors.tabColor }]}>
               Notification tips for best experience
             </Text>
-          </TouchableOpacity>
-          
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          
-          <TouchableOpacity
-            style={styles.rowBetween}
-            onPress={() => setShowResetPasswordModal(true)}
-          >
-            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-              {/* <Ionicons name="key-outline" size={20} color={colors.tabColor} style={{ marginRight: 12 }} /> */}
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.primaryText, { color: colors.mainFont }]}>
-                  Reset Password
-                </Text>
-                <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>
-                  Change your account password
-                </Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.secondaryFont} />
           </TouchableOpacity>
         </View>
 
@@ -578,6 +582,13 @@ export default function SettingsScreen() {
                 />
               )}
             </View>
+          </TouchableOpacity>
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <TouchableOpacity
+            style={styles.rowBetween}
+            onPress={() => setShowFeedbackModal(true)}
+          >
+            <Text style={[styles.primaryText, { color: colors.mainFont }]}>Give Feedback</Text>
           </TouchableOpacity>
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <TouchableOpacity
@@ -745,6 +756,28 @@ export default function SettingsScreen() {
         }}
       />
 
+      {/* Feedback Modal */}
+      <FeedbackModal
+        visible={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        onSuccess={() => {
+          showAlert({
+            title: 'Thank You!',
+            message: 'Your feedback has been submitted successfully. We appreciate your input!',
+            type: 'success',
+            buttons: [{ text: 'OK' }]
+          });
+        }}
+        onError={(message) => {
+          showAlert({
+            title: 'Error',
+            message: message,
+            type: 'error',
+            buttons: [{ text: 'OK' }]
+          });
+        }}
+      />
+
       {AlertComponent()}
     </ScrollView>
   );
@@ -753,6 +786,11 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    padding: 20,
+    paddingBottom: 10,
+    paddingTop: 60,
   },
   content: {
     padding: 16,
