@@ -47,10 +47,10 @@
 
 ## Database Schema
 ### Table 1 (Users)
-- Username, GUC-ID, Date Joined App, Last Opened Date, GPA, Joined Season (58), Major (MET)
++ Username, GUC-ID, Date Joined App, Last Opened Date, GPA, Joined Season (58), Major (MET)
 
 ### Table 2 (Feedback)
-- Username, Notes, Season Joined (58), Date, Version
++ Username, Notes, Season Joined (58), Date, Version
 
 -------------------------- -------------------------- -------------------------- --------------------------
 
