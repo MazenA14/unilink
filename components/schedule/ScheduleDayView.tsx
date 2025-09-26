@@ -1,6 +1,7 @@
 import { Colors, ScheduleColors, ScheduleTypeColors, SlotTypeColors } from '@/constants/Colors';
 import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { isCurrentTimeSlot } from '@/utils/currentSlotUtils';
 import { GradeCache } from '@/utils/gradeCache';
 import { GUCAPIProxy } from '@/utils/gucApiProxy';
 import { useEffect, useState } from 'react';
@@ -12,9 +13,10 @@ import { ScheduleClass, ScheduleDay, ScheduleType } from './types';
 interface ScheduleDayViewProps {
   day: ScheduleDay;
   scheduleType?: ScheduleType;
+  currentTime?: Date;
 }
 
-export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayViewProps) {
+export function ScheduleDayView({ day, scheduleType = 'personal', currentTime: propCurrentTime }: ScheduleDayViewProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const scheduleColors = ScheduleColors[colorScheme ?? 'light'];
@@ -30,6 +32,9 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
   const [selectedLectures, setSelectedLectures] = useState<ScheduleClass[]>([]);
   const [selectedPeriodName, setSelectedPeriodName] = useState('');
   const [selectedDayName, setSelectedDayName] = useState('');
+  
+  // State to force re-render for current slot indicator
+  const [currentTime, setCurrentTime] = useState(new Date());
   
   // Load course name mapping on component mount
   useEffect(() => {
@@ -65,6 +70,13 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
     
     loadCourseNameMapping();
   }, []);
+
+  // Update local currentTime when prop changes
+  useEffect(() => {
+    if (propCurrentTime) {
+      setCurrentTime(propCurrentTime);
+    }
+  }, [propCurrentTime]);
 
   // Utility function to get course name by matching course names
   const getCourseNameByMatching = (scheduleCourseName: string): string | null => {
@@ -243,20 +255,38 @@ export function ScheduleDayView({ day, scheduleType = 'personal' }: ScheduleDayV
       <View style={styles.periodsContainer}>
         {periods.map((period) => {
           const classData = day.periods[period.key];
+          const isCurrentSlot = isCurrentTimeSlot(period.key, isShiftedScheduleEnabled, propCurrentTime || currentTime);
+          
           return (
             <View key={period.key} style={[styles.periodRow, { 
               backgroundColor: scheduleColors.periodRowBg,
-              borderColor: scheduleColors.periodRowBorder,
+              borderColor: isCurrentSlot ? colors.tint : scheduleColors.periodRowBorder,
+              borderWidth: isCurrentSlot ? 2 : 1,
               borderRadius: 16,
+              shadowColor: isCurrentSlot ? colors.tint : 'transparent',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: isCurrentSlot ? 0.3 : 0,
+              shadowRadius: isCurrentSlot ? 6 : 0,
+              elevation: isCurrentSlot ? 5 : 0,
             }]}>
               <View style={[styles.periodLabel, { 
-                backgroundColor: typeColor + '15', 
-                borderColor: typeColor + '30',
+                backgroundColor: isCurrentSlot 
+                  ? colors.tint + '20' 
+                  : typeColor + '15', 
+                borderColor: isCurrentSlot 
+                  ? colors.tint + '40' 
+                  : typeColor + '30',
                 borderTopLeftRadius: 16,
                 borderBottomLeftRadius: 16,
               }]}>
-                <Text style={[styles.periodLabelText, { color: typeColor }]}>{period.name}</Text>
-                <Text style={[styles.periodTimingText, { color: typeColor }]}>{period.timing}</Text>
+                <Text style={[styles.periodLabelText, { 
+                  color: isCurrentSlot ? colors.tint : typeColor,
+                  fontWeight: isCurrentSlot ? '700' : '600'
+                }]}>{period.name}</Text>
+                <Text style={[styles.periodTimingText, { 
+                  color: isCurrentSlot ? colors.tint : typeColor,
+                  fontWeight: isCurrentSlot ? '600' : '400'
+                }]}>{period.timing}</Text>
                 <View style={[styles.slotTypeBadge, { 
                   backgroundColor: SlotTypeColors[getSlotType(classData) as keyof typeof SlotTypeColors]
                 }]}>

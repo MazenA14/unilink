@@ -9,18 +9,19 @@ import { useSchedule } from '@/hooks/useSchedule';
 import { useVersionCheck } from '@/hooks/useVersionCheck';
 import { useWhatsNew } from '@/hooks/useWhatsNew';
 import { AuthManager } from '@/utils/auth';
+import { isCurrentTimeSlot } from '@/utils/currentSlotUtils';
 import { GradeCache } from '@/utils/gradeCache';
 import { GUCAPIProxy } from '@/utils/gucApiProxy';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Animated,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function DashboardScreen() {
@@ -57,6 +58,13 @@ export default function DashboardScreen() {
   
   // State for course name mapping
   const [courseNameMapping, setCourseNameMapping] = useState<{ [courseId: string]: string }>({});
+  
+  // State to force re-render for current slot indicator
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // Use currentTime to ensure slot indicators are always up to date
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _ = currentTime; // This triggers re-render when time changes
 
   // Load course name mapping on component mount
   useEffect(() => {
@@ -292,10 +300,30 @@ export default function DashboardScreen() {
     checkWhatsNew();
   }, [loadNickname, fetchNotifications, checkForUpdates, checkWhatsNew]);
 
-  // Reload nickname when screen comes into focus (e.g., returning from settings)
+  // Update current time every minute for slot indicator
+  useEffect(() => {
+    const updateTime = () => {
+      const newTime = new Date();
+      // console.log('Dashboard: Updating current time to:', newTime.toLocaleTimeString());
+      setCurrentTime(newTime);
+    };
+
+    // Update immediately
+    updateTime();
+
+    // Set up interval to update every minute
+    const interval = setInterval(updateTime, 60000); // 60 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Reload nickname and update current time when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       loadNickname();
+      const newTime = new Date();
+      // console.log('Dashboard: Focus effect - updating current time to:', newTime.toLocaleTimeString());
+      setCurrentTime(newTime); // Update current time for slot indicator
     }, [loadNickname])
   );
 
@@ -432,29 +460,45 @@ export default function DashboardScreen() {
                   activeOpacity: 0.7,
                 } : {};
 
+                const isCurrentSlot = isCurrentTimeSlot(periodKey, isShiftedScheduleEnabled, currentTime);
+
                 return (
                   <PeriodRowComponent 
                     key={periodKey} 
                     style={[styles.periodRow, { 
                       backgroundColor: colorScheme === 'dark' ? '#2A1F1F' : '#FFF5F5',
-                      borderColor: colorScheme === 'dark' ? '#3D2A2A' : '#FFE0E0',
+                      borderColor: isCurrentSlot 
+                        ? colors.tint 
+                        : (colorScheme === 'dark' ? '#3D2A2A' : '#FFE0E0'),
+                      borderWidth: isCurrentSlot ? 2 : 1,
                       borderRadius: 16,
-                      shadowColor: ScheduleTypeColors.personal,
+                      shadowColor: isCurrentSlot ? colors.tint : ScheduleTypeColors.personal,
                       shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.1,
-                      shadowRadius: 4,
-                      elevation: 3,
+                      shadowOpacity: isCurrentSlot ? 0.3 : 0.1,
+                      shadowRadius: isCurrentSlot ? 6 : 4,
+                      elevation: isCurrentSlot ? 5 : 3,
                     }]}
                     {...periodRowProps}
                   >
                     <View style={[styles.periodLabel, { 
-                      backgroundColor: ScheduleTypeColors.personal + '15', 
-                      borderColor: ScheduleTypeColors.personal + '30',
+                      backgroundColor: isCurrentSlot 
+                        ? colors.tint + '20' 
+                        : ScheduleTypeColors.personal + '15', 
+                      borderColor: isCurrentSlot 
+                        ? colors.tint + '40' 
+                        : ScheduleTypeColors.personal + '30',
                       borderTopLeftRadius: 16,
                       borderBottomLeftRadius: 16,
                     }]}>
-                      <Text style={[styles.periodLabelText, { color: ScheduleTypeColors.personal }]}>{periodNumber}</Text>
-                      <Text style={[styles.periodTimingText, { color: ScheduleTypeColors.personal, fontSize: 10 }]}>{timing}</Text>
+                      <Text style={[styles.periodLabelText, { 
+                        color: isCurrentSlot ? colors.tint : ScheduleTypeColors.personal,
+                        fontWeight: isCurrentSlot ? '700' : 'bold'
+                      }]}>{periodNumber}</Text>
+                      <Text style={[styles.periodTimingText, { 
+                        color: isCurrentSlot ? colors.tint : ScheduleTypeColors.personal, 
+                        fontSize: 10,
+                        fontWeight: isCurrentSlot ? '600' : '500'
+                      }]}>{timing}</Text>
                     </View>
                     <View style={[styles.periodContent, { 
                       backgroundColor: colors.cardBackground,

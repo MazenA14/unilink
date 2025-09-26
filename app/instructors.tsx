@@ -7,12 +7,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    FlatList,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 export default function InstructorsScreen() {
@@ -173,7 +173,7 @@ export default function InstructorsScreen() {
           </View>
           <View style={styles.courseInfo}>
             <Text style={[styles.courseName, { color: colors.mainFont }]} numberOfLines={2}>
-              {item.text}
+              {item.text.split('-').pop()?.trim() || item.text}
             </Text>
             <Text style={[styles.courseSubtitle, { color: colors.secondaryFont }]}>
               Course

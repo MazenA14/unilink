@@ -8,6 +8,7 @@ export const WHATS_NEW_CONFIG = {
   version: APP_VERSION,
   features: [
     "Fixed Attendance Screen",
+    "Schedule Slot Indicator",
     "Bug Fixes"
   ]
 };

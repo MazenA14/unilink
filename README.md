@@ -64,8 +64,8 @@
 ## To-Do (Notes)
 - Clear Course previous grades cache on pull to refresh and not be visibile while refreshing
 - ReApply All cache timings
-- Make notification cached and fetch on loading dashboard, on fetching don't remove the old notifications (Preload notifications on dashboard)
 
+- Make notification cached and fetch on loading dashboard, on fetching don't remove the old notifications (Preload notifications on dashboard)
 - Add tutorial and lecture notifications by a variable time reminder (15min, 20 min...) time set in settings under preferences (Make the reminder optional, no lecture reminder)
 - See if guc notifications could be fetched while app is closed
 - On loading don't show loading state, show cached data and after fetching is complete, replace notifications
@@ -75,7 +75,6 @@
 - Fetch schedules JSON and cache it permanently on the users schedule
 - Apply schedules version control with the same update API, if old clear schedules cached
 - Use GitHub actions for prepairing schedules
-- Add slot indicator depending on time of day
 - Handle offline mode gracefully
 - Add message screen depending on version
 
@@ -126,7 +125,7 @@
 + Check consistency of modals in the whole app
 + Preload the attendance on opening dashboard (Rehandle all preloading and there order)
 + Check first time production app open, opens on the login screen
-- In the Courses under Instructor make it show only course name
++ In the Courses under Instructor make it show only course name
 + What's new screen didn't appear, does it have something to do with the first time open attribute (Opening Order)
 + Add the attendance level when I have one (Now there is commented static badge)
 + Handle FF,FA,FX
@@ -137,6 +136,7 @@
 + See how to make attendance fetching faster and add this might take a minute
 + Add unilink logo to Gmail
 + Apply smart fetching, fetch grades & attendance on loading dashboard (See if something else needs smart fetching)
++ Add slot indicator depending on time of day
 
 
 

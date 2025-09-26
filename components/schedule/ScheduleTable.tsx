@@ -8,9 +8,10 @@ import { ScheduleDay, ScheduleType } from './types';
 interface ScheduleTableProps {
   scheduleData: ScheduleDay[];
   scheduleType?: ScheduleType;
+  currentTime?: Date;
 }
 
-export function ScheduleTable({ scheduleData, scheduleType = 'personal' }: ScheduleTableProps) {
+export function ScheduleTable({ scheduleData, scheduleType = 'personal', currentTime: propCurrentTime }: ScheduleTableProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const scrollViewRef = useRef<ScrollView>(null);
@@ -18,6 +19,9 @@ export function ScheduleTable({ scheduleData, scheduleType = 'personal' }: Sched
   const screenWidth = Dimensions.get('window').width;
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const isProgrammaticScroll = useRef(false);
+  
+  // State to force re-render for current slot indicator
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   // Normalize day ordering to Saturday–Thursday (filter out Friday if present)
   const orderedDays = React.useMemo(() => {
@@ -70,6 +74,23 @@ export function ScheduleTable({ scheduleData, scheduleType = 'personal' }: Sched
       }, 100);
     }
   }, [orderedDays, screenWidth]);
+
+  // Update current time every minute for slot indicator
+  useEffect(() => {
+    const updateTime = () => {
+      const newTime = new Date();
+      // console.log('ScheduleTable: Updating current time to:', newTime.toLocaleTimeString());
+      setCurrentTime(newTime);
+    };
+
+    // Update immediately
+    updateTime();
+
+    // Set up interval to update every minute
+    const interval = setInterval(updateTime, 60000); // 60 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Handle day tag selection
   const handleDaySelect = (dayIndex: number) => {
@@ -211,6 +232,7 @@ export function ScheduleTable({ scheduleData, scheduleType = 'personal' }: Sched
             <ScheduleDayView 
               day={day} 
               scheduleType={scheduleType}
+              currentTime={propCurrentTime || currentTime}
             />
           </View>
         ))}

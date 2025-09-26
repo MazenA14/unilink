@@ -6,8 +6,8 @@ import { useScheduleContext } from '@/contexts/ScheduleContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useScheduleTypes } from '@/hooks/useScheduleTypes';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function ScheduleScreen() {
@@ -29,6 +29,9 @@ export default function ScheduleScreen() {
 
   // Menu state
   const [menuVisible, setMenuVisible] = useState(false);
+  
+  // State to force re-render for current slot indicator
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   // Handle schedule type from menu navigation (context) - only run when selectedScheduleType changes
   useEffect(() => {
@@ -45,6 +48,32 @@ export default function ScheduleScreen() {
       handleScheduleTypeChange(paramScheduleType as any);
     }
   }, [paramScheduleType]); // Removed other dependencies to prevent loop
+
+  // Update current time every minute for slot indicator
+  useEffect(() => {
+    const updateTime = () => {
+      const newTime = new Date();
+      // console.log('ScheduleScreen: Updating current time to:', newTime.toLocaleTimeString());
+      setCurrentTime(newTime);
+    };
+
+    // Update immediately
+    updateTime();
+
+    // Set up interval to update every minute
+    const interval = setInterval(updateTime, 60000); // 60 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Update current time when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      const newTime = new Date();
+      // console.log('ScheduleScreen: Focus effect - updating current time to:', newTime.toLocaleTimeString());
+      setCurrentTime(newTime);
+    }, [])
+  );
   
   // Calculate dynamic padding based on screen width
   const screenWidth = Dimensions.get('window').width;
@@ -106,7 +135,7 @@ export default function ScheduleScreen() {
     if (scheduleData && scheduleData.days.length > 0) {
       return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-          <ScheduleTable scheduleData={scheduleData.days} scheduleType={scheduleType} />
+          <ScheduleTable scheduleData={scheduleData.days} scheduleType={scheduleType} currentTime={currentTime} />
         </View>
       );
     }
