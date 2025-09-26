@@ -65,6 +65,10 @@
 - Clear Course previous grades cache on pull to refresh and not be visibile while refreshing
 - ReApply All cache timings
 
+- Add View calendar button on dashboard that prompts user to upload his semester calendar to view at any time (Also delete option)
+- Adjust attendance warning ui
+- Change schedule haburger icon to be a drop down beside personal schedule
+- On 1:00 open app to fetch attendance
 - Make notification cached and fetch on loading dashboard, on fetching don't remove the old notifications (Preload notifications on dashboard)
 - Add tutorial and lecture notifications by a variable time reminder (15min, 20 min...) time set in settings under preferences (Make the reminder optional, no lecture reminder)
 - See if guc notifications could be fetched while app is closed

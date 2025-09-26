@@ -1,3 +1,4 @@
+import AttendanceWarningInfoModal from '@/components/AttendanceWarningInfoModal';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -19,6 +20,7 @@ export default function AttendanceScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
+  const [showWarningInfo, setShowWarningInfo] = useState(false);
 
   // Load attendance data on component mount
   useEffect(() => {
@@ -138,17 +140,17 @@ export default function AttendanceScreen() {
     }
   };
 
-  const getAbsenceLevelText = (level: string) => {
-    switch (level) {
-      case '1':
-        return 'First Warning';
-      case '2':
-        return 'Second Warning';
-      case '3':
-        return 'Course Drop (25%+ Absence)';
-      default:
-        return `Level ${level}`;
-    }
+
+  const getCourseWarningLevel = (courseName: string) => {
+    if (!attendanceData?.summary?.absenceReport) return null;
+    
+    // Find matching course in absence report
+    const matchingReport = attendanceData.summary.absenceReport.find(report => 
+      courseName.toLowerCase().includes(report.name.toLowerCase()) ||
+      report.name.toLowerCase().includes(courseName.toLowerCase())
+    );
+    
+    return matchingReport ? matchingReport.absenceLevel : null;
   };
 
 
@@ -220,7 +222,12 @@ export default function AttendanceScreen() {
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}>Attendance</Text>
-          <View style={styles.placeholder} />
+          <TouchableOpacity 
+            onPress={() => setShowWarningInfo(true)}
+            style={styles.infoButton}
+          >
+            <Ionicons name="information-circle-outline" size={27} color={colors.tint} />
+          </TouchableOpacity>
         </View>
 
         {refreshing && (
@@ -262,7 +269,7 @@ export default function AttendanceScreen() {
             </View> */}
 
             {/* Absence Warnings Section */}
-            {attendanceData.summary.absenceReport.length > 0 && (
+            {/* {attendanceData.summary.absenceReport.length > 0 && (
               <View style={[styles.section, { backgroundColor: colors.cardBackground }]}>
                 <View style={styles.sectionHeader}>
                   <Ionicons name="alert-circle" size={20} color={colors.gradeAverage} />
@@ -271,7 +278,10 @@ export default function AttendanceScreen() {
                 
                 <View style={styles.warningsContainer}>
                   {attendanceData.summary.absenceReport.map((report, index) => (
-                    <View key={index} style={[styles.warningCard, { borderColor: getAbsenceLevelColor(report.absenceLevel) + '40' }]}>
+                    <View key={index} style={[styles.warningCard, { 
+                      borderColor: getAbsenceLevelColor(report.absenceLevel) + '40',
+                      backgroundColor: colors.cardBackground
+                    }]}>
                       <View style={styles.warningHeader}>
                         <View style={[styles.courseCodeBadge, { backgroundColor: colors.tint + '20' }]}>
                           <Text style={[styles.courseCodeText, { color: colors.tint }]}>{report.code}</Text>
@@ -290,7 +300,7 @@ export default function AttendanceScreen() {
                   ))}
                 </View>
               </View>
-            )}
+            )} */}
 
             {/* Course Attendance Section */}
             {attendanceData.courses.length > 0 ? (
@@ -299,10 +309,11 @@ export default function AttendanceScreen() {
                 const isExpanded = expandedCourses.has(course.courseId);
                 const presentCount = course.attendanceRecords.filter(r => r.attendance === 'Attended').length;
                 const totalCount = course.attendanceRecords.length;
+                const warningLevel = getCourseWarningLevel(course.courseName);
 
                 return (
                   <View key={course.courseId} style={[styles.courseCard, { 
-                    backgroundColor: colorScheme === 'dark' ? '#232323' : '#f8f9fa',
+                    backgroundColor: colors.cardBackground,
                     borderColor: colors.border,
                     borderTopLeftRadius: 16,
                     borderTopRightRadius: 16,
@@ -327,11 +338,13 @@ export default function AttendanceScreen() {
                             
                             {/* Right Section - Badge and Arrow */}
                             <View style={styles.rightSection}>
-                              {/* <View style={[styles.staticLevelBadge, { backgroundColor: colors.gradeGood }]}>
-                                <Text style={styles.staticLevelBadgeText}>
-                                  Level 1
-                                </Text>
-                              </View> */}
+                              {warningLevel && (
+                                <View style={[styles.dynamicLevelBadge, { backgroundColor: getAbsenceLevelColor(warningLevel) }]}>
+                                  <Text style={styles.dynamicLevelBadgeText}>
+                                    Level {warningLevel}
+                                  </Text>
+                                </View>
+                              )}
                               <View style={[styles.arrowContainer, { 
                                 backgroundColor: colors.border + '60',
                                 borderColor: colors.border + '70'
@@ -348,7 +361,7 @@ export default function AttendanceScreen() {
 
                         {isExpanded && (
                           <View style={[styles.courseDetails, { 
-                            backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#ffffff',
+                            backgroundColor: colors.background,
                             borderTopColor: colors.border
                           }]}>
                             {course.attendanceRecords.length > 0 ? (
@@ -357,7 +370,7 @@ export default function AttendanceScreen() {
                                 return (
                                   <View key={index} style={[styles.attendanceRecord, { 
                                     borderColor: colors.border,
-                                    backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f8f9fa'
+                                    backgroundColor: colors.cardBackground
                                   }]}>
                                     <View style={styles.recordHeader}>
                                       <View style={styles.sessionInfo}>
@@ -453,6 +466,11 @@ export default function AttendanceScreen() {
           </>
         )}
       </ScrollView>
+      
+      <AttendanceWarningInfoModal 
+        visible={showWarningInfo} 
+        onClose={() => setShowWarningInfo(false)} 
+      />
     </View>
   );
 }
@@ -491,6 +509,10 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     width: 40,
+  },
+  infoButton: {
+    padding: 8,
+    marginRight: -8,
   },
   loadingText: {
     marginTop: 16,
@@ -592,7 +614,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     padding: 16,
-    backgroundColor: '#FFF8F8',
   },
   warningHeader: {
     flexDirection: 'row',
@@ -681,6 +702,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
+  dynamicLevelBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  dynamicLevelBadgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
   arrowContainer: {
     width: 28,
     height: 28,
@@ -688,7 +720,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    marginTop: 8,
+    // marginTop: 0,
   },
   statusBadge: {
     paddingHorizontal: 12,
@@ -710,7 +742,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    backgroundColor: '#FAFAFA',
   },
   recordHeader: {
     flexDirection: 'row',
