@@ -983,7 +983,7 @@ export class GUCAPIProxy {
 
 
       return profileData;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -1062,7 +1062,7 @@ export class GUCAPIProxy {
       const profileData = GUCAPIProxy.parseInstructorProfile(html);
       
       return profileData;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -1103,7 +1103,7 @@ export class GUCAPIProxy {
         office,
         courses: courses && courses !== '' ? courses : undefined
       };
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -1125,7 +1125,7 @@ export class GUCAPIProxy {
       courseName: string;
       attendanceRecords: {
         rowNumber: number;
-        attendance: 'Present' | 'Absent';
+        attendance: 'Attended' | 'Absent';
         sessionDescription: string;
       }[];
     }[];
@@ -1176,7 +1176,7 @@ export class GUCAPIProxy {
     courseName: string;
     attendanceRecords: {
       rowNumber: number;
-      attendance: 'Present' | 'Absent';
+      attendance: 'Attended' | 'Absent';
       sessionDescription: string;
     }[];
   }> {
@@ -1256,7 +1256,7 @@ export class GUCAPIProxy {
       courseName: string;
       attendanceRecords: {
         rowNumber: number;
-        attendance: 'Present' | 'Absent';
+        attendance: 'Attended' | 'Absent';
         sessionDescription: string;
       }[];
     }[];
@@ -1300,7 +1300,7 @@ export class GUCAPIProxy {
         courseName: string;
         attendanceRecords: {
           rowNumber: number;
-          attendance: 'Present' | 'Absent';
+          attendance: 'Attended' | 'Absent';
           sessionDescription: string;
         }[];
       }[] = [];
@@ -1335,7 +1335,7 @@ export class GUCAPIProxy {
         },
         courses
       };
-    } catch (error) {
+    } catch {
       return {
         summary: { absenceReport: [] },
         courses: []
@@ -1351,7 +1351,7 @@ export class GUCAPIProxy {
     courseName: string;
     attendanceRecords: {
       rowNumber: number;
-      attendance: 'Present' | 'Absent';
+      attendance: 'Attended' | 'Absent';
       sessionDescription: string;
     }[];
   } {
@@ -1365,7 +1365,7 @@ export class GUCAPIProxy {
 
       const attendanceRecords: {
         rowNumber: number;
-        attendance: 'Present' | 'Absent';
+        attendance: 'Attended' | 'Absent';
         sessionDescription: string;
       }[] = [];
 
@@ -1383,7 +1383,8 @@ export class GUCAPIProxy {
             
             if (cellMatches && cellMatches.length >= 3) {
               const rowNumber = parseInt(this.stripHtmlTags(cellMatches[0])) || 0;
-              const attendance = this.stripHtmlTags(cellMatches[1]) === 'Present' ? 'Present' : 'Absent';
+              const attendanceCellText = this.stripHtmlTags(cellMatches[1]).toLowerCase();
+              const attendance = (attendanceCellText === 'present' || attendanceCellText === 'attended') ? 'Attended' : 'Absent';
               const sessionDescription = this.stripHtmlTags(cellMatches[2]);
               
               attendanceRecords.push({
@@ -1401,7 +1402,7 @@ export class GUCAPIProxy {
         courseName,
         attendanceRecords
       };
-    } catch (error) {
+    } catch {
       return {
         courseId,
         courseName: '',

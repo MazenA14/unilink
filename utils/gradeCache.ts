@@ -86,7 +86,7 @@ interface CourseIdToNameMapping {
 }
 
 // Attendance interfaces
-interface AttendanceSummary {
+export interface AttendanceSummary {
   absenceReport: {
     settingsTitle: string;
     code: string;
@@ -95,19 +95,19 @@ interface AttendanceSummary {
   }[];
 }
 
-interface AttendanceRecord {
+export interface AttendanceRecord {
   rowNumber: number;
-  attendance: 'Present' | 'Absent';
+  attendance: 'Attended' | 'Absent';
   sessionDescription: string;
 }
 
-interface CourseAttendance {
+export interface CourseAttendance {
   courseId: string;
   courseName: string;
   attendanceRecords: AttendanceRecord[];
 }
 
-interface AttendanceData {
+export interface AttendanceData {
   summary: AttendanceSummary;
   courses: CourseAttendance[];
 }

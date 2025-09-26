@@ -20,12 +20,14 @@
 - General Group Schedule https://apps.guc.edu.eg/student_ext/Scheduling/GeneralGroupSchedule.aspx
 - GUC Notifications https://apps.guc.edu.eg/student_ext/Main/Notifications.aspx
 - Mobile Notifications (Slot Reminder)
-- Add skeletons for everything that loads
-- Empty Slots (Rooms) https://gucroomschedule.web.app/
 
 ## To-Do List (Optional)
+- Add skeletons for everything that loads
+- Empty Slots (Rooms) https://gucroomschedule.web.app/
 - Evaluate Course (Release update when the university releases it)
 - Evaluate Staff (Release update when the university releases it)
+- Quizzes
+- Weight calculation
 - Bachelor endpoint
 - Reminder for Password Reset
 - Calendar
@@ -62,18 +64,20 @@
 ## To-Do (Notes)
 - Clear Course previous grades cache on pull to refresh and not be visibile while refreshing
 - ReApply All cache timings
-- Apply smart fetching, fetch grades & attendance on loading dashboard (See if something else needs smart fetching)
-- Make notification cached and fetch on loading dashboard, on fetching don't remove the old notifications
+- Make notification cached and fetch on loading dashboard, on fetching don't remove the old notifications (Preload notifications on dashboard)
 
 - Add tutorial and lecture notifications by a variable time reminder (15min, 20 min...) time set in settings under preferences (Make the reminder optional, no lecture reminder)
 - See if guc notifications could be fetched while app is closed
 - On loading don't show loading state, show cached data and after fetching is complete, replace notifications
 - Solve notifcations error if possible
 
-- Check first time production app open, opens on the login screen
-- In the Courses under Instructor make it show only course name
-- What's new screen didn't appear, does it have something to do with the first time open attribute (Opening Order)
-- Add the attendance level when I have one (Now there is commented static badge)
+- Cache course and staff schedules on vercel?
+- Fetch schedules JSON and cache it permanently on the users schedule
+- Apply schedules version control with the same update API, if old clear schedules cached
+- Use GitHub actions for prepairing schedules
+- Add slot indicator depending on time of day
+- Handle offline mode gracefully
+- Add message screen depending on version
 
 - Wraping up the app:
     - Make it more efficient (Parsing Server Side, Parallel Data Fetching)
@@ -81,6 +85,9 @@
     - Remove any console logs/wars/errors
     - Replace Alert.alert with custom alert component
     - See how all aspects of the app works (Caching,...)
+
+
+
 
 + Remove the effect that occurs on pressing on the tabs at the bottom
 + Change animation for the hamburger menu to Fade in
@@ -118,6 +125,21 @@
 + Settings page is shifted up
 + Check consistency of modals in the whole app
 + Preload the attendance on opening dashboard (Rehandle all preloading and there order)
++ Check first time production app open, opens on the login screen
+- In the Courses under Instructor make it show only course name
++ What's new screen didn't appear, does it have something to do with the first time open attribute (Opening Order)
++ Add the attendance level when I have one (Now there is commented static badge)
++ Handle FF,FA,FX
++ Handle attended case in attendance
++ See why what's new feature not working
++ On pressing check for update it shows to models if there is an update
++ Unify update modal ui
++ See how to make attendance fetching faster and add this might take a minute
++ Add unilink logo to Gmail
++ Apply smart fetching, fetch grades & attendance on loading dashboard (See if something else needs smart fetching)
+
+
+
 
 ## Run these next time
 - npx expo install @expo/metro-runtime react-native-worklets

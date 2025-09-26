@@ -552,8 +552,10 @@ export default function SettingsScreen() {
             style={styles.rowBetween}
             onPress={async () => {
               try {
-                await checkForUpdates();
-                if (!showUpdateModal) {
+                const updateAvailable = await checkForUpdates();
+                
+                // Only show "Up to Date" message if no update is available
+                if (!updateAvailable) {
                   showAlert({
                     title: 'Up to Date',
                     message: 'You are using the latest version of UniLink.',
@@ -561,6 +563,7 @@ export default function SettingsScreen() {
                     buttons: [{ text: 'OK' }]
                   });
                 }
+                // If updateAvailable is true, the UpdateModal will be shown automatically
               } catch {
                 showAlert({
                   title: 'Update Check Failed',

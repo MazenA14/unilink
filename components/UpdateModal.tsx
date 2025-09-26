@@ -1,8 +1,7 @@
 import { useCustomAlert } from '@/components/CustomAlert';
 import { Colors } from '@/constants/Colors';
-import { UPDATE_DOWNLOAD_LINK } from '@/constants/Version';
+import { APP_VERSION, UPDATE_DOWNLOAD_LINK } from '@/constants/Version';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { BlurView } from 'expo-blur';
 import {
   Linking,
   Modal,
@@ -65,41 +64,64 @@ export default function UpdateModal({ visible, onClose, onUpdate }: UpdateModalP
       visible={visible}
       transparent
       animationType="fade"
-      statusBarTranslucent
+      onRequestClose={onClose}
     >
-      <BlurView intensity={20} style={styles.overlay}>
-        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+      <View style={styles.overlay}>
+        <View style={[
+          styles.modalContainer,
+          {
+            backgroundColor: colorScheme === 'dark' ? '#232323' : '#ffffff',
+            borderColor: colors.border,
+          }
+        ]}>
+          <View style={styles.header}>
+            <View style={styles.titleContainer}>
+              <View style={styles.titleTextContainer}>
+                <Text style={[styles.title, { color: colors.mainFont }]}>
+                  Update Available
+                </Text>
+                <Text style={[styles.version, { color: colors.secondaryFont }]}>
+                  Current Version {APP_VERSION}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={onClose}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              {/* Close button can be added here if needed */}
+            </TouchableOpacity>
+          </View>
+          
           <View style={styles.content}>
-            <Text style={[styles.title, { color: colors.text }]}>
-              Update Available
-            </Text>
-            
-            <Text style={[styles.message, { color: colors.text }]}>
+            <Text style={[styles.description, { color: colors.mainFont }]}>
               A new version of UniLink is available. Please update to the latest version to continue using the app with the best experience.
             </Text>
             
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.updateButton, { backgroundColor: colors.tint }]}
-                onPress={handleUpdatePress}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.updateButtonText}>Update Now</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.laterButton, { borderColor: colors.text }]}
-                onPress={onClose}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.laterButtonText, { color: colors.text }]}>
-                  Later
-                </Text>
-              </TouchableOpacity>
-            </View>
+          </View>
+          
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.updateButton, { backgroundColor: colors.tabColor }]}
+              onPress={handleUpdatePress}
+            >
+              <Text style={[styles.updateButtonText, { color: colors.background }]}>
+                Update Now
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.laterButton, { borderColor: colors.border }]}
+              onPress={onClose}
+            >
+              <Text style={[styles.laterButtonText, { color: colors.mainFont }]}>
+                Later
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
-      </BlurView>
+      </View>
       {AlertComponent()}
     </Modal>
   );
@@ -108,58 +130,104 @@ export default function UpdateModal({ visible, onClose, onUpdate }: UpdateModalP
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 40,
   },
   modalContainer: {
-    margin: 20,
-    borderRadius: 16,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '90%',
+    borderRadius: 20,
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 10,
     },
     shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowRadius: 20,
+    elevation: 15,
   },
-  content: {
-    padding: 24,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  titleTextContainer: {
+    flex: 1,
     alignItems: 'center',
   },
   title: {
     fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
+    fontWeight: '700',
+    marginBottom: 2,
   },
-  message: {
+  version: {
+    fontSize: 14,
+    opacity: 0.7,
+  },
+  closeButton: {
+    padding: 4,
+  },
+  content: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  description: {
     fontSize: 16,
+    lineHeight: 24,
+  },
+  featuresList: {
+    gap: 16,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: 4,
+  },
+  bulletPoint: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginTop: 6,
+    marginRight: 12,
+    flexShrink: 0,
+  },
+  featureText: {
+    fontSize: 15,
     lineHeight: 22,
-    textAlign: 'center',
-    marginBottom: 24,
-    opacity: 0.8,
+    flex: 1,
   },
   buttonContainer: {
-    width: '100%',
+    paddingHorizontal: 24,
+    paddingBottom: 24,
     gap: 12,
   },
   updateButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    height: 48,
     borderRadius: 12,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   updateButtonText: {
-    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   laterButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    height: 48,
     borderRadius: 12,
     borderWidth: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   laterButtonText: {

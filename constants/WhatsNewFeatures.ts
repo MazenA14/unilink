@@ -7,9 +7,7 @@ import { APP_VERSION } from './Version';
 export const WHATS_NEW_CONFIG = {
   version: APP_VERSION,
   features: [
-    "Instructor Profiles",
-    "Attendance Tracking",
-    "Feedback System",
+    "Fixed Attendance Screen",
     "Bug Fixes"
   ]
 };

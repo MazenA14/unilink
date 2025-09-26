@@ -1,39 +1,14 @@
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { GradeCache } from '@/utils/gradeCache';
+import { AttendanceData, GradeCache } from '@/utils/gradeCache';
 import { GUCAPIProxy } from '@/utils/gucApiProxy';
-import { Ionicons } from '@expo/vector-icons';
+import { AntDesign, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-// Types for attendance data
-interface AttendanceSummary {
-  absenceReport: {
-    settingsTitle: string;
-    code: string;
-    name: string;
-    absenceLevel: string;
-  }[];
-}
-
-interface AttendanceRecord {
-  rowNumber: number;
-  attendance: 'Present' | 'Absent';
-  sessionDescription: string;
-}
-
-interface CourseAttendance {
-  courseId: string;
-  courseName: string;
-  attendanceRecords: AttendanceRecord[];
-}
-
-interface AttendanceData {
-  summary: AttendanceSummary;
-  courses: CourseAttendance[];
-}
+// Use shared attendance types from GradeCache to avoid duplicate/conflicting types
 
 export default function AttendanceScreen() {
   const colorScheme = useColorScheme();
@@ -248,6 +223,18 @@ export default function AttendanceScreen() {
           <View style={styles.placeholder} />
         </View>
 
+        {refreshing && (
+          <View style={[styles.updateNote, { 
+            backgroundColor: colors.tint + '10', 
+            borderColor: colors.tint + '20',
+            marginHorizontal: 20,
+            marginBottom: 10  
+          }]}> 
+            <AntDesign name="hourglass" size={14} color={colors.tint} />
+            <Text style={[styles.updateNoteText, { color: colors.tint }]}>This might take a minute</Text>
+          </View>
+        )}
+
         {attendanceData && (
           <>
             {/* Attendance Overview Card */}
@@ -310,7 +297,7 @@ export default function AttendanceScreen() {
               <>
                 {attendanceData.courses.map((course) => {
                 const isExpanded = expandedCourses.has(course.courseId);
-                const presentCount = course.attendanceRecords.filter(r => r.attendance === 'Present').length;
+                const presentCount = course.attendanceRecords.filter(r => r.attendance === 'Attended').length;
                 const totalCount = course.attendanceRecords.length;
 
                 return (
@@ -384,16 +371,16 @@ export default function AttendanceScreen() {
                                         )}
                                       </View>
                                       <View style={[styles.attendanceStatus, { 
-                                        backgroundColor: record.attendance === 'Present' ? colors.gradeGood + '20' : colors.gradeFailing + '20',
-                                        borderColor: record.attendance === 'Present' ? colors.gradeGood + '40' : colors.gradeFailing + '40'
+                                        backgroundColor: record.attendance === 'Attended' ? colors.gradeGood + '20' : colors.gradeFailing + '20',
+                                        borderColor: record.attendance === 'Attended' ? colors.gradeGood + '40' : colors.gradeFailing + '40'
                                       }]}>
                                         <Ionicons 
-                                          name={record.attendance === 'Present' ? "checkmark-circle" : "close-circle"} 
+                                          name={record.attendance === 'Attended' ? "checkmark-circle" : "close-circle"} 
                                           size={16} 
-                                          color={record.attendance === 'Present' ? colors.gradeGood : colors.gradeFailing} 
+                                          color={record.attendance === 'Attended' ? colors.gradeGood : colors.gradeFailing} 
                                         />
                                         <Text style={[styles.attendanceStatusText, { 
-                                          color: record.attendance === 'Present' ? colors.gradeGood : colors.gradeFailing 
+                                          color: record.attendance === 'Attended' ? colors.gradeGood : colors.gradeFailing 
                                         }]}>
                                           {record.attendance}
                                         </Text>

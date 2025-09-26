@@ -44,10 +44,12 @@ export default function SemesterTable({ semester, index }: SemesterTableProps) {
       <View style={[styles.semesterHeader, { backgroundColor: colors.tabColor }]}>
         <View style={styles.semesterHeaderContent}>
           <Text style={[styles.semesterTitle, { color: '#FFFFFF' }]}>{semester.name}</Text>
-          <View style={[styles.semesterGpaBadge, { backgroundColor: getSemesterGPAColorForComponent(semester.semesterGPA) }]}>
-            <Text style={[styles.semesterGpaLabel, { color: '#FFFFFF' }]}>GPA</Text>
-            <Text style={[styles.semesterGpaValue, { color: '#FFFFFF' }]}>{semester.semesterGPA}</Text>
-          </View>
+          {semester.semesterGPA && semester.semesterGPA !== '0' && (
+            <View style={[styles.semesterGpaBadge, { backgroundColor: getSemesterGPAColorForComponent(semester.semesterGPA) }]}>
+              <Text style={[styles.semesterGpaLabel, { color: '#FFFFFF' }]}>GPA</Text>
+              <Text style={[styles.semesterGpaValue, { color: '#FFFFFF' }]}>{semester.semesterGPA}</Text>
+            </View>
+          )}
         </View>
       </View>
       
