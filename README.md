@@ -71,10 +71,12 @@
 - Solve notifcations error if possible
 
 - Check first time production app open, opens on the login screen
+- In the Courses under Instructor make it show only course name
+- What's new screen didn't appear, does it have something to do with the first time open attribute (Opening Order)
 - Add the attendance level when I have one (Now there is commented static badge)
 
 - Wraping up the app:
-    - Make it more efficient
+    - Make it more efficient (Parsing Server Side, Parallel Data Fetching)
     - Remove the unneeded dependencies (Smaller file size)
     - Remove any console logs/wars/errors
     - Replace Alert.alert with custom alert component
