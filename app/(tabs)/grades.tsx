@@ -1,10 +1,11 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import {
-    CourseWithGrades,
-    CurrentGradesSection,
-    GradeType,
-    PreviousGradesSection,
-    Season,
-    YearGroup
+  CourseWithGrades,
+  CurrentGradesSection,
+  GradeType,
+  PreviousGradesSection,
+  Season,
+  YearGroup
 } from '@/components/grades';
 import { GradesMenu } from '@/components/GradesMenu';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
@@ -15,12 +16,13 @@ import { getGradeColor } from '@/utils/gradingColors';
 import { GUCAPIProxy as GUCAPI, GradeData } from '@/utils/gucApiProxy';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 
 export default function GradesScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   // State management
   const [gradeType, setGradeType] = useState<GradeType>('current');
@@ -89,10 +91,11 @@ export default function GradesScreen() {
       const errorMessage = error?.message || 'Unknown error occurred';
       
       if (errorMessage.includes('Session expired') || errorMessage.includes('login')) {
-        Alert.alert(
-          'Session Expired',
-          'Your session has expired. Please login again.',
-          [
+        showAlert({
+          title: 'Session Expired',
+          message: 'Your session has expired. Please login again.',
+          type: 'error',
+          buttons: [
             { 
               text: 'OK', 
               onPress: () => {
@@ -101,13 +104,13 @@ export default function GradesScreen() {
               }
             }
           ]
-        );
+        });
       } else {
-        Alert.alert(
-          'Error',
-          `Failed to load current grades: ${errorMessage}`,
-          [{ text: 'OK' }]
-        );
+        showAlert({
+          title: 'Error',
+          message: `Failed to load current grades: ${errorMessage}`,
+          type: 'error',
+        });
       }
     } finally {
       setLoadingGrades(false);
@@ -203,10 +206,11 @@ export default function GradesScreen() {
       const errorMessage = error?.message || 'Unknown error occurred';
       
       if (errorMessage.includes('Session expired') || errorMessage.includes('login')) {
-        Alert.alert(
-          'Session Expired',
-          'Your session has expired. Please login again.',
-          [
+        showAlert({
+          title: 'Session Expired',
+          message: 'Your session has expired. Please login again.',
+          type: 'error',
+          buttons: [
             { 
               text: 'OK', 
               onPress: () => {
@@ -215,13 +219,13 @@ export default function GradesScreen() {
               }
             }
           ]
-        );
+        });
       } else {
-        Alert.alert(
-          'Error',
-          `Failed to load seasons: ${errorMessage}`,
-          [{ text: 'OK' }]
-        );
+        showAlert({
+          title: 'Error',
+          message: `Failed to load seasons: ${errorMessage}`,
+          type: 'error',
+        });
       }
     } finally {
       setLoadingSeasons(false);
@@ -349,11 +353,11 @@ export default function GradesScreen() {
       }
       
     } catch (error) {
-      Alert.alert(
-        'Error',
-        'Failed to load courses and grades. Please try again.',
-        [{ text: 'OK' }]
-      );
+      showAlert({
+        title: 'Error',
+        message: 'Failed to load courses and grades. Please try again.',
+        type: 'error',
+      });
     } finally {
       setLoadingCourses(false);
       setLoadingGrades(false);
@@ -627,6 +631,9 @@ export default function GradesScreen() {
         onClose={handleMenuClose}
         onOptionPress={handleMenuOptionPress}
       />
+      
+      {/* Custom Alert Component */}
+      <AlertComponent />
     </View>
   );
 }

@@ -1,3 +1,4 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import { EmptyState, LoadingIndicator, ScheduleSelector, ScheduleTable } from '@/components/schedule';
 import { ScheduleMenuNew } from '@/components/ScheduleMenuNew';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
@@ -8,13 +9,14 @@ import { useScheduleTypes } from '@/hooks/useScheduleTypes';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function ScheduleScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { scheduleType: paramScheduleType } = useLocalSearchParams<{ scheduleType?: string }>();
   const { selectedScheduleType, setSelectedScheduleType } = useScheduleContext();
+  const { showAlert, AlertComponent } = useCustomAlert();
   const {
     scheduleType,
     selectedOption,
@@ -53,7 +55,6 @@ export default function ScheduleScreen() {
   useEffect(() => {
     const updateTime = () => {
       const newTime = new Date();
-      // console.log('ScheduleScreen: Updating current time to:', newTime.toLocaleTimeString());
       setCurrentTime(newTime);
     };
 
@@ -70,7 +71,6 @@ export default function ScheduleScreen() {
   useFocusEffect(
     useCallback(() => {
       const newTime = new Date();
-      // console.log('ScheduleScreen: Focus effect - updating current time to:', newTime.toLocaleTimeString());
       setCurrentTime(newTime);
     }, [])
   );
@@ -83,7 +83,11 @@ export default function ScheduleScreen() {
     try {
       await refetch();
     } catch {
-      Alert.alert('Error', 'Failed to refresh schedule data');
+      showAlert({
+        title: 'Error',
+        message: 'Failed to refresh schedule data',
+        type: 'error',
+      });
     }
   };
 
@@ -154,26 +158,34 @@ export default function ScheduleScreen() {
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <Text style={[styles.title, { color: colors.text }]}>Schedule</Text>
-            <TouchableOpacity
-              style={[styles.menuButton, { backgroundColor: colors.tint }]}
-              onPress={handleMenuPress}
-              activeOpacity={0.7}
-            >
-              <Ionicons 
-                name="menu" 
-                size={20} 
-                color={colorScheme === 'dark' ? '#000000' : '#FFFFFF'} 
-              />
-            </TouchableOpacity>
           </View>
           
         {/* Schedule Section Title */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            {scheduleType === 'personal' ? 'Personal Schedule' : 
-             scheduleType === 'staff' ? 'Staff Schedule' :
-             scheduleType === 'course' ? 'Course Schedule' : 'Group Schedule'}
-          </Text>
+          <View style={styles.sectionTitleContainer}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {scheduleType === 'personal' ? 'Personal Schedule' : 
+               scheduleType === 'staff' ? 'Staff Schedule' :
+               scheduleType === 'course' ? 'Course Schedule' : 'Group Schedule'}
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.dropdownButton,
+                {
+                  backgroundColor: colors.cardBackground,
+                  borderColor: colors.border,
+                }
+              ]}
+              onPress={handleMenuPress}
+              activeOpacity={0.7}
+            >
+              <Ionicons 
+                name="chevron-down" 
+                size={16} 
+                color={colors.secondaryFont} 
+              />
+            </TouchableOpacity>
+          </View>
         </View>
         </View>
         
@@ -201,6 +213,9 @@ export default function ScheduleScreen() {
         onClose={handleMenuClose}
         onOptionPress={handleMenuOptionPress}
       />
+      
+      {/* Custom Alert Component */}
+      <AlertComponent />
     </View>
   );
 }
@@ -226,21 +241,6 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
   },
-  menuButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
@@ -254,10 +254,23 @@ const styles = StyleSheet.create({
   section: {
     // marginBottom: 20,
   },
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 11,
+    marginBottom: 12,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginTop: 11,
-    marginBottom: 12,
+  },
+  dropdownButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    marginLeft: 8,
   },
 });

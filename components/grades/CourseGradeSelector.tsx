@@ -1,9 +1,10 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { GUCAPIProxy, GradeData } from '@/utils/gucApiProxy';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface Course {
   value: string;
@@ -23,6 +24,7 @@ export default function CourseGradeSelector({
 }: CourseGradeSelectorProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   // State management
   const [courses, setCourses] = useState<Course[]>([]);
@@ -43,7 +45,11 @@ export default function CourseGradeSelector({
       const availableCourses = await GUCAPIProxy.getAvailableCourses();
       setCourses(availableCourses);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load available courses. Please try again.');
+      showAlert({
+        title: 'Error',
+        message: 'Failed to load available courses. Please try again.',
+        type: 'error',
+      });
     } finally {
       setLoadingCourses(false);
     }
@@ -243,6 +249,9 @@ export default function CourseGradeSelector({
           )}
         </View>
       )}
+      
+      {/* Custom Alert Component */}
+      <AlertComponent />
     </View>
   );
 }

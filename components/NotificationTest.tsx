@@ -1,10 +1,10 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import { Colors } from '@/constants/Colors';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { pushNotificationService } from '@/utils/services/pushNotificationService';
 import { Ionicons } from '@expo/vector-icons';
 import {
-    Alert,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -20,14 +20,15 @@ export default function NotificationTest() {
   const colors = Colors[colorScheme ?? 'light'];
   const { pushPermissionGranted, requestPushPermissions } = useNotifications();
   const isExpoGo = pushNotificationService.isExpoGo();
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   const testBasicNotification = async () => {
     if (!pushPermissionGranted) {
-      Alert.alert(
-        'Permission Required',
-        'Please enable notifications first.',
-        [{ text: 'OK' }]
-      );
+      showAlert({
+        title: 'Permission Required',
+        message: 'Please enable notifications first.',
+        type: 'warning',
+      });
       return;
     }
 
@@ -40,11 +41,11 @@ export default function NotificationTest() {
 
   const testNotification = async () => {
     if (!pushPermissionGranted) {
-      Alert.alert(
-        'Permission Required',
-        'Please enable notifications first.',
-        [{ text: 'OK' }]
-      );
+      showAlert({
+        title: 'Permission Required',
+        message: 'Please enable notifications first.',
+        type: 'warning',
+      });
       return;
     }
 
@@ -64,11 +65,11 @@ export default function NotificationTest() {
 
   const testBatchNotification = async () => {
     if (!pushPermissionGranted) {
-      Alert.alert(
-        'Permission Required',
-        'Please enable notifications first.',
-        [{ text: 'OK' }]
-      );
+      showAlert({
+        title: 'Permission Required',
+        message: 'Please enable notifications first.',
+        type: 'warning',
+      });
       return;
     }
 
@@ -77,11 +78,11 @@ export default function NotificationTest() {
 
   const testReminderNotification = async () => {
     if (!pushPermissionGranted) {
-      Alert.alert(
-        'Permission Required',
-        'Please enable notifications first.',
-        [{ text: 'OK' }]
-      );
+      showAlert({
+        title: 'Permission Required',
+        message: 'Please enable notifications first.',
+        type: 'warning',
+      });
       return;
     }
 
@@ -199,6 +200,9 @@ export default function NotificationTest() {
           </Text>
         )}
       </View>
+      
+      {/* Custom Alert Component */}
+      <AlertComponent />
     </View>
   );
 }

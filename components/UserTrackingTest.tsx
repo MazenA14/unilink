@@ -1,11 +1,13 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import { useState } from 'react';
-import { Alert, Button, Text, View } from 'react-native';
+import { Button, Text, View } from 'react-native';
 import { UserData, userTrackingService } from '../utils/services/userTrackingService';
 import { supabase } from '../utils/supabase';
 
 export default function UserTrackingTest() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(false);
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   const testConnection = async () => {
     setLoading(true);
@@ -14,12 +16,24 @@ export default function UserTrackingTest() {
       const { data, error } = await supabase.from('userdata').select('count').limit(1);
       
       if (error) {
-        Alert.alert('Connection Error', error.message);
+        showAlert({
+          title: 'Connection Error',
+          message: error.message,
+          type: 'error',
+        });
       } else {
-        Alert.alert('Success', 'Connected to Supabase successfully!');
+        showAlert({
+          title: 'Success',
+          message: 'Connected to Supabase successfully!',
+          type: 'success',
+        });
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to connect to Supabase');
+      showAlert({
+        title: 'Error',
+        message: 'Failed to connect to Supabase',
+        type: 'error',
+      });
     } finally {
       setLoading(false);
     }
@@ -31,7 +45,11 @@ export default function UserTrackingTest() {
       const userData = await userTrackingService.getAllUsers();
       setUsers(userData);
     } catch (error) {
-      Alert.alert('Error', 'Failed to fetch users');
+      showAlert({
+        title: 'Error',
+        message: 'Failed to fetch users',
+        type: 'error',
+      });
     } finally {
       setLoading(false);
     }
@@ -41,9 +59,17 @@ export default function UserTrackingTest() {
     setLoading(true);
     try {
       await userTrackingService.trackUserLogin('test_user', '12345678');
-      Alert.alert('Success', 'User tracking test completed!');
+      showAlert({
+        title: 'Success',
+        message: 'User tracking test completed!',
+        type: 'success',
+      });
     } catch (error) {
-      Alert.alert('Error', 'User tracking test failed');
+      showAlert({
+        title: 'Error',
+        message: 'User tracking test failed',
+        type: 'error',
+      });
     } finally {
       setLoading(false);
     }
@@ -92,6 +118,9 @@ export default function UserTrackingTest() {
           {user.major && <Text>Major: {user.major}</Text>}
         </View>
       ))}
+      
+      {/* Custom Alert Component */}
+      <AlertComponent />
     </View>
   );
 }

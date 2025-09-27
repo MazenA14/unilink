@@ -1,6 +1,7 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface SelectableTextProps {
   children: string;
@@ -15,6 +16,7 @@ export default function SelectableText({
 }: SelectableTextProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   // URL regex pattern to detect links
   const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -37,15 +39,19 @@ export default function SelectableText({
         if (supported) {
           await Linking.openURL(url);
         } else {
-          Alert.alert(
-            'Cannot Open Link',
-            'This link cannot be opened.',
-            [{ text: 'OK' }]
-          );
+          showAlert({
+            title: 'Cannot Open Link',
+            message: 'This link cannot be opened.',
+            type: 'warning',
+          });
         }
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to open link');
+      showAlert({
+        title: 'Error',
+        message: 'Failed to open link',
+        type: 'error',
+      });
     }
   };
 
@@ -78,6 +84,9 @@ export default function SelectableText({
   return (
     <View style={styles.textContainer}>
       {renderTextWithLinks(children)}
+      
+      {/* Custom Alert Component */}
+      <AlertComponent />
     </View>
   );
 }

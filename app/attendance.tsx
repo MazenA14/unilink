@@ -1,4 +1,5 @@
 import AttendanceWarningInfoModal from '@/components/AttendanceWarningInfoModal';
+import { useCustomAlert } from '@/components/CustomAlert';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -7,13 +8,14 @@ import { GUCAPIProxy } from '@/utils/gucApiProxy';
 import { AntDesign, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // Use shared attendance types from GradeCache to avoid duplicate/conflicting types
 
 export default function AttendanceScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   // State management
   const [attendanceData, setAttendanceData] = useState<AttendanceData | null>(null);
@@ -82,10 +84,11 @@ export default function AttendanceScreen() {
       const errorMessage = error?.message || 'Unknown error occurred';
       
       if (errorMessage.includes('Session expired') || errorMessage.includes('login')) {
-        Alert.alert(
-          'Session Expired',
-          'Your session has expired. Please login again.',
-          [
+        showAlert({
+          title: 'Session Expired',
+          message: 'Your session has expired. Please login again.',
+          type: 'error',
+          buttons: [
             { 
               text: 'OK', 
               onPress: () => {
@@ -93,13 +96,13 @@ export default function AttendanceScreen() {
               }
             }
           ]
-        );
+        });
       } else {
-        Alert.alert(
-          'Error',
-          `Failed to load attendance data: ${errorMessage}`,
-          [{ text: 'OK' }]
-        );
+        showAlert({
+          title: 'Error',
+          message: `Failed to load attendance data: ${errorMessage}`,
+          type: 'error',
+        });
       }
     } finally {
       setLoading(false);
@@ -471,6 +474,9 @@ export default function AttendanceScreen() {
         visible={showWarningInfo} 
         onClose={() => setShowWarningInfo(false)} 
       />
+      
+      {/* Custom Alert Component */}
+      <AlertComponent />
     </View>
   );
 }
@@ -853,6 +859,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     gap: 8,
+    marginBottom: 16,
   },
   updateNoteText: {
     fontSize: 12,

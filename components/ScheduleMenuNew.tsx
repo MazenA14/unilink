@@ -1,7 +1,7 @@
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Animated, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface ScheduleMenuNewProps {
@@ -11,7 +11,7 @@ interface ScheduleMenuNewProps {
 }
 
 const menuOptions = [
-  { id: 'personal', title: 'Your Schedule', icon: 'person-outline' },
+  { id: 'personal', title: 'Personal Schedule', icon: 'person-outline' },
   { id: 'staff', title: 'Staff Schedule', icon: 'people-outline' },
   { id: 'course', title: 'Course Schedule', icon: 'book-outline' },
   { id: 'group', title: 'Group Schedule', icon: 'school-outline' },
@@ -56,8 +56,6 @@ export function ScheduleMenuNew({ visible, onClose, onOptionPress }: ScheduleMen
           onPress={onClose}
         />
         <Animated.View style={[styles.menuWrapper, { opacity: fadeAnim }]}>
-          {/* Arrow pointing to hamburger button */}
-          <View style={[styles.arrow, { borderBottomColor: colors.cardBackground }]} />
           <View style={[styles.menu, { backgroundColor: colors.cardBackground }]}>
             {/* Menu Options */}
             {menuOptions.map((option, index) => (
@@ -129,22 +127,9 @@ const styles = StyleSheet.create({
   },
   menuWrapper: {
     position: 'absolute',
-    top: 70, // Position right below the header area
-    right: 8, // Align with the hamburger button (20px from edge - 4px for visual connection)
+    top: 110, // Position right below the section title area
+    left: 20, // Align with the left edge of the section title
     width: 260, // Slightly smaller width for better proportion
-  },
-  arrow: {
-    position: 'absolute',
-    top: -8,
-    right: 24, // Position arrow to point to the hamburger button
-    width: 0,
-    height: 0,
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderBottomWidth: 8,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    zIndex: 1,
   },
   menu: {
     borderRadius: 12,

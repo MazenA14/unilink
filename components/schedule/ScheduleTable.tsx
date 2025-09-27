@@ -79,7 +79,6 @@ export function ScheduleTable({ scheduleData, scheduleType = 'personal', current
   useEffect(() => {
     const updateTime = () => {
       const newTime = new Date();
-      // console.log('ScheduleTable: Updating current time to:', newTime.toLocaleTimeString());
       setCurrentTime(newTime);
     };
 

@@ -82,7 +82,6 @@ export async function checkAppVersion(): Promise<VersionCheckResponse | VersionC
  */
 export async function isUpdateNeeded(): Promise<boolean> {
   const result = await checkAppVersion();
-  // console.log('isUpdateNeeded result', result);
   
   if ('error' in result) {
     // If version check fails, assume no update is needed to avoid blocking users

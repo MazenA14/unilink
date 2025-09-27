@@ -1,11 +1,13 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import { StudyYear, TranscriptData } from '@/components/transcript/types';
 import { GradeCache } from '@/utils/gradeCache';
 import { GUCAPIProxy as GUCAPI } from '@/utils/gucApiProxy';
 import { parseTranscriptHTML } from '@/utils/parsers/transcriptParser';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert } from 'react-native';
 
 export function useTranscript() {
+  const { showAlert } = useCustomAlert();
+  
   // State management
   const [studyYears, setStudyYears] = useState<StudyYear[]>([]);
   const [selectedYear, setSelectedYear] = useState<StudyYear | null>(null);
@@ -43,11 +45,11 @@ export function useTranscript() {
       setStudyYears(fetchedYears);
       
     } catch (error: any) {
-      Alert.alert(
-        'Error',
-        `Failed to load study years: ${error.message}`,
-        [{ text: 'OK' }]
-      );
+      showAlert({
+        title: 'Error',
+        message: `Failed to load study years: ${error.message}`,
+        type: 'error',
+      });
     } finally {
       setLoadingYears(false);
     }

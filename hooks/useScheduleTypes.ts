@@ -26,7 +26,7 @@ const generateMockSchedule = (type: ScheduleType, selectedId?: string): Schedule
     {
       dayName: 'Saturday',
       periods: {
-        first: selectedId ? {
+        first: selectedId ? [{
           courseName: type === 'staff' ? 'DMET 502 Lecture (7MET L001)' : 
                      type === 'course' ? 'CS101 - Introduction to Programming' : 'CS101 - Programming',
           instructor: type === 'staff' ? 'Dr. Ahmed Hassan' : 'Dr. Sarah Mohamed',
@@ -35,9 +35,9 @@ const generateMockSchedule = (type: ScheduleType, selectedId?: string): Schedule
           ...(type === 'staff' && { officeHours: '2:00 PM - 4:00 PM' }),
           ...(type === 'course' && { enrollmentCount: 45, credits: 3 }),
           ...(type === 'group' && { groupSize: 120, department: 'Computer Science' }),
-        } : null,
+        }] : null,
         second: null,
-        third: selectedId ? {
+        third: selectedId ? [{
           courseName: type === 'staff' ? 'CS201 - Data Structures [Tutorial]' : 
                      type === 'course' ? 'CS201 - Data Structures' : 'CS201 - Data Structures',
           instructor: type === 'staff' ? 'Dr. Ahmed Hassan' : 'Dr. Omar Ali',
@@ -46,7 +46,7 @@ const generateMockSchedule = (type: ScheduleType, selectedId?: string): Schedule
           ...(type === 'staff' && { officeHours: '2:00 PM - 4:00 PM' }),
           ...(type === 'course' && { enrollmentCount: 38, credits: 3 }),
           ...(type === 'group' && { groupSize: 120, department: 'Computer Science' }),
-        } : null,
+        }] : null,
         fourth: null,
         fifth: null,
       },
@@ -56,7 +56,7 @@ const generateMockSchedule = (type: ScheduleType, selectedId?: string): Schedule
       dayName: 'Sunday',
       periods: {
         first: null,
-        second: selectedId ? {
+        second: selectedId ? [{
           courseName: type === 'staff' ? 'CS301 - Algorithms - Lab' : 
                      type === 'course' ? 'CS301 - Algorithms' : 'CS301 - Algorithms',
           instructor: type === 'staff' ? 'Dr. Ahmed Hassan' : 'Dr. Ahmed Hassan',
@@ -65,7 +65,7 @@ const generateMockSchedule = (type: ScheduleType, selectedId?: string): Schedule
           ...(type === 'staff' && { officeHours: '2:00 PM - 4:00 PM' }),
           ...(type === 'course' && { enrollmentCount: 32, credits: 3 }),
           ...(type === 'group' && { groupSize: 120, department: 'Computer Science' }),
-        } : null,
+        }] : null,
         third: null,
         fourth: null,
         fifth: null,
@@ -123,7 +123,7 @@ export function useScheduleTypes() {
       if (type === 'personal') {
         // Use cached API for personal schedule
         const { GUCAPIProxy } = await import('../utils/gucApiProxy');
-        data = await GUCAPIProxy.getScheduleData(bypassCache);
+        data = await GUCAPIProxy.getScheduleData(bypassCache) as any;
       } else {
         // Use mock data for other schedule types
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -174,7 +174,7 @@ export function useScheduleTypes() {
       
       if (cachedData) {
         // Use cached data immediately without loading state
-        setScheduleData(cachedData);
+        setScheduleData(cachedData as any);
         setLoading(false);
         return;
       }

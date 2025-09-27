@@ -1,10 +1,11 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { GradeCache } from '@/utils/gradeCache';
 import { GUCAPIProxy, GradeData } from '@/utils/gucApiProxy';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface Course {
   value: string;
@@ -36,6 +37,7 @@ export default function CurrentGradesSection({
 }: CurrentGradesSectionProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   // State management
   const [courses, setCourses] = useState<Course[]>([]);
@@ -116,7 +118,11 @@ export default function CurrentGradesSection({
       }));
       setCoursesWithGrades(initialCoursesWithGrades);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load available courses. Please try again.');
+      showAlert({
+        title: 'Error',
+        message: 'Failed to load available courses. Please try again.',
+        type: 'error',
+      });
     } finally {
       setLoadingCourses(false);
     }
@@ -147,7 +153,11 @@ export default function CurrentGradesSection({
       const updatedCourses = [...coursesWithGrades];
       updatedCourses[courseIndex].isLoadingDetails = false;
       setCoursesWithGrades([...updatedCourses]);
-      Alert.alert('Error', 'Failed to load grades for this course. Please try again.');
+      showAlert({
+        title: 'Error',
+        message: 'Failed to load grades for this course. Please try again.',
+        type: 'error',
+      });
     }
   };
 
@@ -434,6 +444,9 @@ function ExpandableCourseCard({
           )}
         </View>
       )}
+      
+      {/* Custom Alert Component */}
+      <AlertComponent />
     </View>
   );
 }

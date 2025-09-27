@@ -350,6 +350,9 @@ export class AuthManager {
         
         // Clear all application cache
         await this.clearAllCache();
+        
+        // Clear Quick Media files
+        await this.clearQuickMediaFiles();
       }
       
     } catch (error) {
@@ -543,6 +546,54 @@ export class AuthManager {
     try {
       await AsyncStorage.removeItem(this.FIRST_TIME_OPEN_KEY);
     } catch (error) {
+    }
+  }
+
+  /**
+   * Clear Quick Media files and storage
+   */
+  static async clearQuickMediaFiles(): Promise<void> {
+    try {
+      // Import required modules
+      const AsyncStorage = await import('@react-native-async-storage/async-storage');
+      const { getInfoAsync, deleteAsync, documentDirectory } = await import('expo-file-system/legacy');
+      
+      const MEDIA_FILES_KEY = 'quick_media_files';
+      const MEDIA_DIRECTORY = `${documentDirectory}quick_media/`;
+      
+      // Get stored files list
+      const storedFiles = await AsyncStorage.default.getItem(MEDIA_FILES_KEY);
+      if (storedFiles) {
+        const files = JSON.parse(storedFiles);
+        
+        // Delete all physical files
+        for (const file of files) {
+          try {
+            const fileInfo = await getInfoAsync(file.uri);
+            if (fileInfo.exists) {
+              await deleteAsync(file.uri);
+            }
+          } catch (error) {
+            // Continue with other files if one fails
+          }
+        }
+      }
+      
+      // Remove the files list from storage
+      await AsyncStorage.default.removeItem(MEDIA_FILES_KEY);
+      
+      // Try to remove the media directory if it exists
+      try {
+        const dirInfo = await getInfoAsync(MEDIA_DIRECTORY);
+        if (dirInfo.exists) {
+          await deleteAsync(MEDIA_DIRECTORY);
+        }
+      } catch (error) {
+        // Directory might not exist or be in use, that's okay
+      }
+      
+    } catch (error) {
+      // Don't throw error - logout should continue even if media cleanup fails
     }
   }
 }

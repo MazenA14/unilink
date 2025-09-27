@@ -359,6 +359,7 @@ const styles = StyleSheet.create({
   modalContent: {
     flex: 1,
     paddingHorizontal: 20,
+    marginTop: 16,
   },
   lectureCard: {
     borderWidth: 1,

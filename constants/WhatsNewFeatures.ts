@@ -7,8 +7,11 @@ import { APP_VERSION } from './Version';
 export const WHATS_NEW_CONFIG = {
   version: APP_VERSION,
   features: [
-    "Fixed Attendance Screen",
-    "Schedule Slot Indicator",
+    "Fixed Attendance Warning Levels",
+    "Added Attendance Info Button",
+    "Schedule Dropdown Changed",
+    "Added Calendar Upload",
+    "Added Quick Access to Upload Files",
     "Bug Fixes"
   ]
 };

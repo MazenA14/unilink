@@ -1,8 +1,8 @@
 import {
-    EmptyState,
-    LoadingIndicator,
-    SemesterTable,
-    YearSelector,
+  EmptyState,
+  LoadingIndicator,
+  SemesterTable,
+  YearSelector,
 } from '@/components/transcript';
 import GradingInfoModal from '@/components/transcript/GradingInfoModal';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
@@ -63,18 +63,24 @@ export default function TranscriptScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.mainFont }]}>Transcript</Text>
-        <TouchableOpacity 
-          onPress={() => setShowGradingInfo(true)}
-          style={styles.gradingInfoButton}
-        >
-          <Ionicons name="information-circle-outline" size={27} color={colors.tint} />
-        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <Text style={[styles.title, { color: colors.mainFont }]}>Transcript</Text>
+          <TouchableOpacity 
+            onPress={() => setShowGradingInfo(true)}
+            style={styles.gradingInfoButton}
+          >
+            <Ionicons name="information-circle-outline" size={27} color={colors.tint} />
+          </TouchableOpacity>
+        </View>
+        
+        {/* Study Years Section Title */}
+        <View style={styles.headerSection}>
+          <Text style={[styles.sectionTitle, { color: colors.mainFont }]}>Select Study Year</Text>
+        </View>
       </View>
 
       {/* Study Years Section */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.mainFont }]}>Select Study Year</Text>
         {loadingYears ? (
           <LoadingIndicator message={refreshing ? 'Refreshing...' : 'Loading study years...'} />
         ) : studyYears.length > 0 ? (
@@ -163,17 +169,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     padding: 20,
     paddingBottom: 10,
-    paddingTop: 60,
+    paddingTop: 58,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   title: {
-    fontSize: 32,
-    fontWeight: '700',
-    marginBottom: 8,
+    fontSize: 28,
+    fontWeight: 'bold',
   },
   gradingInfoButton: {
     padding: 8,
@@ -184,12 +191,16 @@ const styles = StyleSheet.create({
   },
   section: {
     marginHorizontal: 20,
-    marginBottom: 24,
+    // marginBottom: 20,
+  },
+  headerSection: {
+    // No horizontal margins since it's inside the header which already has padding
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
-    marginBottom: 16,
+    marginTop: 11,
+    marginBottom: 12,
   },
   transcriptSection: {
     marginHorizontal: 4,

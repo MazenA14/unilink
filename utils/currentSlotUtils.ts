@@ -168,7 +168,6 @@ export function isCurrentTimeSlot(slotKey: string, isShiftedScheduleEnabled: boo
   const isCurrent = currentSlot?.key === slotKey;
   
   // if (isCurrent) {
-  //   console.log(`isCurrentTimeSlot: ${slotKey} is current slot at ${currentTime?.toLocaleTimeString() || new Date().toLocaleTimeString()}`);
   // }
   
   return isCurrent;

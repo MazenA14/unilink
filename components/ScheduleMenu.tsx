@@ -11,7 +11,7 @@ interface ScheduleMenuProps {
 }
 
 const menuOptions = [
-  { id: 'personal', title: 'Your Schedule', icon: 'person-outline' },
+  { id: 'personal', title: 'Personal Schedule', icon: 'person-outline' },
   { id: 'staff', title: 'Staff Schedule', icon: 'people-outline' },
   { id: 'course', title: 'Course Schedule', icon: 'book-outline' },
   { id: 'group', title: 'Group Schedule', icon: 'school-outline' },

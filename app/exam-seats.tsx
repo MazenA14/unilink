@@ -1,3 +1,4 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -8,7 +9,6 @@ import { router, Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     ScrollView,
     StyleSheet,
     Text,
@@ -22,6 +22,7 @@ export default function ExamSeatsScreen() {
   const [examSeats, setExamSeats] = useState<ExamSeat[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { showAlert, AlertComponent } = useCustomAlert();
   // const [studentName, setStudentName] = useState<string>('');
 
   useEffect(() => {
@@ -43,7 +44,11 @@ export default function ExamSeatsScreen() {
       setExamSeats(parsedSeats);
       // setStudentName(parsedName);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load exam seats. Please try again.');
+      showAlert({
+        title: 'Error',
+        message: 'Failed to load exam seats. Please try again.',
+        type: 'error',
+      });
     } finally {
       if (isRefresh) {
         setRefreshing(false);
@@ -195,6 +200,9 @@ export default function ExamSeatsScreen() {
          </View>
        </ScrollView>
      </View>
+     
+     {/* Custom Alert Component */}
+     <AlertComponent />
     </>
   );
 }

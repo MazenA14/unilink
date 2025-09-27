@@ -1,6 +1,7 @@
+import QuickMediaModal from '@/components/QuickMediaModal';
+import { MultipleLecturesModal } from '@/components/schedule/MultipleLecturesModal';
 import UpdateModal from '@/components/UpdateModal';
 import WhatsNewModal from '@/components/WhatsNewModal';
-import { MultipleLecturesModal } from '@/components/schedule/MultipleLecturesModal';
 import { Colors, ScheduleTypeColors } from '@/constants/Colors';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
@@ -38,6 +39,9 @@ export default function DashboardScreen() {
   const [selectedLectures, setSelectedLectures] = useState<any[]>([]);
   const [selectedPeriodName, setSelectedPeriodName] = useState('');
   const [selectedDayName, setSelectedDayName] = useState('');
+  
+  // Quick Media modal state
+  const [quickMediaModalVisible, setQuickMediaModalVisible] = useState(false);
   
   // Version check hook
   const {
@@ -304,7 +308,6 @@ export default function DashboardScreen() {
   useEffect(() => {
     const updateTime = () => {
       const newTime = new Date();
-      // console.log('Dashboard: Updating current time to:', newTime.toLocaleTimeString());
       setCurrentTime(newTime);
     };
 
@@ -322,7 +325,6 @@ export default function DashboardScreen() {
     useCallback(() => {
       loadNickname();
       const newTime = new Date();
-      // console.log('Dashboard: Focus effect - updating current time to:', newTime.toLocaleTimeString());
       setCurrentTime(newTime); // Update current time for slot indicator
     }, [loadNickname])
   );
@@ -395,10 +397,20 @@ export default function DashboardScreen() {
               <Text style={[styles.gridText, { color: 'white' }]}>Attendance</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={[styles.gridItem, { backgroundColor: '#4A90E2', borderColor: '#4A90E2' }]}>
-              <Text style={[styles.cmsText, { color: 'white' }]}>CMS</Text>
-              <Text style={[styles.comingSoonText, { color: 'white' }]}>Coming Soon</Text>
+            <TouchableOpacity 
+              style={[styles.gridItem, { backgroundColor: '#8B5CF6', borderColor: '#8B5CF6', justifyContent: 'center', alignItems: 'center' }]}
+              onPress={() => setQuickMediaModalVisible(true)}
+            >
+              <Ionicons name="folder-open" size={20} color="white" />
+              <Text style={[styles.gridText, { color: 'white' }]}>Quick Access</Text>
             </TouchableOpacity>
+            
+            {__DEV__ && (
+              <TouchableOpacity style={[styles.gridItem, { backgroundColor: '#4A90E2', borderColor: '#4A90E2' }]}>
+                <Text style={[styles.cmsText, { color: 'white' }]}>CMS</Text>
+                <Text style={[styles.comingSoonText, { color: 'white' }]}>Coming Soon</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -611,6 +623,12 @@ export default function DashboardScreen() {
         lectures={selectedLectures}
         periodName={selectedPeriodName}
         dayName={selectedDayName}
+      />
+
+      {/* Quick Media Modal */}
+      <QuickMediaModal
+        visible={quickMediaModalVisible}
+        onClose={() => setQuickMediaModalVisible(false)}
       />
     </View>
   );
