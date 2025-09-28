@@ -14,6 +14,6 @@ export const SUPABASE_CONFIG = {
   // Database table names
   TABLES: {
     USERDATA: 'Users',
-    FEEDBACK: 'feedback'
+    FEEDBACK: 'Feedback'
   }
 };

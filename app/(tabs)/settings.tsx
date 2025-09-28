@@ -2,6 +2,7 @@ import { useCustomAlert } from '@/components/CustomAlert';
 import FeedbackModal from '@/components/FeedbackModal';
 import NotificationTest from '@/components/NotificationTest';
 import ResetPasswordModal from '@/components/ResetPasswordModal';
+import StatisticsSection from '@/components/StatisticsSection';
 import UpdateModal from '@/components/UpdateModal';
 import WhatsNewModal from '@/components/WhatsNewModal';
 import { Colors } from '@/constants/Colors';
@@ -35,6 +36,7 @@ export default function SettingsScreen() {
   const [editVisible, setEditVisible] = useState(false);
   const [editValue, setEditValue] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
+  const [username, setUsername] = useState<string>('');
   const [payments, setPayments] = useState<PaymentItem[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
   const [payingIndex, setPayingIndex] = useState<number | null>(null);
@@ -202,6 +204,7 @@ export default function SettingsScreen() {
         AuthManager.getUserId(),
       ]);
       const username = creds.username || '';
+      setUsername(username);
       const formattedFromUsername = username
         .split('@')[0]
         .split('.')
@@ -451,35 +454,39 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={20} color={colors.secondaryFont} />
           </TouchableOpacity>
 
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          {__DEV__ && (
+            <>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
           
-          <View style={styles.rowBetween}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.primaryText, { color: colors.mainFont }]}>
-                Push Notifications
-              </Text>
-              <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>
-                Receive alerts for new announcements
-              </Text>
-            </View>
-            <Switch
-              value={pushPermissionGranted}
-              onValueChange={handleToggleNotifications}
-              disabled={isNotificationLoading}
-              trackColor={{ false: colors.border, true: colors.tabColor }}
-              thumbColor="#ffffff"
-            />
-          </View>
-          
-          <TouchableOpacity 
-            style={[styles.infoButton, { backgroundColor: colors.tabColor + '10', borderColor: colors.tabColor + '30' }]}
-            onPress={showNotificationTips}
-          >
-            <Ionicons name="information-circle-outline" size={18} color={colors.tabColor} />
-            <Text style={[styles.infoButtonText, { color: colors.tabColor }]}>
-              Notification tips for best experience
-            </Text>
-          </TouchableOpacity>
+              <View style={styles.rowBetween}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.primaryText, { color: colors.mainFont }]}>
+                    Push Notifications
+                  </Text>
+                  <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>
+                    Receive alerts for new announcements
+                  </Text>
+                </View>
+                <Switch
+                  value={pushPermissionGranted}
+                  onValueChange={handleToggleNotifications}
+                  disabled={isNotificationLoading}
+                  trackColor={{ false: colors.border, true: colors.tabColor }}
+                  thumbColor="#ffffff"
+                />
+              </View>
+              
+              <TouchableOpacity 
+                style={[styles.infoButton, { backgroundColor: colors.tabColor + '10', borderColor: colors.tabColor + '30' }]}
+                onPress={showNotificationTips}
+              >
+                <Ionicons name="information-circle-outline" size={18} color={colors.tabColor} />
+                <Text style={[styles.infoButtonText, { color: colors.tabColor }]}>
+                  Notification tips for best experience
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
 
         {/* Development Section */}
@@ -621,6 +628,9 @@ export default function SettingsScreen() {
             <Text style={[styles.primaryText, { color: colors.gradeFailing }]}>Logout</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Statistics Section - Only for mazen.abdelazeem */}
+        {username === 'mazen.abdelazeem' && <StatisticsSection />}
 
         {/* App Version */}
         <View style={styles.versionContainer}>

@@ -7,17 +7,17 @@ import * as FileSystem from 'expo-file-system';
 import { copyAsync } from 'expo-file-system/legacy';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Animated,
-    Dimensions,
-    FlatList,
-    Image,
-    Modal,
-    PanResponder,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Animated,
+  Dimensions,
+  FlatList,
+  Image,
+  Modal,
+  PanResponder,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useCustomAlert } from './CustomAlert';
 
@@ -523,12 +523,6 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
               <Text style={[styles.modalTitle, { color: colors.mainFont }]}>
                 Quick Access
               </Text>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={closeModal}
-              >
-                <Ionicons name="close" size={24} color={colors.mainFont} />
-              </TouchableOpacity>
             </View>
           </View>
 
@@ -764,9 +758,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: -0.3,
-  },
-  closeButton: {
-    padding: 4,
   },
   uploadSection: {
     paddingHorizontal: 20,

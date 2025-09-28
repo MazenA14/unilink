@@ -43,7 +43,6 @@
 
 - CMS
 
--------------------------- -------------------------- -------------------------- --------------------------
 
 ## Database Schema
 ### Table 1 (Users)
@@ -52,14 +51,12 @@
 ### Table 2 (Feedback)
 + Username, Notes, Season Joined (58), Date, Version
 
--------------------------- -------------------------- -------------------------- --------------------------
 
 ## Build APK
 - eas build -p android --profile preview
 - Use 'npx expo install --check' to review and upgrade your dependencies
 - npm install -g eas-cli (To upgrade eas-cli version)
 
--------------------------- -------------------------- -------------------------- --------------------------
 
 ## To-Do (Notes)
 - Clear Course previous grades cache on pull to refresh and not be visibile while refreshing
@@ -86,7 +83,7 @@
 - Fix top overlay overlapping by shifting image preview down
 - Remove X icon in quick access modal
 - Add how to install file in drive
-- Add statistics section that only appears for my username
++ Add statistics section that only appears for my username
 
 - Wraping up the app:
     - Make it more efficient (Parsing Server Side, Parallel Data Fetching)
