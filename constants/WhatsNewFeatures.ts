@@ -8,6 +8,7 @@ export const WHATS_NEW_CONFIG = {
   version: APP_VERSION,
   features: [
     "Fixing Grades Screen",
+    "Quick Access Modal UI Enhancements",
   ]
 };
 

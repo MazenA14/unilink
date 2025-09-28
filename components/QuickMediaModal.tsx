@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { copyAsync } from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -16,6 +17,7 @@ import {
   PanResponder,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -45,6 +47,11 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
   const [previewImage, setPreviewImage] = useState<MediaFile | null>(null);
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [renameModalVisible, setRenameModalVisible] = useState(false);
+  const [renameFileId, setRenameFileId] = useState<string>('');
+  const [renameCurrentName, setRenameCurrentName] = useState<string>('');
+  const [renameNewName, setRenameNewName] = useState<string>('');
+  const [dropdownVisible, setDropdownVisible] = useState<string | null>(null);
   
   // Animation values
   const translateY = useState(new Animated.Value(0))[0];
@@ -158,8 +165,8 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
       if (!dirInfo.exists) {
         MEDIA_DIRECTORY.create({ intermediates: true });
       }
-    } catch (error) {
-      console.error('Error initializing media directory:', error);
+    } catch {
+      // Error handling - directory initialization failed
     }
   }, [MEDIA_DIRECTORY]);
 
@@ -186,8 +193,8 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
           await AsyncStorage.setItem(MEDIA_FILES_KEY, JSON.stringify(existingFiles));
         }
       }
-    } catch (error) {
-      console.error('Error loading media files:', error);
+    } catch {
+      // Error handling - failed to load media files
     } finally {
       setLoading(false);
     }
@@ -197,8 +204,8 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
   const saveMediaFiles = async (files: MediaFile[]) => {
     try {
       await AsyncStorage.setItem(MEDIA_FILES_KEY, JSON.stringify(files));
-    } catch (error) {
-      console.error('Error saving media files:', error);
+    } catch {
+      // Error handling - failed to save media files
     }
   };
 
@@ -254,8 +261,8 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
         // Show success message
         // Alert.alert('Success', 'Image uploaded successfully!');
       }
-    } catch (error) {
-      console.error('Error uploading image:', error);
+    } catch {
+      // Error handling - upload failed
       showAlert({
         title: 'Error',
         message: 'Failed to upload image. Please try again.',
@@ -270,7 +277,9 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
   const handleDelete = async (fileId: string) => {
     try {
       const fileToDelete = mediaFiles.find(f => f.id === fileId);
-      if (!fileToDelete) return;
+      if (!fileToDelete) {
+        return;
+      }
       
       showAlert({
         title: 'Delete File',
@@ -294,8 +303,8 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
                 const updatedFiles = mediaFiles.filter(f => f.id !== fileId);
                 setMediaFiles(updatedFiles);
                 await saveMediaFiles(updatedFiles);
-              } catch (error) {
-                console.error('Error deleting file:', error);
+              } catch {
+                // Error handling - delete failed
                 showAlert({
                   title: 'Error',
                   message: 'Failed to delete file.',
@@ -306,8 +315,118 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
           }
         ]
       });
-    } catch (error) {
-      console.error('Error in delete handler:', error);
+    } catch {
+      // Error handling - delete handler failed
+    }
+  };
+
+  // Handle file rename
+  const handleRename = async (fileId: string, currentName: string) => {
+    try {
+      setRenameFileId(fileId);
+      setRenameCurrentName(currentName);
+      setRenameNewName(currentName);
+      setRenameModalVisible(true);
+    } catch {
+      // Error handling - rename handler failed
+    }
+  };
+
+  // Handle rename confirmation
+  const handleRenameConfirm = async () => {
+    try {
+      if (!renameNewName || renameNewName.trim() === '') {
+        showAlert({
+          title: 'Invalid Name',
+          message: 'File name cannot be empty.',
+          type: 'error',
+          buttons: [{ text: 'OK' }]
+        });
+        return;
+      }
+
+      // Update the file name in the mediaFiles array
+      const updatedFiles = mediaFiles.map(file => 
+        file.id === renameFileId 
+          ? { ...file, name: renameNewName.trim() }
+          : file
+      );
+      
+      setMediaFiles(updatedFiles);
+      await saveMediaFiles(updatedFiles);
+      
+      // Close modal and show success
+      setRenameModalVisible(false);
+      showAlert({
+        title: 'Success',
+        message: 'File renamed successfully!',
+        type: 'success',
+        buttons: [{ text: 'OK' }]
+      });
+    } catch {
+      // Error handling - rename failed
+      showAlert({
+        title: 'Error',
+        message: 'Failed to rename file.',
+        type: 'error',
+        buttons: [{ text: 'OK' }]
+      });
+    }
+  };
+
+  // Handle rename cancel
+  const handleRenameCancel = () => {
+    setRenameModalVisible(false);
+    setRenameFileId('');
+    setRenameCurrentName('');
+    setRenameNewName('');
+  };
+
+  // Handle dropdown toggle
+  const handleDropdownToggle = (fileId: string) => {
+    setDropdownVisible(dropdownVisible === fileId ? null : fileId);
+  };
+
+  // Handle dropdown close
+  const handleDropdownClose = () => {
+    setDropdownVisible(null);
+  };
+
+  // Handle file share
+  const handleShare = async (file: MediaFile) => {
+    try {
+      // Check if sharing is available
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        showAlert({
+          title: 'Sharing Not Available',
+          message: 'Sharing is not available on this device.',
+          type: 'error',
+          buttons: [{ text: 'OK' }]
+        });
+        return;
+      }
+
+      // Use expo-sharing for better file sharing
+      await Sharing.shareAsync(file.uri, {
+        mimeType: file.type || 'image/jpeg',
+        dialogTitle: `Share ${file.name}`,
+      });
+
+      showAlert({
+        title: 'Success',
+        message: 'Image shared successfully!',
+        type: 'success',
+        buttons: [{ text: 'OK' }]
+      });
+    } catch {
+      // Error handling - share failed
+      showAlert({
+        title: 'Error',
+        message: 'Failed to share image. Please try again.',
+        type: 'error',
+        buttons: [{ text: 'OK' }]
+      });
     }
   };
 
@@ -446,8 +565,8 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
       // Clear storage
       await AsyncStorage.removeItem(MEDIA_FILES_KEY);
       setMediaFiles([]);
-    } catch (error) {
-      console.error('Error clearing media files:', error);
+    } catch {
+      // Error handling - clear files failed
     }
   }, [mediaFiles]);
 
@@ -484,12 +603,61 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
             </Text>
           </View>
         </View>
-        <TouchableOpacity
-          style={[styles.deleteButton, { backgroundColor: colors.gradeFailing + '15' }]}
-          onPress={() => handleDelete(item.id)}
-        >
-          <Ionicons name="trash-outline" size={20} color={colors.gradeFailing} />
-        </TouchableOpacity>
+        <View style={styles.menuContainer}>
+          <TouchableOpacity
+            style={[styles.menuButton, { backgroundColor: colors.border + '30' }]}
+            onPress={() => handleDropdownToggle(item.id)}
+          >
+            <Ionicons name="ellipsis-vertical" size={20} color={colors.mainFont} />
+          </TouchableOpacity>
+          
+          {dropdownVisible === item.id && (
+            <View style={[styles.dropdown, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => {
+                  handleDropdownClose();
+                  setTimeout(() => {
+                    handleRename(item.id, item.name);
+                  }, 100);
+                }}
+              >
+                <Ionicons name="create-outline" size={18} color="#4CAF50" />
+                <Text style={[styles.dropdownItemText, { color: colors.mainFont }]}>Rename</Text>
+              </TouchableOpacity>
+              
+              <View style={[styles.dropdownDivider, { backgroundColor: colors.border }]} />
+              
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => {
+                  handleDropdownClose();
+                  setTimeout(() => {
+                    handleShare(item);
+                  }, 100);
+                }}
+              >
+                <Ionicons name="share-outline" size={18} color={colors.tint} />
+                <Text style={[styles.dropdownItemText, { color: colors.mainFont }]}>Share</Text>
+              </TouchableOpacity>
+              
+              <View style={[styles.dropdownDivider, { backgroundColor: colors.border }]} />
+              
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => {
+                  handleDropdownClose();
+                  setTimeout(() => {
+                    handleDelete(item.id);
+                  }, 100);
+                }}
+              >
+                <Ionicons name="trash-outline" size={18} color={colors.gradeFailing} />
+                <Text style={[styles.dropdownItemText, { color: colors.mainFont }]}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -548,9 +716,9 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
                 {uploading ? 'Uploading...' : 'Upload Image'}
               </Text>
             </TouchableOpacity>
-            <Text style={[styles.uploadHint, { color: colors.secondaryFont }]}>
-              Upload images for quick access and preview
-            </Text>
+              <Text style={[styles.uploadHint, { color: colors.secondaryFont }]}>
+                Upload images for quick access and preview (e.g., Academic Calendar, Course Materials)
+              </Text>
           </View>
 
           {/* Media Files List */}
@@ -599,119 +767,175 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
             { opacity: previewOpacity }
           ]}
         >
-          {/* Header with close button and actions */}
-          <Animated.View 
-            style={[
-              styles.previewHeader,
-              { 
-                backgroundColor: colors.background + '95',
-                opacity: infoOpacity
-              }
-            ]}
-          >
-            <TouchableOpacity
-              style={[styles.previewCloseButton, { backgroundColor: colors.tint + '20' }]}
-              onPress={closeImagePreview}
-            >
-              <Ionicons name="close" size={20} color={colors.tint} />
-            </TouchableOpacity>
-            
-            <View style={styles.previewActions}>
-              <TouchableOpacity
-                style={[styles.previewActionButton, { backgroundColor: colors.tint + '20' }]}
-                onPress={() => {
-                  // Reset zoom
-                  Animated.parallel([
-                    Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
-                    Animated.spring(translateX, { toValue: 0, useNativeDriver: true }),
-                    Animated.spring(translateYPreview, { toValue: 0, useNativeDriver: true }),
-                  ]).start();
-                }}
-              >
-                <Ionicons name="refresh" size={18} color={colors.tint} />
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-
-          {/* Image Container */}
-          <View style={styles.previewImageContainer}>
-            {previewImage && (
-              <TouchableOpacity 
-                style={styles.imageWrapper} 
-                activeOpacity={1}
-                onPress={(e) => e.stopPropagation()}
-                {...imagePanResponder.panHandlers}
-              >
-                {imageLoading && (
-                  <View style={styles.imageLoadingContainer}>
-                    <ActivityIndicator size="large" color={colors.tint} />
-                    <Text style={[styles.loadingText, { color: colors.secondaryFont }]}>
-                      Loading image...
-                    </Text>
-                  </View>
-                )}
-                
-                {imageError && (
-                  <View style={styles.imageErrorContainer}>
-                    <Ionicons name="image-outline" size={64} color={colors.secondaryFont} />
-                    <Text style={[styles.errorText, { color: colors.secondaryFont }]}>
-                      Failed to load image
-                    </Text>
-                  </View>
-                )}
-                
-                <Animated.Image
-                  source={{ uri: previewImage.uri }}
-                  style={[
-                    styles.previewImage,
-                    {
-                      opacity: imageLoading || imageError ? 0 : 1,
-                      transform: [
-                        { scale: scale },
-                        { translateX: translateX },
-                        { translateY: translateYPreview },
-                      ],
-                    },
-                  ]}
-                  resizeMode="contain"
-                  onLoad={() => {
-                    setImageLoading(false);
-                    setImageError(false);
-                  }}
-                  onError={() => {
-                    setImageLoading(false);
-                    setImageError(true);
-                  }}
-                />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Bottom Info Panel */}
-          {previewImage && (
+          {/* Three-section layout container */}
+          <View style={styles.previewContainer}>
+            {/* Top Header Section */}
             <Animated.View 
               style={[
-                styles.previewInfoPanel,
+                styles.previewTopSection,
                 { 
                   backgroundColor: colors.background + '95',
                   opacity: infoOpacity
                 }
               ]}
             >
-              <View style={styles.previewInfoContent}>
-                <View style={styles.previewInfoLeft}>
-                  <Text style={[styles.previewFileName, { color: colors.mainFont }]}>
-                    {previewImage.name}
-                  </Text>
-                  <Text style={[styles.previewFileDetails, { color: colors.secondaryFont }]}>
-                    {formatFileSize(previewImage.size)} • {formatDate(previewImage.uploadDate)}
-                  </Text>
-                </View>
-                
+              <TouchableOpacity
+                style={[styles.previewCloseButton, { backgroundColor: colors.tint + '20' }]}
+                onPress={closeImagePreview}
+              >
+                <Ionicons name="close" size={20} color={colors.tint} />
+              </TouchableOpacity>
+              
+              <View style={styles.previewActions}>
+                <TouchableOpacity
+                  style={[styles.previewActionButton, { backgroundColor: colors.tint + '20' }]}
+                  onPress={() => {
+                    // Reset zoom
+                    Animated.parallel([
+                      Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
+                      Animated.spring(translateX, { toValue: 0, useNativeDriver: true }),
+                      Animated.spring(translateYPreview, { toValue: 0, useNativeDriver: true }),
+                    ]).start();
+                  }}
+                >
+                  <Ionicons name="refresh" size={18} color={colors.tint} />
+                </TouchableOpacity>
               </View>
             </Animated.View>
-          )}
+
+            {/* Middle Image Section */}
+            <View style={styles.previewMiddleSection}>
+              {previewImage && (
+                <TouchableOpacity 
+                  style={styles.imageWrapper} 
+                  activeOpacity={1}
+                  onPress={(e) => e.stopPropagation()}
+                  {...imagePanResponder.panHandlers}
+                >
+                  {imageLoading && (
+                    <View style={styles.imageLoadingContainer}>
+                      <ActivityIndicator size="large" color={colors.tint} />
+                      <Text style={[styles.loadingText, { color: colors.secondaryFont }]}>
+                        Loading image...
+                      </Text>
+                    </View>
+                  )}
+                  
+                  {imageError && (
+                    <View style={styles.imageErrorContainer}>
+                      <Ionicons name="image-outline" size={64} color={colors.secondaryFont} />
+                      <Text style={[styles.errorText, { color: colors.secondaryFont }]}>
+                        Failed to load image
+                      </Text>
+                    </View>
+                  )}
+                  
+                  <Animated.Image
+                    source={{ uri: previewImage.uri }}
+                    style={[
+                      styles.previewImage,
+                      {
+                        opacity: imageLoading || imageError ? 0 : 1,
+                        transform: [
+                          { scale: scale },
+                          { translateX: translateX },
+                          { translateY: translateYPreview },
+                        ],
+                      },
+                    ]}
+                    resizeMode="contain"
+                    onLoad={() => {
+                      setImageLoading(false);
+                      setImageError(false);
+                    }}
+                    onError={() => {
+                      setImageLoading(false);
+                      setImageError(true);
+                    }}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Bottom Info Section */}
+            {previewImage && (
+              <Animated.View 
+                style={[
+                  styles.previewBottomSection,
+                  { 
+                    backgroundColor: colors.background + '95',
+                    opacity: infoOpacity
+                  }
+                ]}
+              >
+                <View style={styles.previewInfoContent}>
+                  <View style={styles.previewInfoLeft}>
+                    <Text style={[styles.previewFileName, { color: colors.mainFont }]}>
+                      {previewImage.name}
+                    </Text>
+                    <Text style={[styles.previewFileDetails, { color: colors.secondaryFont }]}>
+                      {formatFileSize(previewImage.size)} • {formatDate(previewImage.uploadDate)}
+                    </Text>
+                  </View>
+                </View>
+              </Animated.View>
+            )}
+          </View>
         </Animated.View>
+      </Modal>
+
+      {/* Rename Modal */}
+      <Modal
+        visible={renameModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleRenameCancel}
+      >
+        <View style={styles.renameModalOverlay}>
+          <View style={[styles.renameModalContainer, { backgroundColor: colors.background }]}>
+            <Text style={[styles.renameModalTitle, { color: colors.mainFont }]}>
+              Rename File
+            </Text>
+            
+            <Text style={[styles.renameModalSubtitle, { color: colors.secondaryFont }]}>
+              Current name: {renameCurrentName}
+            </Text>
+            
+            <TextInput
+              style={[styles.renameInput, { 
+                backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3',
+                borderColor: colors.border,
+                color: colors.mainFont
+              }]}
+              value={renameNewName}
+              onChangeText={setRenameNewName}
+              placeholder="Enter new name"
+              placeholderTextColor={colors.secondaryFont}
+              autoFocus={true}
+              selectTextOnFocus={true}
+            />
+            
+            <View style={styles.renameModalButtons}>
+              <TouchableOpacity
+                style={[styles.renameModalButton, styles.renameCancelButton, { borderColor: colors.border }]}
+                onPress={handleRenameCancel}
+              >
+                <Text style={[styles.renameModalButtonText, { color: colors.secondaryFont }]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.renameModalButton, styles.renameConfirmButton, { backgroundColor: colors.tint }]}
+                onPress={handleRenameConfirm}
+              >
+                <Text style={[styles.renameModalButtonText, { color: 'white' }]}>
+                  Rename
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
       
       {/* Custom Alert Component */}
@@ -832,6 +1056,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 4,
+    marginRight: 16,
   },
   fileDate: {
     fontSize: 12,
@@ -842,12 +1067,52 @@ const styles = StyleSheet.create({
     fontSize: 11,
     opacity: 0.6,
   },
-  deleteButton: {
+  menuContainer: {
+    position: 'relative',
+  },
+  menuButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  dropdown: {
+    position: 'absolute',
+    top: 40,
+    right: 0,
+    minWidth: 120,
+    borderRadius: 8,
+    borderWidth: 1,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    zIndex: 1000,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    marginLeft: 8,
+    fontWeight: '500',
+  },
+  dropdownDivider: {
+    height: 1,
+    marginHorizontal: 8,
+  },
+  dropdownOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -876,11 +1141,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.95)',
   },
-  previewHeader: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+  previewContainer: {
+    flex: 1,
+    flexDirection: 'column',
+  },
+  previewTopSection: {
     height: 100,
     paddingTop: 50,
     paddingHorizontal: 20,
@@ -917,17 +1182,17 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  previewImageContainer: {
+  previewMiddleSection: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: 120, // Space for bottom panel
   },
   imageWrapper: {
     width: '100%',
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    maxHeight: '100%',
   },
   imageLoadingContainer: {
     position: 'absolute',
@@ -955,12 +1220,10 @@ const styles = StyleSheet.create({
   previewImage: {
     width: '100%',
     height: '100%',
+    maxWidth: '100%',
+    maxHeight: '100%',
   },
-  previewInfoPanel: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+  previewBottomSection: {
     paddingTop: 20,
     paddingBottom: 40,
     paddingHorizontal: 20,
@@ -985,5 +1248,65 @@ const styles = StyleSheet.create({
   previewFileDetails: {
     fontSize: 14,
     opacity: 0.8,
+  },
+  // Rename Modal Styles
+  renameModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  renameModalContainer: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 16,
+    padding: 24,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  renameModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  renameModalSubtitle: {
+    fontSize: 14,
+    marginBottom: 20,
+    textAlign: 'center',
+    opacity: 0.8,
+  },
+  renameInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    marginBottom: 24,
+  },
+  renameModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  renameModalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  renameCancelButton: {
+    borderWidth: 1,
+  },
+  renameConfirmButton: {
+    // backgroundColor will be set dynamically
+  },
+  renameModalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

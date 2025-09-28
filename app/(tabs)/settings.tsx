@@ -18,6 +18,7 @@ import { AuthManager } from '@/utils/auth';
 import { GUCAPIProxy, PaymentItem } from '@/utils/gucApiProxy';
 import { pushNotificationService } from '@/utils/services/pushNotificationService';
 import { userTrackingService } from '@/utils/services/userTrackingService';
+import { supabase } from '@/utils/supabase';
 import { resetWhatsNewStatus } from '@/utils/whatsNewStorage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
@@ -536,6 +537,51 @@ export default function SettingsScreen() {
                 <Text style={[styles.primaryText, { color: colors.mainFont }]}>Test User Tracking</Text>
                 <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>
                   Debug Supabase
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
+              <TouchableOpacity
+                style={styles.rowBetween}
+                onPress={async () => {
+                  try {
+                    const { data, error } = await supabase
+                      .from('Schedules')
+                      .select('data')
+                      .single();
+                    
+                    if (error) {
+                      console.error('Error fetching schedules data:', error);
+                      showAlert({
+                        title: 'Error',
+                        message: `Failed to fetch schedules data: ${error.message}`,
+                        type: 'error',
+                        buttons: [{ text: 'OK' }]
+                      });
+                    } else {
+                      console.log('Schedules data:', data);
+                      showAlert({
+                        title: 'Success',
+                        message: 'Schedules data fetched successfully. Check console for details.',
+                        type: 'success',
+                        buttons: [{ text: 'OK' }]
+                      });
+                    }
+                  } catch (err) {
+                    console.error('Unexpected error:', err);
+                    showAlert({
+                      title: 'Error',
+                      message: 'An unexpected error occurred while fetching schedules data.',
+                      type: 'error',
+                      buttons: [{ text: 'OK' }]
+                    });
+                  }
+                }}
+              >
+                <Text style={[styles.primaryText, { color: colors.mainFont }]}>Fetch Schedules Data</Text>
+                <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>
+                  Get data from Schedules table
                 </Text>
               </TouchableOpacity>
             </View>
