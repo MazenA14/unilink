@@ -1,11 +1,11 @@
 import { useCustomAlert } from '@/components/CustomAlert';
 import {
-  CourseWithGrades,
-  CurrentGradesSection,
-  GradeType,
-  PreviousGradesSection,
-  Season,
-  YearGroup
+    CourseWithGrades,
+    CurrentGradesSection,
+    GradeType,
+    PreviousGradesSection,
+    Season,
+    YearGroup
 } from '@/components/grades';
 import { GradesMenu } from '@/components/GradesMenu';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
@@ -14,7 +14,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { GradeCache } from '@/utils/gradeCache';
 import { getGradeColor } from '@/utils/gradingColors';
 import { GUCAPIProxy as GUCAPI, GradeData } from '@/utils/gucApiProxy';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 

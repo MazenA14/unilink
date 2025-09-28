@@ -1,8 +1,8 @@
 import {
-  EmptyState,
-  LoadingIndicator,
-  SemesterTable,
-  YearSelector,
+    EmptyState,
+    LoadingIndicator,
+    SemesterTable,
+    YearSelector,
 } from '@/components/transcript';
 import GradingInfoModal from '@/components/transcript/GradingInfoModal';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
@@ -10,7 +10,7 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTranscript } from '@/hooks/useTranscript';
 import { getCumulativeGPAColor } from '@/utils/gradingColors';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 

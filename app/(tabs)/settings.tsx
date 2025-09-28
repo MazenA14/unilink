@@ -18,7 +18,7 @@ import { GUCAPIProxy, PaymentItem } from '@/utils/gucApiProxy';
 import { pushNotificationService } from '@/utils/services/pushNotificationService';
 import { userTrackingService } from '@/utils/services/userTrackingService';
 import { resetWhatsNewStatus } from '@/utils/whatsNewStorage';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';

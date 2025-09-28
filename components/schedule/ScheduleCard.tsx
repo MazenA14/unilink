@@ -1,7 +1,7 @@
 import { Colors, ScheduleColors, ScheduleTypeColors } from '@/constants/Colors';
 // Updated to support courseCode
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ScheduleClass, ScheduleType } from './types';
 

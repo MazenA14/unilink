@@ -4,7 +4,8 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { GUCAPIProxy } from '@/utils/gucApiProxy';
 import { ExamSeat, formatExamDate, getExamTypeColor, parseExamSeatsHTML } from '@/utils/parsers/examSeatsParser';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {

@@ -80,6 +80,14 @@
 - Handle offline mode gracefully
 - Add message screen depending on version
 
+- Grades page crashes
+- Add example in quick access tab
+- Add rename option
+- Fix top overlay overlapping by shifting image preview down
+- Remove X icon in quick access modal
+- Add how to install file in drive
+- Add statistics section that only appears for my username
+
 - Wraping up the app:
     - Make it more efficient (Parsing Server Side, Parallel Data Fetching)
     - Remove the unneeded dependencies (Smaller file size)
