@@ -457,9 +457,9 @@ export default function AttendanceScreen() {
                 </View>
               )}
 
-                <View style={[styles.updateNote, { 
-                  backgroundColor: colors.tint + '10', 
-                  borderColor: colors.tint + '20',
+                <View style={[styles.updateNote2, { 
+                  // backgroundColor: colors.tint + '10', 
+                  // borderColor: colors.tint + '20',
                   marginHorizontal: 20
                 }]}>
                   <Ionicons name="time" size={14} color={colors.tint} />
@@ -859,6 +859,13 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
+    gap: 8,
+    marginBottom: 16,
+  },
+  updateNote2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
     gap: 8,
     marginBottom: 16,
   },

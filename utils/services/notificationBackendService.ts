@@ -1,3 +1,4 @@
+import { APP_VERSION } from '@/constants/Version';
 import { AuthManager } from '@/utils/auth';
 
 // Backend API endpoints
@@ -38,7 +39,7 @@ export class NotificationBackendService {
         userId: username || userId,
         deviceInfo: {
           platform: 'expo',
-          version: '1.0.0',
+          version: APP_VERSION,
         },
       };
 

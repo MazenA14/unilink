@@ -480,7 +480,7 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={20} color={colors.secondaryFont} />
           </TouchableOpacity>
 
-          {__DEV__ && (
+          {/* {__DEV__ && ( */}
             <>
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
           
@@ -512,7 +512,7 @@ export default function SettingsScreen() {
                 </Text>
               </TouchableOpacity>
             </>
-          )}
+          {/* )} */}
         </View>
 
         {/* Development Section */}

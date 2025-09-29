@@ -11,9 +11,26 @@ import { ScheduleProvider } from '@/contexts/ScheduleContext';
 import { ShiftedScheduleProvider } from '@/contexts/ShiftedScheduleContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { consumeAttendanceNavigateFlag, initializeAttendanceBackgroundTask } from '@/utils/services/backgroundTaskService';
+import { router } from 'expo-router';
+import { useEffect } from 'react';
 
 function AppContent() {
   const colorScheme = useColorScheme();
+  
+  useEffect(() => {
+    initializeAttendanceBackgroundTask();
+  }, []);
+  
+  useEffect(() => {
+    const checkAndNavigate = async () => {
+      const shouldNavigate = await consumeAttendanceNavigateFlag();
+      if (shouldNavigate) {
+        router.push('/attendance');
+      }
+    };
+    checkAndNavigate();
+  });
   
   return (
     <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

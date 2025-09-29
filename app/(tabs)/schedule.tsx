@@ -6,6 +6,7 @@ import { Colors } from '@/constants/Colors';
 import { useScheduleContext } from '@/contexts/ScheduleContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useScheduleTypes } from '@/hooks/useScheduleTypes';
+import { AuthManager } from '@/utils/auth';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -34,6 +35,7 @@ export default function ScheduleScreen() {
 
   // Menu state
   const [menuVisible, setMenuVisible] = useState(false);
+  const [preferredSlots, setPreferredSlots] = useState<number>(5);
   
   // State to force re-render for current slot indicator
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -69,6 +71,23 @@ export default function ScheduleScreen() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Load preferred slots initially and refresh on focus
+  useEffect(() => {
+    (async () => {
+      const stored = await AuthManager.getDashboardSlots();
+      setPreferredSlots(stored || 5);
+    })();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        const stored = await AuthManager.getDashboardSlots();
+        setPreferredSlots(stored || 5);
+      })();
+    }, [])
+  );
 
   // Update current time when screen comes into focus
   useFocusEffect(
@@ -142,7 +161,12 @@ export default function ScheduleScreen() {
     if (scheduleData && scheduleData.days.length > 0) {
       return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-          <ScheduleTable scheduleData={scheduleData.days} scheduleType={scheduleType} currentTime={currentTime} />
+          <ScheduleTable 
+            scheduleData={scheduleData.days} 
+            scheduleType={scheduleType} 
+            currentTime={currentTime}
+            preferredSlots={preferredSlots}
+          />
         </View>
       );
     }

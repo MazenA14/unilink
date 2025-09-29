@@ -1,7 +1,7 @@
 import { Notification } from '@/utils/types/notificationTypes';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
-import * as Device from 'expo-device';
+import { isDevice } from 'expo-device';
 import {
   addNotificationReceivedListener,
   addNotificationResponseReceivedListener,
@@ -67,7 +67,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
    */
   async requestPermissions(): Promise<boolean> {
     try {
-      if (!Device.isDevice) {
+      if (!isDevice) {
         return false;
       }
 
@@ -110,7 +110,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
       }
 
       return isGranted;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -120,7 +120,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
    */
   async getExpoPushToken(): Promise<string | null> {
     try {
-      if (!Device.isDevice) {
+      if (!isDevice) {
         return null;
       }
 
@@ -175,7 +175,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
 
       const token = await this.getExpoPushToken();
       return token;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -200,7 +200,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
         },
         trigger: null, // Show immediately
       });
-    } catch (error) {
+    } catch {
     }
   }
 
@@ -215,7 +215,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
         content,
         trigger: null, // Show immediately
       });
-    } catch (error) {
+    } catch {
     }
   }
 
@@ -230,7 +230,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
         content,
         trigger: null, // Show immediately
       });
-    } catch (error) {
+    } catch {
     }
   }
 
@@ -253,7 +253,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
         content,
         trigger: null, // Show immediately
       });
-    } catch (error) {
+    } catch {
     }
   }
 
@@ -263,7 +263,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
   async clearAllNotifications(): Promise<void> {
     try {
       await dismissAllNotificationsAsync();
-    } catch (error) {
+    } catch {
     }
   }
 
@@ -281,7 +281,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
       await AsyncStorage.setItem(NOTIFICATION_PERMISSION_KEY, JSON.stringify(isGranted));
       
       return isGranted;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -331,7 +331,7 @@ class PushNotificationServiceImpl implements PushNotificationService {
       await AsyncStorage.removeItem(EXPO_PUSH_TOKEN_KEY);
       await AsyncStorage.removeItem(NOTIFICATION_PERMISSION_KEY);
       this.expoPushToken = null;
-    } catch (error) {
+    } catch {
     }
   }
 }

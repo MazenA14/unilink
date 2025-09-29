@@ -5,7 +5,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { Notification } from '@/utils/types/notificationTypes';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
     ActivityIndicator,
     Animated,
@@ -135,12 +135,7 @@ export default function NotificationsScreen() {
     });
   };
 
-  useEffect(() => {
-    // Fetch notifications when screen loads if not already loaded
-    if (notifications.length === 0 && !loading) {
-      fetchNotifications();
-    }
-  }, [notifications.length, loading, fetchNotifications]);
+  // Removed auto-fetch on entering the notifications page. Pull to refresh is still available.
 
   const getImportanceColor = (importance: string) => {
     switch (importance.toLowerCase()) {

@@ -2,10 +2,10 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as DocumentPicker from 'expo-document-picker';
+import { getDocumentAsync } from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { copyAsync } from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
+import { isAvailableAsync as isSharingAvailableAsync, shareAsync } from 'expo-sharing';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -214,7 +214,7 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
     try {
       setUploading(true);
       
-      const result = await DocumentPicker.getDocumentAsync({
+      const result = await getDocumentAsync({
         type: ['image/*'],
         copyToCacheDirectory: true,
       });
@@ -396,7 +396,7 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
   const handleShare = async (file: MediaFile) => {
     try {
       // Check if sharing is available
-      const isAvailable = await Sharing.isAvailableAsync();
+      const isAvailable = await isSharingAvailableAsync();
       if (!isAvailable) {
         showAlert({
           title: 'Sharing Not Available',
@@ -408,7 +408,7 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
       }
 
       // Use expo-sharing for better file sharing
-      await Sharing.shareAsync(file.uri, {
+      await shareAsync(file.uri, {
         mimeType: file.type || 'image/jpeg',
         dialogTitle: `Share ${file.name}`,
       });

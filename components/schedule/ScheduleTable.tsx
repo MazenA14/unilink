@@ -9,9 +9,10 @@ interface ScheduleTableProps {
   scheduleData: ScheduleDay[];
   scheduleType?: ScheduleType;
   currentTime?: Date;
+  preferredSlots?: number;
 }
 
-export function ScheduleTable({ scheduleData, scheduleType = 'personal', currentTime: propCurrentTime }: ScheduleTableProps) {
+export function ScheduleTable({ scheduleData, scheduleType = 'personal', currentTime: propCurrentTime, preferredSlots }: ScheduleTableProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const scrollViewRef = useRef<ScrollView>(null);
@@ -232,6 +233,7 @@ export function ScheduleTable({ scheduleData, scheduleType = 'personal', current
               day={day} 
               scheduleType={scheduleType}
               currentTime={propCurrentTime || currentTime}
+              preferredSlots={preferredSlots}
             />
           </View>
         ))}

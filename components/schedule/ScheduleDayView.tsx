@@ -1,6 +1,7 @@
 import { Colors, ScheduleColors, ScheduleTypeColors, SlotTypeColors } from '@/constants/Colors';
 import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { AuthManager } from '@/utils/auth';
 import { isCurrentTimeSlot } from '@/utils/currentSlotUtils';
 import { GradeCache } from '@/utils/gradeCache';
 import { GUCAPIProxy } from '@/utils/gucApiProxy';
@@ -14,9 +15,10 @@ interface ScheduleDayViewProps {
   day: ScheduleDay;
   scheduleType?: ScheduleType;
   currentTime?: Date;
+  preferredSlots?: number;
 }
 
-export function ScheduleDayView({ day, scheduleType = 'personal', currentTime: propCurrentTime }: ScheduleDayViewProps) {
+export function ScheduleDayView({ day, scheduleType = 'personal', currentTime: propCurrentTime, preferredSlots: propPreferredSlots }: ScheduleDayViewProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const scheduleColors = ScheduleColors[colorScheme ?? 'light'];
@@ -35,6 +37,15 @@ export function ScheduleDayView({ day, scheduleType = 'personal', currentTime: p
   
   // State to force re-render for current slot indicator
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [preferredSlots, setPreferredSlots] = useState<number>(5);
+
+  // Determine if this view is rendering today's day
+  const isToday = (() => {
+    const now = propCurrentTime || currentTime;
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const todayName = dayNames[now.getDay()];
+    return day.dayName === todayName;
+  })();
   
   // Load course name mapping on component mount
   useEffect(() => {
@@ -77,6 +88,23 @@ export function ScheduleDayView({ day, scheduleType = 'personal', currentTime: p
       setCurrentTime(propCurrentTime);
     }
   }, [propCurrentTime]);
+
+  // Load preferred number of slots: use prop if provided, else read from storage
+  useEffect(() => {
+    let isMounted = true;
+    if (typeof propPreferredSlots === 'number') {
+      setPreferredSlots(propPreferredSlots);
+      return () => { isMounted = false; };
+    }
+    (async () => {
+      try {
+        const stored = await AuthManager.getDashboardSlots();
+        if (isMounted) setPreferredSlots(stored || 5);
+      } catch {
+      }
+    })();
+    return () => { isMounted = false; };
+  }, [propPreferredSlots]);
 
   // Utility function to get course name by matching course names
   const getCourseNameByMatching = (scheduleCourseName: string): string | null => {
@@ -256,9 +284,12 @@ export function ScheduleDayView({ day, scheduleType = 'personal', currentTime: p
       
       {/* Periods List */}
       <View style={styles.periodsContainer}>
-        {periods.map((period) => {
+        {(scheduleType === 'personal'
+          ? periods.slice(0, Math.min(8, Math.max(5, preferredSlots)))
+          : periods
+        ).map((period) => {
           const classData = day.periods[period.key];
-          const isCurrentSlot = isCurrentTimeSlot(period.key, isShiftedScheduleEnabled, propCurrentTime || currentTime);
+          const isCurrentSlot = isToday && isCurrentTimeSlot(period.key, isShiftedScheduleEnabled, propCurrentTime || currentTime);
           
           return (
             <View key={period.key} style={[styles.periodRow, { 

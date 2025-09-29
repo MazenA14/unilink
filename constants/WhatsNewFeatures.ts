@@ -8,8 +8,11 @@ export const WHATS_NEW_CONFIG = {
   version: APP_VERSION,
   features: [
     "Implemented Staff/Course Multi-Select Schedules",
+    "Dashboard Slots Number Preference",
     "Fixing Grades Screen",
     "Quick Access Modal UI Enhancements",
+    "Personal Schedule UI Enhancements",
+    "Bug Fixes",
   ]
 };
 

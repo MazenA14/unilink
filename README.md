@@ -62,22 +62,23 @@
 - Clear Course previous grades cache on pull to refresh and not be visibile while refreshing
 - Redesign All cache timings
 
-- On 1:00 open app to fetch attendance
-- Make notification cached and fetch on loading dashboard, on fetching don't remove the old notifications (Preload notifications on dashboard)
 - Add tutorial and lecture notifications by a variable time reminder (15min, 20 min...) time set in settings under preferences (Make the reminder optional, no lecture reminder)
 - See if guc notifications could be fetched while app is closed
-- On loading don't show loading state, show cached data and after fetching is complete, replace notifications
 - Solve notifcations error if possible
-- Notifiactions preloader is implemented, remove the option that it refetches on opening the notifications
 
 - Handle offline mode gracefully
 - Investigate 409 error in transcript page
 - Investigate multiple proxy calls (A lot & repetitive)
 
+- Add supabase hit on every app open to save last opened time and number of times opened
+- Add version joined from as an attribute in the users table
+- Add this might take a minute to the previous semester grades screen on pull to refresh
+
+
 - Wraping up the app:
     - Make it more efficient (Parsing Server Side, Parallel Data Fetching)
     - Remove the unneeded dependencies (Smaller file size)
-    - Remove any console logs/wars/errors
+    - Remove any console logs/warnings/errors
     - Replace Alert.alert with custom alert component
     - See how all aspects of the app works (Caching,...)
 
@@ -123,7 +124,7 @@
 + Check first time production app open, opens on the login screen
 + In the Courses under Instructor make it show only course name
 + What's new screen didn't appear, does it have something to do with the first time open attribute (Opening Order)
-+ Add the attendance level when I have one (Now there is commented static badge)
++ On 1:00 open app to fetch attendance
 + Handle FF,FA,FX
 + Handle attended case in attendance
 + See why what's new feature not working
@@ -146,6 +147,10 @@
 + Either search staff or course schedule
 + Unify all schedule and list colouring
 + Remove the descriptions for the course and group schedules
++ Notifiactions preloader is implemented, remove the option that it refetches on opening the notifications
++ Make notification cached and fetch on loading dashboard, on fetching don't remove the old notifications (Preload notifications on dashboard)
++ On loading don't show loading state, show cached data and after fetching is complete, replace notifications
++ Add the attendance level when I have one (Now there is commented static badge)
 
 
 
