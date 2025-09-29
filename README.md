@@ -77,7 +77,9 @@
 - Either search staff or course schedule
 - Remove the descriptions for the course and group schedules and handle the '&' correctly
 - Unify all schedule and list colouring
-- if changed schedule type during fetching another type, stop it
+- If changed schedule type during fetching another type, stop it
+- Make profile modal be the same as the rest
+- Make all modals be swipable from area not just the top if possible
 
 - Wraping up the app:
     - Make it more efficient (Parsing Server Side, Parallel Data Fetching)

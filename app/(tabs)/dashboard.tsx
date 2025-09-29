@@ -392,7 +392,7 @@ export default function DashboardScreen() {
         <View style={styles.section}>
           <View style={styles.gridContainer}>
             <TouchableOpacity 
-              style={[styles.gridItem, { backgroundColor: ScheduleTypeColors.staff, borderColor: ScheduleTypeColors.staff }]}
+              style={[styles.gridItem, { backgroundColor: ScheduleTypeColors.instructor, borderColor: ScheduleTypeColors.instructor }]}
               onPress={() => router.push('/instructors')}
             >
               <Ionicons name="people" size={20} color="white" />

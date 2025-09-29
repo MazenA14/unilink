@@ -1,5 +1,5 @@
 import { ScheduleData, ScheduleOption, ScheduleType } from '@/components/schedule/types';
-import { getCourseOptions, getStaffAndCourseOptions, getStaffOptions, submitScheduleSelection } from '@/utils/handlers/staffScheduleHandler';
+import { getCourseOptions, getStaffAndCourseOptions, getStaffOptions, submitMultipleScheduleSelections, submitScheduleSelection } from '@/utils/handlers/staffScheduleHandler';
 import { useEffect, useState } from 'react';
 
 // Group schedules removed
@@ -57,7 +57,6 @@ const generateMockSchedule = (type: ScheduleType, selectedId?: string): Schedule
           time: '10:00 AM - 11:30 AM',
           ...(type === 'staff' && { officeHours: '2:00 PM - 4:00 PM' }),
           ...(type === 'course' && { enrollmentCount: 32, credits: 3 }),
-          ...(type === 'group' && { groupSize: 120, department: 'Computer Science' }),
         }] : null,
         third: null,
         fourth: null,
@@ -79,11 +78,7 @@ const generateMockSchedule = (type: ScheduleType, selectedId?: string): Schedule
     days,
     type,
     metadata: {
-      selectedItem: selectedId ? 
-        (type === 'staff' ? mockStaffOptions.find(s => s.id === selectedId)?.name :
-         type === 'course' ? mockCourseOptions.find(c => c.id === selectedId)?.name :
-         type === 'combined' ? 'Combined Schedule' :
-         mockGroupOptions.find(g => g.id === selectedId)?.name) : undefined,
+      selectedItem: selectedId ? (type === 'combined' ? 'Combined Schedule' : selectedId) : undefined,
       // For combined schedules, add sample metadata
       ...(type === 'combined' && {
         staffSelections: ['Dr. Ahmed Hassan', 'Dr. Sarah Mohamed'],
@@ -102,6 +97,7 @@ export function useScheduleTypes(initialScheduleType?: ScheduleType) {
     : 'personal';
   const [scheduleType, setScheduleType] = useState<ScheduleType>(initialType);
   const [selectedOption, setSelectedOption] = useState<string>('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -238,6 +234,7 @@ export function useScheduleTypes(initialScheduleType?: ScheduleType) {
   const handleScheduleTypeChange = async (type: ScheduleType) => {
     setScheduleType(type);
     setSelectedOption('');
+    setSelectedIds([]);
     setError(null);
     
     if (type === 'personal') {
@@ -249,29 +246,34 @@ export function useScheduleTypes(initialScheduleType?: ScheduleType) {
     }
   };
 
-  const handleOptionSelection = async (optionId: string) => {
-    setSelectedOption(optionId);
+  const handleOptionSelection = async (optionIds: string[]) => {
+    setSelectedIds(optionIds);
+    setSelectedOption(optionIds[optionIds.length - 1] || '');
     
-    // For staff and course schedules, use the auto-submit functionality
+    // For staff and course schedules, submit all selected IDs together
     if (scheduleType === 'staff' || scheduleType === 'course') {
       setLoading(true);
       setError(null);
       
       try {
-        const selectedOption = options.find(opt => opt.id === optionId);
-        if (!selectedOption) {
-          throw new Error('Selected option not found');
+        const idSet = new Set(optionIds);
+        const names = options.filter(opt => idSet.has(opt.id)).map(opt => opt.name);
+        const staffIds = scheduleType === 'staff' ? optionIds : [];
+        const courseIds = scheduleType === 'course' ? optionIds : [];
+        const staffNames = scheduleType === 'staff' ? names : [];
+        const courseNames = scheduleType === 'course' ? names : [];
+
+        if (optionIds.length === 0) {
+          setScheduleData(null);
+          setLoading(false);
+          return;
         }
-        
-        const result = await submitScheduleSelection(
-          scheduleType as 'staff' | 'course',
-          optionId,
-          selectedOption.name
-        );
-        
+
+        // Use multi-submit to get combined schedule
+        const result = await submitMultipleScheduleSelections(staffIds, courseIds, staffNames, courseNames);
         setScheduleData(result.scheduleData);
       } catch (err) {
-        console.error('Error submitting schedule selection:', err);
+        console.error('Error submitting multiple schedule selections:', err);
         setError('Failed to load schedule data');
         setScheduleData(null);
       } finally {
@@ -279,33 +281,30 @@ export function useScheduleTypes(initialScheduleType?: ScheduleType) {
       }
     } else {
       // For other types, use the existing mock data approach
-      fetchScheduleData(scheduleType, optionId);
+      fetchScheduleData(scheduleType, optionIds[0]);
     }
   };
 
   const refetch = async () => {
     if (scheduleType === 'personal') {
       await fetchScheduleData(scheduleType, undefined, false, true); // bypassCache = true for refresh
-    } else if (selectedOption && (scheduleType === 'staff' || scheduleType === 'course')) {
-      // For staff and course schedules, re-submit the selection
+    } else if (selectedIds.length > 0 && (scheduleType === 'staff' || scheduleType === 'course')) {
+      // For staff and course schedules, re-submit all selections
       setLoading(true);
       setError(null);
       
       try {
-        const selectedOptionData = options.find(opt => opt.id === selectedOption);
-        if (!selectedOptionData) {
-          throw new Error('Selected option not found');
-        }
-        
-        const result = await submitScheduleSelection(
-          scheduleType as 'staff' | 'course',
-          selectedOption,
-          selectedOptionData.name
-        );
-        
+        const idSet = new Set(selectedIds);
+        const names = options.filter(opt => idSet.has(opt.id)).map(opt => opt.name);
+        const staffIds = scheduleType === 'staff' ? selectedIds : [];
+        const courseIds = scheduleType === 'course' ? selectedIds : [];
+        const staffNames = scheduleType === 'staff' ? names : [];
+        const courseNames = scheduleType === 'course' ? names : [];
+
+        const result = await submitMultipleScheduleSelections(staffIds, courseIds, staffNames, courseNames);
         setScheduleData(result.scheduleData);
       } catch (err) {
-        console.error('Error refreshing schedule selection:', err);
+        console.error('Error refreshing schedule selections:', err);
         setError('Failed to refresh schedule data');
         setScheduleData(null);
       } finally {
@@ -355,6 +354,7 @@ export function useScheduleTypes(initialScheduleType?: ScheduleType) {
   return {
     scheduleType,
     selectedOption,
+    selectedIds,
     scheduleData,
     loading: loading || optionsLoading,
     error,

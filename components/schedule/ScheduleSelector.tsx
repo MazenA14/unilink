@@ -31,10 +31,6 @@ const OptionItem = memo(({
       {
         backgroundColor: isSelected ? typeColor + '20' : 'transparent',
         borderBottomColor: colors.border,
-        borderTopLeftRadius: isSelected && isFirst ? 0 : 0,
-        borderTopRightRadius: isSelected && isFirst ? 0 : 0,
-        borderBottomLeftRadius: isSelected && isLast ? 12 : 0,
-        borderBottomRightRadius: isSelected && isLast ? 12 : 0,
       }
     ]}
     onPress={onPress}
@@ -55,6 +51,11 @@ const OptionItem = memo(({
         </Text>
       )}
     </View>
+    <Ionicons
+      name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+      size={22}
+      color={isSelected ? typeColor : colors.secondaryFont}
+    />
   </TouchableOpacity>
 ));
 
@@ -64,7 +65,7 @@ interface ScheduleSelectorProps {
   type: ScheduleType;
   options: ScheduleOption[];
   selectedValue: string;
-  onSelectionChange: (value: string) => void;
+  onSelectionChange: (values: string[]) => void;
   placeholder: string;
   loading?: boolean;
 }
@@ -89,6 +90,22 @@ export function ScheduleSelector({
   const buttonRef = useRef<any>(null);
 
   const selectedOption = options.find(option => option.id === selectedValue);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    () => new Set(selectedValue ? [selectedValue] : [])
+  );
+  const lastSelectedIdRef = useRef<string | null>(selectedValue || null);
+
+  // Keep local multi-select state in sync when the externally selected value changes
+  useEffect(() => {
+    if (selectedValue) {
+      setSelectedIds((prev) => {
+        if (prev.has(selectedValue)) return prev;
+        const next = new Set(prev);
+        next.add(selectedValue);
+        return next;
+      });
+    }
+  }, [selectedValue]);
 
   // Debounce search query for better performance
   useEffect(() => {
@@ -116,15 +133,50 @@ export function ScheduleSelector({
     });
   }, [options, debouncedSearchQuery]);
 
+  // Sort selected items to the top while preserving relative order otherwise
+  const selectedFirstOptions = useMemo(() => {
+    if (selectedIds.size === 0) return filteredOptions;
+    const withIndex = filteredOptions.map((opt, idx) => ({ opt, idx }));
+    withIndex.sort((a, b) => {
+      const aSel = selectedIds.has(a.opt.id) ? 1 : 0;
+      const bSel = selectedIds.has(b.opt.id) ? 1 : 0;
+      if (aSel !== bSel) return bSel - aSel; // selected first
+      return a.idx - b.idx; // stable among same group
+    });
+    return withIndex.map(({ opt }) => opt);
+  }, [filteredOptions, selectedIds]);
+
   // Paginated options - only show visible items for performance
   const paginatedOptions = useMemo(() => {
-    return filteredOptions.slice(0, visibleItemsCount);
-  }, [filteredOptions, visibleItemsCount]);
+    return selectedFirstOptions.slice(0, visibleItemsCount);
+  }, [selectedFirstOptions, visibleItemsCount]);
 
   const handleSelection = (optionId: string) => {
-    onSelectionChange(optionId);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(optionId)) {
+        next.delete(optionId);
+      } else {
+        next.add(optionId);
+        lastSelectedIdRef.current = optionId;
+      }
+      return next;
+    });
+  };
+
+  const handleApply = () => {
+    // Defer fetching until user confirms
+    const toSubmit = Array.from(selectedIds);
+    if (toSubmit.length > 0) {
+      onSelectionChange(toSubmit);
+    }
     setModalVisible(false);
-    setSearchQuery(''); // Clear search when selection is made
+    setSearchQuery('');
+  };
+
+  const handleClear = () => {
+    setSelectedIds(new Set());
+    lastSelectedIdRef.current = null;
   };
 
   // Load more items when scrolling reaches the end
@@ -279,7 +331,7 @@ export function ScheduleSelector({
               onEndReachedThreshold={0.3}
               keyExtractor={(item) => item.id}
               renderItem={({ item: option, index }) => {
-                const isSelected = selectedValue === option.id;
+                const isSelected = selectedIds.has(option.id);
                 const isFirst = index === 0;
                 const isLast = index === paginatedOptions.length - 1;
                 
@@ -298,6 +350,15 @@ export function ScheduleSelector({
                 );
               }}
             />
+            {/* Footer actions */}
+            <View style={[styles.footerActions, { borderTopColor: colors.border }]}> 
+              <TouchableOpacity style={[styles.footerButton, { borderColor: colors.border }]} onPress={handleClear}>
+                <Text style={[styles.footerButtonText, { color: colors.secondaryFont }]}>Clear</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.footerButtonPrimary, { backgroundColor: typeColor }]} onPress={handleApply}>
+                <Text style={[styles.footerButtonPrimaryText, { color: '#fff' }]}>Apply</Text>
+              </TouchableOpacity>
+            </View>
             {filteredOptions.length === 0 && (
               <View style={styles.noResultsContainer}>
                 <Text style={[styles.noResultsText, { color: colors.secondaryFont }]}>
@@ -412,6 +473,7 @@ const styles = StyleSheet.create({
   optionItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between', // Added to space out content and checkmark
     padding: 12,
     borderBottomWidth: 1,
   },
@@ -429,5 +491,31 @@ const styles = StyleSheet.create({
   },
   optionAdditionalInfo: {
     fontSize: 12,
+  },
+  footerActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    borderTopWidth: 1,
+  },
+  footerButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  footerButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  footerButtonPrimary: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  footerButtonPrimaryText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

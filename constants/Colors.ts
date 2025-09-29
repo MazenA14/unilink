@@ -62,11 +62,13 @@ export const Colors = {
 };
 
 // Schedule type colors - Warm theme colors
-export const ScheduleTypeColors = {
+export const ScheduleTypeColors = { // FF8C42
   personal: '#FF6B6B', // Vibrant coral red (matches app theme)
-  staff: '#FF8C42',    // Warm orange
-  course: '#FFB347',   // Golden orange
+  staff: '#FF6B6B',    // Match personal (red)
+  instructor: '#FF8C42',    // Match personal (red)
+  course: '#FF6B6B',   // Match personal (red)
   group: '#FF69B4',    // Hot pink
+  combined: '#4CAF50', // Green for combined selections
 };
 
 // Slot type colors - matching dashboard colors
