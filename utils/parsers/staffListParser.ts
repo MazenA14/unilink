@@ -11,8 +11,6 @@ export interface StaffListData {
  */
 export function parseStaffListHtml(html: string): StaffListData {
   try {
-    console.log('Parsing staff list HTML...');
-    console.log('HTML length:', html.length);
     
     // Look for the JavaScript arrays in the HTML
     // Try different patterns to find the arrays
@@ -36,13 +34,10 @@ export function parseStaffListHtml(html: string): StaffListData {
     }
     
     // Log what we found
-    console.log('Courses match found:', !!coursesMatch);
-    console.log('TAs match found:', !!tasMatch);
     
     if (!coursesMatch || !tasMatch) {
       // Log a sample of the HTML to help debug
       const sampleHtml = html.substring(0, 1000);
-      console.log('HTML sample:', sampleHtml);
       throw new Error('Could not find courses or tas arrays in HTML');
     }
 
@@ -50,8 +45,7 @@ export function parseStaffListHtml(html: string): StaffListData {
     const coursesArray = parseJavaScriptArray(coursesMatch[1]);
     const tasArray = parseJavaScriptArray(tasMatch[1]);
 
-    console.log('Parsed courses count:', coursesArray.length);
-    console.log('Parsed TAs count:', tasArray.length);
+    
 
     // Convert to ScheduleOption format
     const courses: ScheduleOption[] = coursesArray.map((item: any) => ({
@@ -67,10 +61,8 @@ export function parseStaffListHtml(html: string): StaffListData {
       // TAs don't show department or additionalInfo in the UI
     }));
 
-    console.log('Successfully parsed staff list data');
     return { courses, tas };
   } catch (error) {
-    console.error('Error parsing staff list HTML:', error);
     throw new Error('Failed to parse staff list data');
   }
 }
@@ -126,7 +118,6 @@ function parseJavaScriptArray(arrayString: string): any[] {
 
     return objects;
   } catch (error) {
-    console.error('Error parsing JavaScript array:', error);
     return [];
   }
 }

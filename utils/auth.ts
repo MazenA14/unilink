@@ -11,6 +11,7 @@ export class AuthManager {
   private static SHIFTED_SCHEDULE_KEY = 'shiftedScheduleEnabled';
   private static DEFAULT_SCREEN_KEY = 'defaultScreen';
   private static FIRST_TIME_OPEN_KEY = 'isFirstTimeOpen';
+  private static DASHBOARD_SLOTS_KEY = 'dashboardSlots';
 
   /**
    * Store session cookie from login response
@@ -290,7 +291,8 @@ export class AuthManager {
       // Clear any other potential cache keys
       await Promise.all([
         AsyncStorage.removeItem('shiftedScheduleEnabled'),
-        AsyncStorage.removeItem('defaultScreen')
+        AsyncStorage.removeItem('defaultScreen'),
+        AsyncStorage.removeItem(this.DASHBOARD_SLOTS_KEY)
       ]);
       
     } catch (error) {
@@ -374,11 +376,48 @@ export class AuthManager {
         this.clearUserId(),
         this.clearJoinedSeason(),
         this.clearShiftedSchedulePreference(),
-        this.clearDefaultScreen()
+        this.clearDefaultScreen(),
+        this.clearDashboardSlots()
       ]);
       
     } catch (error) {
       throw error;
+    }
+  }
+
+  /**
+   * Store number of dashboard slots to display (5-8)
+   */
+  static async storeDashboardSlots(slots: number): Promise<void> {
+    try {
+      const safe = Math.min(8, Math.max(5, Math.floor(slots)));
+      await AsyncStorage.setItem(this.DASHBOARD_SLOTS_KEY, String(safe));
+    } catch (error) {
+    }
+  }
+
+  /**
+   * Retrieve stored dashboard slots preference. Returns null if not set.
+   */
+  static async getDashboardSlots(): Promise<number | null> {
+    try {
+      const value = await AsyncStorage.getItem(this.DASHBOARD_SLOTS_KEY);
+      if (!value) return null;
+      const num = parseInt(value, 10);
+      if (isNaN(num)) return null;
+      return Math.min(8, Math.max(5, num));
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Clear dashboard slots preference
+   */
+  static async clearDashboardSlots(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(this.DASHBOARD_SLOTS_KEY);
+    } catch (error) {
     }
   }
 

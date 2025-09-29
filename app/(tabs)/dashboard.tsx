@@ -18,12 +18,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Animated,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function DashboardScreen() {
@@ -66,6 +66,14 @@ export default function DashboardScreen() {
   
   // State to force re-render for current slot indicator
   const [currentTime, setCurrentTime] = useState(new Date());
+  
+  const [dashboardSlots, setDashboardSlots] = useState<number>(5);
+  useEffect(() => {
+    (async () => {
+      const stored = await AuthManager.getDashboardSlots();
+      setDashboardSlots(stored || 5);
+    })();
+  }, []);
   
   // Use currentTime to ensure slot indicators are always up to date
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -234,7 +242,10 @@ export default function DashboardScreen() {
       third: isShiftedScheduleEnabled ? '12:00\n1:30' : '11:45\n1:15',
       fourth: isShiftedScheduleEnabled ? '2:00\n3:30' : '1:45\n3:15',
       fifth: isShiftedScheduleEnabled ? '4:00\n5:30' : '3:45\n5:15',
-    };
+      sixth: '5:30\n7:00',
+      seventh: '7:15\n8:45',
+      eighth: '9:00\n10:30',
+    } as const;
     return timings[periodKey as keyof typeof timings] || '';
   };
 
@@ -327,6 +338,12 @@ export default function DashboardScreen() {
       loadNickname();
       const newTime = new Date();
       setCurrentTime(newTime); // Update current time for slot indicator
+      
+      // Refresh dashboard slots preference on focus
+      (async () => {
+        const stored = await AuthManager.getDashboardSlots();
+        setDashboardSlots(stored || 5);
+      })();
     }, [loadNickname])
   );
 
@@ -460,11 +477,13 @@ export default function DashboardScreen() {
                 </Text>
               </View>
             ) : periods ? (
-              ['first', 'second', 'third', 'fourth', 'fifth'].map((periodKey, index) => {
+              ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth']
+                .slice(0, Math.min(8, Math.max(5, dashboardSlots)))
+                .map((periodKey, index) => {
                 const classDataArray = periods[periodKey as keyof typeof periods];
                 const classData = Array.isArray(classDataArray) ? classDataArray[0] : classDataArray;
                 const hasMultipleLectures = Array.isArray(classDataArray) && classDataArray.length > 1;
-                const periodNumber = ['1st', '2nd', '3rd', '4th', '5th'][index];
+                const periodNumber = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'][index];
                 const timing = getPeriodTiming(periodKey);
                 
                 const PeriodRowComponent = hasMultipleLectures ? TouchableOpacity : View;

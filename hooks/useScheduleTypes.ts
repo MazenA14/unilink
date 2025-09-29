@@ -117,7 +117,6 @@ export function useScheduleTypes(initialScheduleType?: ScheduleType) {
           setOptions(staffOptions);
           return staffOptions;
         } catch (error) {
-          console.error('Error fetching staff options:', error);
           // Use fallback mock data temporarily (TAs don't show department/additionalInfo)
           const fallbackStaffOptions: ScheduleOption[] = [
             { id: '1', name: 'Dr. Ahmed Hassan' },
@@ -137,7 +136,6 @@ export function useScheduleTypes(initialScheduleType?: ScheduleType) {
           setOptions(courseOptions);
           return courseOptions;
         } catch (error) {
-          console.error('Error fetching course options:', error);
           // Use fallback mock data temporarily
           const fallbackCourseOptions: ScheduleOption[] = [
             { id: '1', name: 'CS101 - Introduction to Programming', department: 'Computer Science', additionalInfo: '3 Credits' },
@@ -165,7 +163,6 @@ export function useScheduleTypes(initialScheduleType?: ScheduleType) {
           setOptions(combinedOptions);
           return combinedOptions;
         } catch (error) {
-          console.error('Error fetching combined options:', error);
           // Use fallback mock data
           const fallbackCombinedOptions: ScheduleOption[] = [
             { id: 'staff_1', name: 'Dr. Ahmed Hassan', additionalInfo: 'Staff: Teaching Assistant' },

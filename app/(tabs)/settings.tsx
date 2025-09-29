@@ -48,6 +48,10 @@ export default function SettingsScreen() {
   const [isNotificationLoading, setIsNotificationLoading] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [dashboardSlots, setDashboardSlots] = useState<number>(5);
+  const [slotsDropdownVisible, setSlotsDropdownVisible] = useState(false);
+  const slotsPillRef = useRef<View>(null);
+  const [slotsPillLayout, setSlotsPillLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
   const testUserTracking = async () => {
     try {
@@ -238,6 +242,13 @@ export default function SettingsScreen() {
     })();
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      const stored = await AuthManager.getDashboardSlots();
+      if (stored) setDashboardSlots(stored);
+    })();
+  }, []);
+
   const openEditNickname = () => {
     setEditValue(displayName);
     setEditVisible(true);
@@ -414,9 +425,7 @@ export default function SettingsScreen() {
           <View style={styles.rowBetween}>
             <View style={{ flex: 1, marginRight: 12 }}>
               <Text style={[styles.primaryText, { color: colors.mainFont }]}>Default Screen</Text>
-              <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>
-                Choose which screen to open when the app starts
-              </Text>
+              <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>Choose which screen to open when the app starts</Text>
             </View>
             <TouchableOpacity
               ref={pillButtonRef}
@@ -428,13 +437,33 @@ export default function SettingsScreen() {
                 });
               }}
             >
-              <Text style={[styles.pillText, { color: colors.background }]}>
-                {getScreenLabel(defaultScreen)}
-              </Text>
+              <Text style={[styles.pillText, { color: colors.background }]}>{getScreenLabel(defaultScreen)}</Text>
               <Text style={[styles.pillArrow, { color: colors.background }]}>▼</Text>
             </TouchableOpacity>
           </View>
           
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+          <View style={styles.rowBetween}>
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <Text style={[styles.primaryText, { color: colors.mainFont }]}>Dashboard Slots</Text>
+              <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>How many periods to show in Today’s schedule</Text>
+            </View>
+            <TouchableOpacity
+              ref={slotsPillRef}
+              style={[styles.pillButton, { backgroundColor: colors.tabColor }]}
+              onPress={() => {
+                slotsPillRef.current?.measureInWindow((x, y, width, height) => {
+                  setSlotsPillLayout({ x, y, width, height });
+                  setSlotsDropdownVisible(true);
+                });
+              }}
+            >
+              <Text style={[styles.pillText, { color: colors.background }]}>{`${dashboardSlots} Slots`}</Text>
+              <Text style={[styles.pillArrow, { color: colors.background }]}>▼</Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           <TouchableOpacity
@@ -444,12 +473,8 @@ export default function SettingsScreen() {
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
               {/* <Ionicons name="key-outline" size={20} color={colors.tabColor} style={{ marginRight: 12 }} /> */}
               <View style={{ flex: 1 }}>
-                <Text style={[styles.primaryText, { color: colors.mainFont }]}>
-                  Reset Password
-                </Text>
-                <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>
-                  Change your account password
-                </Text>
+                <Text style={[styles.primaryText, { color: colors.mainFont }]}>Reset Password</Text>
+                <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>Change your account password</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.secondaryFont} />
@@ -779,9 +804,68 @@ export default function SettingsScreen() {
                   ]}>
                     {option.label}
                   </Text>
-                  {defaultScreen === option.value && (
-                    <Text style={[styles.checkmark, { color: colors.tabColor }]}>✓</Text>
-                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Dashboard Slots Dropdown */}
+      <Modal
+        visible={slotsDropdownVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSlotsDropdownVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.dropdownOverlay}
+          activeOpacity={1}
+          onPress={() => setSlotsDropdownVisible(false)}
+        >
+          {slotsPillLayout && (
+            <View 
+              style={[
+                styles.dropdownContainer,
+                {
+                  top: slotsPillLayout.y + slotsPillLayout.height + 8,
+                  left: slotsPillLayout.x,
+                  width: slotsPillLayout.width,
+                  backgroundColor: colors.cardBackground,
+                  borderColor: colors.border,
+                  shadowColor: colorScheme === 'dark' ? '#000000' : '#000000',
+                }
+              ]}
+            >
+              {[5,6,7,8].map((val, index, arr) => (
+                <TouchableOpacity
+                  key={val}
+                  style={[
+                    styles.dropdownItem,
+                    { 
+                      backgroundColor: dashboardSlots === val ? colors.tabColor + '20' : 'transparent',
+                      borderBottomColor: index < arr.length - 1 ? colors.border : 'transparent',
+                      borderTopLeftRadius: index === 0 ? 12 : 0,
+                      borderTopRightRadius: index === 0 ? 12 : 0,
+                      borderBottomLeftRadius: index === arr.length - 1 ? 12 : 0,
+                      borderBottomRightRadius: index === arr.length - 1 ? 12 : 0,
+                    }
+                  ]}
+                  onPress={async () => {
+                    setDashboardSlots(val);
+                    await AuthManager.storeDashboardSlots(val);
+                    setSlotsDropdownVisible(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.dropdownItemText,
+                    { 
+                      color: dashboardSlots === val ? colors.tabColor : colors.mainFont,
+                      fontWeight: dashboardSlots === val ? '600' : '400'
+                    }
+                  ]}>
+                    {val} Slots
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -1001,7 +1085,7 @@ const styles = StyleSheet.create({
   dropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
@@ -1009,6 +1093,7 @@ const styles = StyleSheet.create({
   dropdownItemText: {
     fontSize: 14,
     fontWeight: '500',
+    textAlign: 'center',
   },
   checkmark: {
     fontSize: 14,

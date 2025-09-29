@@ -68,15 +68,13 @@
 - See if guc notifications could be fetched while app is closed
 - On loading don't show loading state, show cached data and after fetching is complete, replace notifications
 - Solve notifcations error if possible
+- Notifiactions preloader is implemented, remove the option that it refetches on opening the notifications
 
-- Cache course and staff schedules on vercel?
-- Fetch schedules JSON and cache it permanently on the users schedule
-- Apply schedules version control with the same update API, if old clear schedules cached
-- Use GitHub actions for prepairing schedules
 - Handle offline mode gracefully
 - Add number of times opened and last open time (see if database hit is garaunteed on opening app)
 - Investigate 409 error in transcript page
 - Investigate multiple proxy calls (A lot & repetitive)
+- Either search staff or course schedule
 
 - Wraping up the app:
     - Make it more efficient (Parsing Server Side, Parallel Data Fetching)

@@ -128,7 +128,6 @@ function extractExistingSelections(html: string): { courses: string[], staff: st
     }
   }
   
-  console.log(`🔍 DEBUG: Extracted existing selections - courses: ${courses.length}, staff: ${staff.length}`);
   return { courses, staff };
 }
 
@@ -137,7 +136,6 @@ function extractExistingSelections(html: string): { courses: string[], staff: st
  */
 async function sendHtmlToApi(html: string): Promise<any> {
   try {
-    console.log('📡 Using Vercel Parser Endpoint:', VERCEL_PARSER_ENDPOINT);
     const response = await fetch(VERCEL_PARSER_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -152,9 +150,6 @@ async function sendHtmlToApi(html: string): Promise<any> {
 
     const result = await response.json();
     
-    // Log the complete JSON response from Vercel parser
-    console.log('🔍 VERCEL PARSER RESPONSE:', JSON.stringify(result, null, 2));
-    
     return result;
   } catch (error: any) {
     throw new Error(`API request failed: ${error.message}`);
@@ -165,17 +160,8 @@ async function sendHtmlToApi(html: string): Promise<any> {
 /**
  * Debug HTML response to understand what we received
  */
-function debugHtmlResponse(html: string, type: string, selectionName: string) {
-  console.log(`🔍 Debug HTML for ${type} selection "${selectionName}":`);
-  console.log('HTML length:', html.length);
-  console.log('Contains selection name:', html.includes(selectionName));
-  console.log('Contains dropdown elements:', html.includes('ddlStaff') || html.includes('ddlCourse'));
-  console.log('Contains schedule table:', html.includes('schedule') || html.includes('table'));
-  
-  // Log a snippet of the HTML for inspection
-  const snippet = html.substring(0, 1000);
-  console.log('HTML snippet:', snippet);
-}
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function debugHtmlResponse(html: string, type: string, selectionName: string) {}
 
 /**
  * Get staff list data from GUC scheduling page
@@ -183,16 +169,13 @@ function debugHtmlResponse(html: string, type: string, selectionName: string) {
  */
 export async function getStaffListData(bypassCache: boolean = false): Promise<StaffListData> {
   // Check cache first unless bypassing
-  if (!bypassCache) {
+      if (!bypassCache) {
     try {
       const cachedData = await StaffListCache.getCachedStaffList();
       if (cachedData) {
-        console.log('Using cached staff list data');
         return cachedData;
       }
-    } catch (error) {
-      console.warn('Error reading staff list cache:', error);
-    }
+    } catch {}
   }
 
   let attempt = 0;
@@ -204,7 +187,7 @@ export async function getStaffListData(bypassCache: boolean = false): Promise<St
     let redirectCount = 0;
     
     try {
-      console.log(`Fetching staff list data (attempt ${attempt}/${maxAttempts})`);
+      
       
       // Get initial page
       const initialData = await makeProxyRequest('https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx');
@@ -215,7 +198,6 @@ export async function getStaffListData(bypassCache: boolean = false): Promise<St
       // Check for server overload
       if (isServerOverloaded(initialHtml)) {
         if (attempt < maxAttempts) {
-          console.log('Server overload detected, retrying...');
           await AuthManager.logoutAndLogin();
           continue;
         } else {
@@ -228,8 +210,6 @@ export async function getStaffListData(bypassCache: boolean = false): Promise<St
       let html = initialHtml;
       
       if (isRedirectResponse(html)) {
-        console.log('Following redirects...');
-        
         while (redirectCount < maxRedirects) {
           // Extract redirect parameter
           const redirectParam = extractRedirectParam(html);
@@ -266,7 +246,6 @@ export async function getStaffListData(bypassCache: boolean = false): Promise<St
       // Check for server overload one more time
       if (isServerOverloaded(html)) {
         if (attempt < maxAttempts) {
-          console.log('Server overload detected after redirects, retrying...');
           await AuthManager.logoutAndLogin();
           continue;
         } else {
@@ -278,24 +257,11 @@ export async function getStaffListData(bypassCache: boolean = false): Promise<St
       let staffListData;
       try {
         staffListData = parseStaffListHtml(html);
-      } catch (parseError) {
-        console.error('Failed to parse staff list HTML:', parseError);
+      } catch {
         
         // Check if this might be a different page structure
         if (html.includes('server overload') || html.includes('temporarily paused')) {
           throw new Error('Server overload detected in response');
-        }
-        
-        // Log more details about the HTML for debugging
-        console.log('HTML length:', html.length);
-        console.log('HTML contains "courses":', html.includes('courses'));
-        console.log('HTML contains "tas":', html.includes('tas'));
-        console.log('HTML contains "var":', html.includes('var'));
-        
-        // Try to find any JavaScript arrays in the HTML
-        const arrayMatches = html.match(/\[(.*?)\]/gs);
-        if (arrayMatches) {
-          console.log('Found', arrayMatches.length, 'potential arrays in HTML');
         }
         
         throw new Error('Could not parse staff list data from HTML response');
@@ -304,18 +270,13 @@ export async function getStaffListData(bypassCache: boolean = false): Promise<St
       // Cache the data
       try {
         await StaffListCache.cacheStaffList(staffListData);
-        console.log('Staff list data cached successfully');
-      } catch (error) {
-        console.warn('Failed to cache staff list data:', error);
-      }
+      } catch {}
       
       return staffListData;
       
     } catch (error: any) {
-      console.error(`Staff list fetch attempt ${attempt} failed:`, error);
       
       if (attempt < maxAttempts) {
-        console.log('Retrying with fresh authentication...');
         await AuthManager.logoutAndLogin();
       } else {
         throw error;
@@ -330,26 +291,16 @@ export async function getStaffListData(bypassCache: boolean = false): Promise<St
  * Get staff options (TAs) for the staff schedule selector
  */
 export async function getStaffOptions(bypassCache: boolean = false): Promise<ScheduleOption[]> {
-  try {
-    const staffListData = await getStaffListData(bypassCache);
-    return staffListData.tas;
-  } catch (error) {
-    console.error('Error getting staff options:', error);
-    throw new Error('Failed to load staff list');
-  }
+  const staffListData = await getStaffListData(bypassCache);
+  return staffListData.tas;
 }
 
 /**
  * Get course options for the course schedule selector
  */
 export async function getCourseOptions(bypassCache: boolean = false): Promise<ScheduleOption[]> {
-  try {
-    const staffListData = await getStaffListData(bypassCache);
-    return staffListData.courses;
-  } catch (error) {
-    console.error('Error getting course options:', error);
-    throw new Error('Failed to load course list');
-  }
+  const staffListData = await getStaffListData(bypassCache);
+  return staffListData.courses;
 }
 
 /**
@@ -391,8 +342,6 @@ export async function submitScheduleSelection(
     let redirectCount = 0;
     
     try {
-      console.log(`=== Starting ${type} selection submission: ${selectionName} (attempt ${attempt}/${maxAttempts}) ===`);
-      
       // Get initial page - use the same URL pattern as personal schedule
       const initialData = await makeProxyRequest('https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx');
       const initialHtml = initialData.html || initialData.body;
@@ -464,22 +413,9 @@ export async function submitScheduleSelection(
         throw new Error('Failed to extract view state data from scheduling page');
       }
       
-      // Debug: Inspect HTML for dropdown controls
-      console.log(`🔍 DEBUG: Inspecting HTML for dropdown controls:`, {
-        containsDdlStaff: html.includes('ddlStaff'),
-        containsDdlCourse: html.includes('ddlCourse'),
-        containsStaffDropdown: html.includes('ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$ddlStaff'),
-        containsCourseDropdown: html.includes('ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$ddlCourse'),
-        containsJavaScriptDropdowns: html.includes('generate_dropdown'),
-        containsCoursesArray: html.includes('courses, \'#courses_list\''),
-        containsTasArray: html.includes('tas, \'#teaching_assistants\''),
-        htmlSnippet: html.substring(0, 1000)
-      });
-      
       // This page uses JavaScript-generated dropdowns, so we need to submit directly to "Show Schedule"
       // Extract any existing selections from the page
       const existingSelections = extractExistingSelections(html);
-      console.log(`🔍 DEBUG: Found existing selections:`, existingSelections);
       
       // Create form data for "Show Schedule" button
       const formData = new URLSearchParams();
@@ -508,38 +444,7 @@ export async function submitScheduleSelection(
         }
       }
       
-      // Debug: Selection details
-      console.log(`🔍 DEBUG: Selection details:`, {
-        type,
-        selectionId,
-        selectionName,
-        selectionIdType: typeof selectionId,
-        selectionIdLength: selectionId.length
-      });
-      
-      // Debug: Form data being sent
-      console.log(`📤 Form data being sent:`, {
-        eventTarget: 'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$B_ShowSchedule',
-        eventArgument: '',
-        viewState: viewState.__VIEWSTATE ? 'present' : 'missing',
-        viewStateGenerator: viewState.__VIEWSTATEGENERATOR ? 'present' : 'missing',
-        eventValidation: viewState.__EVENTVALIDATION ? 'present' : 'missing',
-        selectionValue: selectionId,
-        fullFormData: formData.toString()
-      });
-      
-      // Debug: Form data being sent
-      console.log(`🔍 DEBUG: Form data format being sent:`, {
-        type,
-        selectionId,
-        formDataString: formData.toString(),
-        containsArray: formData.toString().includes('[]'),
-        containsComma: formData.toString().includes(','),
-        containsBrackets: formData.toString().includes('[')
-      });
-      
       // Submit directly to "Show Schedule" button
-      console.log(`Submitting ${type} selection directly to Show Schedule: ${selectionName} (ID: ${selectionId})`);
       const scheduleResponse = await makeProxyRequest(
         currentUrl,
         'POST',
@@ -552,32 +457,15 @@ export async function submitScheduleSelection(
         throw new Error('No HTML content received after schedule submission');
       }
       
-      // Debug: Schedule response analysis
-      console.log(`🔍 DEBUG: Schedule response analysis:`, {
-        responseStatus: scheduleResponse.status,
-        htmlLength: finalHtml.length,
-        containsSelection: finalHtml.includes(selectionName),
-        containsError: finalHtml.toLowerCase().includes('error'),
-        containsSchedule: finalHtml.toLowerCase().includes('schedule'),
-        containsTable: finalHtml.toLowerCase().includes('table'),
-        htmlPreview: finalHtml.substring(0, 200)
-      });
-      
       // Check for server overload after form submission
       if (isServerOverloaded(finalHtml)) {
         throw new Error('Server overload detected after form submission');
       }
       
-      // Debug the final HTML response
-      debugHtmlResponse(finalHtml, type, selectionName);
-      
       // Send HTML to API and get JSON response - same as personal schedule
       let scheduleData: ScheduleData;
       try {
         const jsonResponse = await sendHtmlToApi(finalHtml);
-        
-        // Debug: Log the complete raw API response from Vercel parser
-        console.log(`🔍 COMPLETE VERCEL PARSER RESPONSE for ${type} "${selectionName}":`, JSON.stringify(jsonResponse, null, 2));
         
         scheduleData = extractScheduleFromJson(jsonResponse, type);
         
@@ -638,15 +526,9 @@ function extractScheduleFromJson(jsonData: any, type: 'staff' | 'course'): Sched
   
   // Handle the Vercel parser response structure
   const scheduleData = jsonData.schedule || jsonData;
-  console.log('🔍 SINGLE EXTRACTION: Processing schedule data with structure:', {
-    hasScheduleKey: !!jsonData.schedule,
-    usingData: scheduleData === jsonData.schedule ? 'jsonData.schedule' : 'jsonData',
-    dayKeys: Object.keys(scheduleData)
-  });
   
   const days = dayNames.map(dayName => {
     const dayData = scheduleData[dayName];
-    console.log(`🔍 SINGLE EXTRACTION: Day ${dayName} - hasData: ${!!dayData}, isArray: ${Array.isArray(dayData)}, length: ${dayData?.length || 0}`);
     
     if (!dayData || !Array.isArray(dayData)) {
       // If no data for this day, return all free periods
@@ -672,7 +554,6 @@ function extractScheduleFromJson(jsonData: any, type: 'staff' | 'course'): Sched
     // Process each period (0-7 corresponds to first-eighth)
     periodKeys.forEach((periodKey, index) => {
       const periodData = dayData[index];
-      console.log(`🔍 SINGLE EXTRACTION: ${dayName} Period ${index} (${periodKey}) - hasData: ${!!periodData}, isArray: ${Array.isArray(periodData)}, length: ${periodData?.length || 0}`);
       
       if (!periodData || !Array.isArray(periodData) || periodData.length === 0) {
         periods[periodKey] = null;
@@ -685,12 +566,10 @@ function extractScheduleFromJson(jsonData: any, type: 'staff' | 'course'): Sched
           // Handle both old format (subject) and new format (group)
           const identifier = course.subject || course.group || '';
           const isValid = identifier && !identifier.includes('Free');
-          console.log(`🔍 SINGLE EXTRACTION: Course filter - identifier: "${identifier}", isValid: ${isValid}`);
           return isValid;
         })
         .map(course => extractCourseData(course));
       
-      console.log(`🔍 SINGLE EXTRACTION: ${dayName} Period ${index} - filtered courses: ${courses.length}`);
       
       if (courses.length > 0) {
         periods[periodKey] = courses;
@@ -732,9 +611,7 @@ export async function submitMultipleScheduleSelections(
     let redirectCount = 0;
     
     try {
-      console.log(`=== Starting multiple selection submission (attempt ${attempt}/${maxAttempts}) ===`);
-      console.log(`Staff selections: ${staffNames.join(', ')}`);
-      console.log(`Course selections: ${courseNames.join(', ')}`);
+      
       
       // Get initial page
       const initialData = await makeProxyRequest('https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx');
@@ -807,17 +684,9 @@ export async function submitMultipleScheduleSelections(
         formData.append('ta[]', staffId);
       });
       
-      // Debug: Log the selections being submitted
-      console.log(`📤 Multiple selections being submitted:`, {
-        courseCount: courseIds.length,
-        staffCount: staffIds.length,
-        courses: courseIds,
-        staff: staffIds,
-        formDataString: formData.toString()
-      });
+      
       
       // Submit the form
-      console.log(`Submitting multiple selections to Show Schedule`);
       const scheduleResponse = await makeProxyRequest(
         currentUrl,
         'POST',
@@ -839,16 +708,9 @@ export async function submitMultipleScheduleSelections(
       let scheduleData: ScheduleData;
       try {
         const jsonResponse = await sendHtmlToApi(finalHtml);
-        
-        // Debug: Log the complete combined schedule API response from Vercel parser
-        console.log(`🔍 COMPLETE VERCEL PARSER RESPONSE for COMBINED (${staffIds.length} staff + ${courseIds.length} courses):`, JSON.stringify(jsonResponse, null, 2));
-        
         scheduleData = extractCombinedScheduleFromJson(jsonResponse, staffNames, courseNames);
         
-        console.log(`✅ Combined schedule data received for ${staffIds.length} staff + ${courseIds.length} courses`);
-        
-      } catch (error) {
-        console.error('Error parsing combined schedule data:', error);
+      } catch {
         throw new Error('Failed to parse combined schedule response');
       }
       
@@ -859,16 +721,13 @@ export async function submitMultipleScheduleSelections(
         selectionCount: staffIds.length + courseIds.length
       };
       
-    } catch (error) {
-      console.error(`Attempt ${attempt} failed:`, error);
-      
+    } catch (e) {
       if (attempt < maxAttempts) {
-        console.log('Retrying after login...');
         await AuthManager.logoutAndLogin();
         continue;
       }
       
-      throw error;
+      throw e;
     }
   }
   
@@ -961,16 +820,11 @@ export async function getStaffAndCourseOptions(bypassCache: boolean = false): Pr
   staffOptions: ScheduleOption[],
   courseOptions: ScheduleOption[]
 }> {
-  try {
-    const staffListData = await getStaffListData(bypassCache);
-    return {
-      staffOptions: staffListData.tas,
-      courseOptions: staffListData.courses
-    };
-  } catch (error) {
-    console.error('Error fetching staff and course options:', error);
-    throw new Error('Failed to load selection options');
-  }
+  const staffListData = await getStaffListData(bypassCache);
+  return {
+    staffOptions: staffListData.tas,
+    courseOptions: staffListData.courses
+  };
 }
 
 /**
