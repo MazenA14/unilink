@@ -12,7 +12,6 @@ const scheduleTypeConfig = {
   personal: { label: 'Personal', icon: '👤' },
   staff: { label: 'Staff', icon: '👨‍🏫' },
   course: { label: 'Course', icon: '📚' },
-  group: { label: 'Group', icon: '👥' },
 };
 
 export function ScheduleTypeSelector({ scheduleType, onScheduleTypeChange }: ScheduleTypeSelectorProps) {

@@ -14,7 +14,6 @@ const menuOptions = [
   { id: 'personal', title: 'Personal Schedule', icon: 'person-outline' },
   { id: 'staff', title: 'Staff Schedule', icon: 'people-outline' },
   { id: 'course', title: 'Course Schedule', icon: 'book-outline' },
-  { id: 'group', title: 'Group Schedule', icon: 'school-outline' },
 ];
 
 export function ScheduleMenu({ visible, onClose, onOptionPress }: ScheduleMenuProps) {
@@ -133,8 +132,6 @@ function getMenuSubtext(optionId: string): string {
       return 'Browse staff member schedules';
     case 'course':
       return 'Find specific course schedules';
-    case 'group':
-      return 'View group/class schedules';
     default:
       return '';
   }

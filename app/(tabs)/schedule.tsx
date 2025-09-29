@@ -169,7 +169,7 @@ export default function ScheduleScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               {scheduleType === 'personal' ? 'Personal Schedule' : 
                scheduleType === 'staff' ? 'Staff Schedule' :
-               scheduleType === 'course' ? 'Course Schedule' : 'Group Schedule'}
+               'Course Schedule'}
             </Text>
             <TouchableOpacity
               style={[
@@ -201,7 +201,7 @@ export default function ScheduleScreen() {
             options={options}
             selectedValue={selectedOption}
             onSelectionChange={handleOptionSelection}
-            placeholder={`Select ${scheduleType === 'staff' ? 'Staff Member' : scheduleType === 'course' ? 'Course' : 'Group'}`}
+            placeholder={`Select ${scheduleType === 'staff' ? 'Staff Member' : 'Course'}`}
             loading={loading}
           />
         )}

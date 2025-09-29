@@ -12,13 +12,13 @@
 + Add slot timing shift for BI/Architecture/... in the settings page (Should change the slot timing in the schedule page)
 + Update alert + update Changelog
 + Reset Password # See Outlook
++ GUC Notifications https://apps.guc.edu.eg/student_ext/Main/Notifications.aspx
 + Search for Staff https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx
 + View Attendance https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx?v=NXM874921
 
 - Staff Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
 - Course Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
 - General Group Schedule https://apps.guc.edu.eg/student_ext/Scheduling/GeneralGroupSchedule.aspx
-- GUC Notifications https://apps.guc.edu.eg/student_ext/Main/Notifications.aspx
 - Mobile Notifications (Slot Reminder)
 
 ## To-Do List (Optional)
@@ -75,6 +75,9 @@
 - Investigate 409 error in transcript page
 - Investigate multiple proxy calls (A lot & repetitive)
 - Either search staff or course schedule
+- Remove the descriptions for the course and group schedules and handle the '&' correctly
+- Unify all schedule and list colouring
+- if changed schedule type during fetching another type, stop it
 
 - Wraping up the app:
     - Make it more efficient (Parsing Server Side, Parallel Data Fetching)

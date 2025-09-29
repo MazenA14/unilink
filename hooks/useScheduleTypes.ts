@@ -2,12 +2,7 @@ import { ScheduleData, ScheduleOption, ScheduleType } from '@/components/schedul
 import { getCourseOptions, getStaffAndCourseOptions, getStaffOptions, submitScheduleSelection } from '@/utils/handlers/staffScheduleHandler';
 import { useEffect, useState } from 'react';
 
-// Mock data for group schedules (not implemented yet)
-const mockGroupOptions: ScheduleOption[] = [
-  { id: '1', name: 'Computer Science Department', department: 'CS', additionalInfo: 'All CS Students' },
-  { id: '2', name: 'Engineering Group A', department: 'Engineering', additionalInfo: 'First Year Students' },
-  { id: '3', name: 'Mathematics Department', department: 'Math', additionalInfo: 'All Math Students' },
-];
+// Group schedules removed
 
 // Mock schedule data generator
 const generateMockSchedule = (type: ScheduleType, selectedId?: string): ScheduleData => {
@@ -25,7 +20,7 @@ const generateMockSchedule = (type: ScheduleType, selectedId?: string): Schedule
           time: '9:00 AM - 10:30 AM',
           ...(type === 'staff' && { officeHours: '2:00 PM - 4:00 PM' }),
           ...(type === 'course' && { enrollmentCount: 45, credits: 3 }),
-          ...(type === 'group' && { groupSize: 120, department: 'Computer Science' }),
+          // group removed
           ...(type === 'combined' && { officeHours: '2:00 PM - 4:00 PM' }),
         }] : null,
         second: null,
@@ -39,7 +34,7 @@ const generateMockSchedule = (type: ScheduleType, selectedId?: string): Schedule
           time: '11:00 AM - 12:30 PM',
           ...(type === 'staff' && { officeHours: '2:00 PM - 4:00 PM' }),
           ...(type === 'course' && { enrollmentCount: 38, credits: 3 }),
-          ...(type === 'group' && { groupSize: 120, department: 'Computer Science' }),
+          // group removed
           ...(type === 'combined' && { enrollmentCount: 45, credits: 3 }),
         }] : null,
         fourth: null,
@@ -100,7 +95,12 @@ const generateMockSchedule = (type: ScheduleType, selectedId?: string): Schedule
 };
 
 export function useScheduleTypes(initialScheduleType?: ScheduleType) {
-  const [scheduleType, setScheduleType] = useState<ScheduleType>(initialScheduleType || 'personal');
+  // Only allow personal, staff, and course
+  const allowedTypes: ScheduleType[] = ['personal', 'staff', 'course'];
+  const initialType = initialScheduleType && (allowedTypes as string[]).includes(initialScheduleType)
+    ? initialScheduleType
+    : 'personal';
+  const [scheduleType, setScheduleType] = useState<ScheduleType>(initialType);
   const [selectedOption, setSelectedOption] = useState<string>('');
   const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -148,9 +148,7 @@ export function useScheduleTypes(initialScheduleType?: ScheduleType) {
         } finally {
           setOptionsLoading(false);
         }
-      case 'group':
-        setOptions(mockGroupOptions);
-        return mockGroupOptions;
+      // group type removed
       case 'combined':
         try {
           setOptionsLoading(true);

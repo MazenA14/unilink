@@ -1,4 +1,4 @@
-export type ScheduleType = 'personal' | 'staff' | 'course' | 'group' | 'combined';
+export type ScheduleType = 'personal' | 'staff' | 'course' | 'combined';
 
 export interface ScheduleClass {
   courseName: string;
