@@ -39,13 +39,13 @@ const OptionItem = memo(({
       <Text style={[styles.optionName, { color: colors.mainFont }]}>
         {option.name}
       </Text>
-      {/* Only show department and additionalInfo for non-staff types */}
-      {type !== 'staff' && option.department && (
+      {/* Only show department for types other than staff and course */}
+      {type !== 'staff' && type !== 'course' && option.department && (
         <Text style={[styles.optionDepartment, { color: colors.secondaryFont }]}>
           {option.department}
         </Text>
       )}
-      {type !== 'staff' && option.additionalInfo && (
+      {type !== 'staff' && type !== 'course' && option.additionalInfo && (
         <Text style={[styles.optionAdditionalInfo, { color: colors.secondaryFont }]}>
           {option.additionalInfo}
         </Text>

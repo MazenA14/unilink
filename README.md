@@ -71,15 +71,8 @@
 - Notifiactions preloader is implemented, remove the option that it refetches on opening the notifications
 
 - Handle offline mode gracefully
-- Add number of times opened and last open time (see if database hit is garaunteed on opening app)
 - Investigate 409 error in transcript page
 - Investigate multiple proxy calls (A lot & repetitive)
-- Either search staff or course schedule
-- Remove the descriptions for the course and group schedules and handle the '&' correctly
-- Unify all schedule and list colouring
-- If changed schedule type during fetching another type, stop it
-- Make profile modal be the same as the rest
-- Make all modals be swipable from area not just the top if possible
 
 - Wraping up the app:
     - Make it more efficient (Parsing Server Side, Parallel Data Fetching)
@@ -150,6 +143,9 @@
 + Grades page crashes
 + Add statistics section that only appears for my username
 + Add View calendar button on dashboard that prompts user to upload his semester calendar to view at any time (Also delete option), also add rename and share options (under three dots icon) and preview if possible
++ Either search staff or course schedule
++ Unify all schedule and list colouring
++ Remove the descriptions for the course and group schedules
 
 
 
