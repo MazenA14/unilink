@@ -1,4 +1,4 @@
-export type ScheduleType = 'personal' | 'staff' | 'course' | 'group';
+export type ScheduleType = 'personal' | 'staff' | 'course' | 'group' | 'combined';
 
 export interface ScheduleClass {
   courseName: string;
@@ -24,6 +24,9 @@ export interface ScheduleDay {
     third: ScheduleClass[] | null;
     fourth: ScheduleClass[] | null;
     fifth: ScheduleClass[] | null;
+    sixth: ScheduleClass[] | null;
+    seventh: ScheduleClass[] | null;
+    eighth: ScheduleClass[] | null;
   };
   isFree: boolean;
 }
@@ -36,6 +39,10 @@ export interface ScheduleData {
     totalStudents?: number;
     department?: string;
     selectedItem?: string; // Selected staff/course/group name
+    // For combined schedules
+    staffSelections?: string[];
+    courseSelections?: string[];
+    totalSelections?: number;
   };
 }
 

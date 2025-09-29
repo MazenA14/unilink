@@ -74,6 +74,9 @@
 - Apply schedules version control with the same update API, if old clear schedules cached
 - Use GitHub actions for prepairing schedules
 - Handle offline mode gracefully
+- Add number of times opened and last open time (see if database hit is garaunteed on opening app)
+- Investigate 409 error in transcript page
+- Investigate multiple proxy calls (A lot & repetitive)
 
 - Wraping up the app:
     - Make it more efficient (Parsing Server Side, Parallel Data Fetching)

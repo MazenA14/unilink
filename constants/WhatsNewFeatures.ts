@@ -7,6 +7,7 @@ import { APP_VERSION } from './Version';
 export const WHATS_NEW_CONFIG = {
   version: APP_VERSION,
   features: [
+    "Implemented Staff/Course/Group Schedules",
     "Fixing Grades Screen",
     "Quick Access Modal UI Enhancements",
   ]

@@ -1,7 +1,6 @@
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export function EmptyState() {
   const colorScheme = useColorScheme();
@@ -9,12 +8,12 @@ export function EmptyState() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.mainFont }]}>
+      {/* <Text style={[styles.title, { color: colors.mainFont }]}>
         No Schedule Available
-      </Text>
-      <Text style={[styles.subtitle, { color: colors.secondaryFont }]}>
+      </Text> */}
+      {/* <Text style={[styles.subtitle, { color: colors.secondaryFont }]}>
         Your schedule information could not be loaded at this time.
-      </Text>
+      </Text> */}
     </View>
   );
 }

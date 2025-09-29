@@ -1,8 +1,64 @@
 import { Colors, ScheduleTypeColors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import React, { useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Dimensions, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ScheduleOption, ScheduleType } from './types';
+
+// Memoized option item component for better performance
+const OptionItem = memo(({ 
+  option, 
+  isSelected, 
+  isFirst, 
+  isLast, 
+  onPress, 
+  colors, 
+  typeColor, 
+  type
+}: {
+  option: ScheduleOption;
+  isSelected: boolean;
+  isFirst: boolean;
+  isLast: boolean;
+  onPress: () => void;
+  colors: any;
+  typeColor: string;
+  type: ScheduleType;
+}) => (
+  <TouchableOpacity
+    style={[
+      styles.optionItem,
+      {
+        backgroundColor: isSelected ? typeColor + '20' : 'transparent',
+        borderBottomColor: colors.border,
+        borderTopLeftRadius: isSelected && isFirst ? 0 : 0,
+        borderTopRightRadius: isSelected && isFirst ? 0 : 0,
+        borderBottomLeftRadius: isSelected && isLast ? 12 : 0,
+        borderBottomRightRadius: isSelected && isLast ? 12 : 0,
+      }
+    ]}
+    onPress={onPress}
+  >
+    <View style={styles.optionContent}>
+      <Text style={[styles.optionName, { color: colors.mainFont }]}>
+        {option.name}
+      </Text>
+      {/* Only show department and additionalInfo for non-staff types */}
+      {type !== 'staff' && option.department && (
+        <Text style={[styles.optionDepartment, { color: colors.secondaryFont }]}>
+          {option.department}
+        </Text>
+      )}
+      {type !== 'staff' && option.additionalInfo && (
+        <Text style={[styles.optionAdditionalInfo, { color: colors.secondaryFont }]}>
+          {option.additionalInfo}
+        </Text>
+      )}
+    </View>
+  </TouchableOpacity>
+));
+
+OptionItem.displayName = 'OptionItem';
 
 interface ScheduleSelectorProps {
   type: ScheduleType;
@@ -24,14 +80,79 @@ export function ScheduleSelector({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [modalVisible, setModalVisible] = useState(false);
+  const [buttonLayout, setButtonLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [visibleItemsCount, setVisibleItemsCount] = useState(50); // Start with 50 items
   const typeColor = ScheduleTypeColors[type];
+  const screenWidth = Dimensions.get('window').width;
+  const buttonRef = useRef<any>(null);
 
   const selectedOption = options.find(option => option.id === selectedValue);
+
+  // Debounce search query for better performance
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      setVisibleItemsCount(50); // Reset pagination when search changes
+    }, 150); // 150ms delay for better performance
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Simplified one-to-one search for maximum performance
+  const filteredOptions = useMemo(() => {
+    if (!debouncedSearchQuery.trim()) {
+      return options;
+    }
+    
+    const query = debouncedSearchQuery.toLowerCase().trim();
+    
+    return options.filter(option => {
+      const name = option.name.toLowerCase();
+      
+      // Simple one-to-one string matching - fastest possible search
+      return name.includes(query);
+    });
+  }, [options, debouncedSearchQuery]);
+
+  // Paginated options - only show visible items for performance
+  const paginatedOptions = useMemo(() => {
+    return filteredOptions.slice(0, visibleItemsCount);
+  }, [filteredOptions, visibleItemsCount]);
 
   const handleSelection = (optionId: string) => {
     onSelectionChange(optionId);
     setModalVisible(false);
+    setSearchQuery(''); // Clear search when selection is made
   };
+
+  // Load more items when scrolling reaches the end
+  const handleLoadMore = useCallback(() => {
+    if (visibleItemsCount < filteredOptions.length) {
+      setVisibleItemsCount(prev => Math.min(prev + 50, filteredOptions.length));
+    }
+  }, [visibleItemsCount, filteredOptions.length]);
+
+  // Highlighting removed for maximum performance
+
+  // Optimized search handler
+  const handleSearchChange = useCallback((text: string) => {
+    setSearchQuery(text);
+    // For very large lists, we could add a small delay here
+    // but for most use cases, immediate filtering is better
+  }, []);
+
+  const handleButtonPress = useCallback(() => {
+    if (buttonRef.current) {
+      buttonRef.current.measureInWindow((x: number, y: number, width: number, height: number) => {
+        setButtonLayout({ x, y, width, height });
+        setSearchQuery(''); // Clear search when opening modal
+        setVisibleItemsCount(50); // Reset to initial batch size
+        setModalVisible(true);
+      });
+    }
+  }, []);
 
   if (type === 'personal') {
     return null; // Personal schedule doesn't need a selector
@@ -40,25 +161,26 @@ export function ScheduleSelector({
   return (
     <View style={styles.container}>
       <TouchableOpacity
+        ref={buttonRef}
         style={[
           styles.selectorButton,
           {
             backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3',
-            borderColor: typeColor,
+            borderColor: colors.border,
           },
         ]}
-        onPress={() => setModalVisible(true)}
+        onPress={handleButtonPress}
         disabled={loading}
       >
         <View style={styles.selectorContent}>
-          <Text style={[styles.selectorIcon, { color: typeColor }]}>
+          {/* <Text style={[styles.selectorIcon, { color: typeColor }]}>
             {type === 'staff' ? '👨‍🏫' : type === 'course' ? '📚' : '👥'}
-          </Text>
+          </Text> */}
           <View style={styles.selectorTextContainer}>
-            <Text style={[styles.selectorLabel, { color: colors.secondaryFont }]}>
+            {/* <Text style={[styles.selectorLabel, { color: colors.secondaryFont }]}>
               {type === 'staff' ? 'Select Staff Member' : 
                type === 'course' ? 'Select Course' : 'Select Group'}
-            </Text>
+            </Text> */}
             <Text 
               style={[styles.selectorValue, { color: colors.mainFont }]}
               numberOfLines={1}
@@ -66,70 +188,128 @@ export function ScheduleSelector({
               {loading ? 'Loading...' : selectedOption?.name || placeholder}
             </Text>
           </View>
-          <Text style={[styles.selectorArrow, { color: colors.secondaryFont }]}>▼</Text>
+          <Ionicons
+            name={modalVisible ? "chevron-up" : "chevron-down"}
+            size={20}
+            color={colors.secondaryFont}
+          />
         </View>
       </TouchableOpacity>
 
       <Modal
         visible={modalVisible}
         transparent={true}
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setModalVisible(false)}
+        >
           <View style={[
-            styles.modalContent,
-            { backgroundColor: colors.cardBackground }
+            styles.dropdownContent,
+            { 
+              backgroundColor: colors.cardBackground,
+              top: buttonLayout.y + buttonLayout.height + 8,
+              left: buttonLayout.x,
+              width: buttonLayout.width || screenWidth - 32,
+              shadowColor: colorScheme === 'dark' ? '#000' : '#000',
+            }
           ]}>
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.modalTitle, { color: colors.mainFont }]}>
-                {type === 'staff' ? 'Select Staff Member' : 
-                 type === 'course' ? 'Select Course' : 'Select Group'}
-              </Text>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={[styles.closeButtonText, { color: colors.secondaryFont }]}>✕</Text>
-              </TouchableOpacity>
-            </View>
+            {/* Search Input */}
+                    <View style={[styles.searchContainer, { borderBottomColor: colors.border }]}>
+                      <Ionicons
+                        name="search"
+                        size={20}
+                        color={colors.secondaryFont}
+                        style={styles.searchIcon}
+                      />
+                      <TextInput
+                        style={[styles.searchInput, {
+                          color: colors.text,
+                          backgroundColor: colors.background,
+                          borderColor: colors.border
+                        }]}
+                        placeholder={`Search ${type === 'staff' ? 'staff members' : type === 'course' ? 'courses' : 'groups'}...`}
+                        placeholderTextColor={colors.secondaryFont}
+                        value={searchQuery}
+                        onChangeText={handleSearchChange}
+                        autoCorrect={false}
+                        autoCapitalize="none"
+                        returnKeyType="search"
+                        clearButtonMode="never"
+                        enablesReturnKeyAutomatically={false}
+                        autoFocus={true}
+                      />
+                      {searchQuery.length > 0 && (
+                        <TouchableOpacity
+                          onPress={() => setSearchQuery('')}
+                          style={styles.clearButton}
+                        >
+                          <Ionicons
+                            name="close-circle"
+                            size={20}
+                            color={colors.secondaryFont}
+                          />
+                        </TouchableOpacity>
+                      )}
+                    </View>
             
-            <ScrollView style={styles.optionsList}>
-              {options.map((option) => (
-                <TouchableOpacity
-                  key={option.id}
-                  style={[
-                    styles.optionItem,
-                    {
-                      backgroundColor: selectedValue === option.id ? typeColor + '20' : 'transparent',
-                      borderBottomColor: colors.border,
-                    }
-                  ]}
-                  onPress={() => handleSelection(option.id)}
-                >
-                  <View style={styles.optionContent}>
-                    <Text style={[styles.optionName, { color: colors.mainFont }]}>
-                      {option.name}
-                    </Text>
-                    {option.department && (
-                      <Text style={[styles.optionDepartment, { color: colors.secondaryFont }]}>
-                        {option.department}
-                      </Text>
-                    )}
-                    {option.additionalInfo && (
-                      <Text style={[styles.optionAdditionalInfo, { color: colors.secondaryFont }]}>
-                        {option.additionalInfo}
-                      </Text>
-                    )}
-                  </View>
-                  {selectedValue === option.id && (
-                    <Text style={[styles.selectedIndicator, { color: typeColor }]}>✓</Text>
+            {/* Results count and search status */}
+            {searchQuery.length > 0 && (
+              <View style={[styles.resultsCountContainer, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.resultsCountText, { color: colors.secondaryFont }]}>
+                  {paginatedOptions.length} of {filteredOptions.length} {type === 'staff' ? 'staff members' : type === 'course' ? 'courses' : 'groups'} shown
+                  {filteredOptions.length > 0 && (
+                    <Text style={{ color: typeColor, fontWeight: '600' }}> • Found</Text>
                   )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+                  {visibleItemsCount < filteredOptions.length && (
+                    <Text style={{ color: colors.secondaryFont, fontSize: 11 }}> • Scroll for more</Text>
+                  )}
+                </Text>
+              </View>
+            )}
+            
+            <FlatList
+              data={paginatedOptions}
+              style={styles.optionsList}
+              showsVerticalScrollIndicator={false}
+              onEndReached={handleLoadMore}
+              onEndReachedThreshold={0.3}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item: option, index }) => {
+                const isSelected = selectedValue === option.id;
+                const isFirst = index === 0;
+                const isLast = index === paginatedOptions.length - 1;
+                
+                return (
+                  <OptionItem
+                    key={option.id}
+                    option={option}
+                    isSelected={isSelected}
+                    isFirst={isFirst}
+                    isLast={isLast}
+                    onPress={() => handleSelection(option.id)}
+                    colors={colors}
+                    typeColor={typeColor}
+                    type={type}
+                  />
+                );
+              }}
+            />
+            {filteredOptions.length === 0 && (
+              <View style={styles.noResultsContainer}>
+                <Text style={[styles.noResultsText, { color: colors.secondaryFont }]}>
+                  No {type === 'staff' ? 'staff members' : type === 'course' ? 'courses' : 'groups'} found
+                </Text>
+                {/* <Text style={[styles.noResultsSubtext, { color: colors.secondaryFont }]}>
+                  Try adjusting your search
+                </Text> */}
+              </View>
+            )}
           </View>
-        </View>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -165,45 +345,74 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  selectorArrow: {
-    fontSize: 12,
-    marginLeft: 8,
-  },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
-  modalContent: {
-    maxHeight: '70%',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+  dropdownContent: {
+    position: 'absolute',
+    maxHeight: 400,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 1000,
   },
-  modalHeader: {
+  searchContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    padding: 12,
     borderBottomWidth: 1,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  searchIcon: {
+    marginRight: 8,
   },
-  closeButton: {
+  searchInput: {
+    flex: 1,
+    height: 43,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    fontSize: 16,
+  },
+  clearButton: {
+    marginLeft: 8,
     padding: 4,
   },
-  closeButtonText: {
-    fontSize: 18,
-    fontWeight: '600',
+  resultsCountContainer: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+  },
+  resultsCountText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  noResultsContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  noResultsText: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  noResultsSubtext: {
+    fontSize: 14,
   },
   optionsList: {
-    maxHeight: 400,
+    maxHeight: 320,
   },
   optionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 12,
     borderBottomWidth: 1,
   },
   optionContent: {
@@ -220,10 +429,5 @@ const styles = StyleSheet.create({
   },
   optionAdditionalInfo: {
     fontSize: 12,
-  },
-  selectedIndicator: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginLeft: 12,
   },
 });

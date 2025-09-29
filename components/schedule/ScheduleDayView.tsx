@@ -227,6 +227,9 @@ export function ScheduleDayView({ day, scheduleType = 'personal', currentTime: p
     { key: 'third', name: '3rd', timing: isShiftedScheduleEnabled ? '12:00 - 1:30' : '11:45 - 1:15' },
     { key: 'fourth', name: '4th', timing: '1:45 - 3:15' },
     { key: 'fifth', name: '5th', timing: '3:45 - 5:15' },
+    { key: 'sixth', name: '6th', timing: '5:30 - 7:00' },
+    { key: 'seventh', name: '7th', timing: '7:15 - 8:45' },
+    { key: 'eighth', name: '8th', timing: '9:00 - 10:30' },
   ] as const;
 
   return (

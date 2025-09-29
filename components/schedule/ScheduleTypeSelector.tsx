@@ -1,6 +1,5 @@
 import { Colors, ScheduleTypeColors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ScheduleType } from './types';
 

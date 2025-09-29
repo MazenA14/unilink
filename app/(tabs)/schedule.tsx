@@ -17,6 +17,9 @@ export default function ScheduleScreen() {
   const { scheduleType: paramScheduleType } = useLocalSearchParams<{ scheduleType?: string }>();
   const { selectedScheduleType, setSelectedScheduleType } = useScheduleContext();
   const { showAlert, AlertComponent } = useCustomAlert();
+  // Determine initial schedule type from context or URL params
+  const initialScheduleType = selectedScheduleType || paramScheduleType as any;
+  
   const {
     scheduleType,
     selectedOption,
@@ -27,7 +30,7 @@ export default function ScheduleScreen() {
     handleScheduleTypeChange,
     handleOptionSelection,
     refetch,
-  } = useScheduleTypes();
+  } = useScheduleTypes(initialScheduleType);
 
   // Menu state
   const [menuVisible, setMenuVisible] = useState(false);
@@ -180,7 +183,7 @@ export default function ScheduleScreen() {
               activeOpacity={0.7}
             >
               <Ionicons 
-                name="chevron-down" 
+                name={menuVisible ? "chevron-up" : "chevron-down"} 
                 size={16} 
                 color={colors.secondaryFont} 
               />

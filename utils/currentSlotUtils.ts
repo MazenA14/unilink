@@ -69,6 +69,36 @@ export function getTimeSlots(isShiftedScheduleEnabled: boolean): TimeSlot[] {
       endHour: isShiftedScheduleEnabled ? 17 : 17,
       endMinute: isShiftedScheduleEnabled ? 30 : 15,
     },
+    {
+      key: 'sixth',
+      name: '6th',
+      startTime: '5:30',
+      endTime: '7:00',
+      startHour: 17,
+      startMinute: 30,
+      endHour: 19,
+      endMinute: 0,
+    },
+    {
+      key: 'seventh',
+      name: '7th',
+      startTime: '7:15',
+      endTime: '8:45',
+      startHour: 19,
+      startMinute: 15,
+      endHour: 20,
+      endMinute: 45,
+    },
+    {
+      key: 'eighth',
+      name: '8th',
+      startTime: '9:00',
+      endTime: '10:30',
+      startHour: 21,
+      startMinute: 0,
+      endHour: 22,
+      endMinute: 30,
+    },
   ];
 
   return slots;
@@ -124,11 +154,41 @@ export function getExtendedTimeSlots(isShiftedScheduleEnabled: boolean): TimeSlo
       key: 'fifth',
       name: '5th',
       startTime: isShiftedScheduleEnabled ? '4:00' : '3:45',
-      endTime: isShiftedScheduleEnabled ? '5:30' : '5:15',
+      endTime: '5:30', // Extended to cover the break
       startHour: isShiftedScheduleEnabled ? 16 : 15,
       startMinute: isShiftedScheduleEnabled ? 0 : 45,
-      endHour: isShiftedScheduleEnabled ? 17 : 17,
-      endMinute: isShiftedScheduleEnabled ? 30 : 15,
+      endHour: 17,
+      endMinute: 30,
+    },
+    {
+      key: 'sixth',
+      name: '6th',
+      startTime: '5:30',
+      endTime: '7:15', // Extended to cover the break
+      startHour: 17,
+      startMinute: 30,
+      endHour: 19,
+      endMinute: 15,
+    },
+    {
+      key: 'seventh',
+      name: '7th',
+      startTime: '7:15',
+      endTime: '9:00', // Extended to cover the break
+      startHour: 19,
+      startMinute: 15,
+      endHour: 21,
+      endMinute: 0,
+    },
+    {
+      key: 'eighth',
+      name: '8th',
+      startTime: '9:00',
+      endTime: '10:30',
+      startHour: 21,
+      startMinute: 0,
+      endHour: 22,
+      endMinute: 30,
     },
   ];
 
