@@ -74,6 +74,18 @@
 - Add version joined from as an attribute in the users table
 - Add this might take a minute to the previous semester grades screen on pull to refresh
 
+- Remove file icon from exam seats page
+- Unify notifications and quick access modal heights
+- on auto login if 401 returned, go to login screen
+- Remove attendance auto fetch because of bulk fetching at the same time
+- Make all popup modals be swipable down from any area
+- In contact add created date and made by a 58- student and make it open after a certain date
+- Add weight calculator in readme
+- change dashboard slots to schedule slots in setttings
+- Make grades screen have the same drop-down and remove the hamburger menu and add to it the Grade Calculation Screen
+- Add weights button on the current grades screen
+- See nickname caching time
+- Remove pay button
 
 - Wraping up the app:
     - Make it more efficient (Parsing Server Side, Parallel Data Fetching)
@@ -83,8 +95,7 @@
     - See how all aspects of the app works (Caching,...)
 
 
-
-
+## To-Do (Done)
 + Remove the effect that occurs on pressing on the tabs at the bottom
 + Change animation for the hamburger menu to Fade in
 + Unify the formating of the personal schedule
@@ -151,9 +162,7 @@
 + Make notification cached and fetch on loading dashboard, on fetching don't remove the old notifications (Preload notifications on dashboard)
 + On loading don't show loading state, show cached data and after fetching is complete, replace notifications
 + Add the attendance level when I have one (Now there is commented static badge)
-
-
-
++ Change version in app settings
 
 ## Run these next time
 - npx expo install @expo/metro-runtime react-native-worklets
