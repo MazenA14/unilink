@@ -137,7 +137,6 @@ export default function ExamSeatsScreen() {
           
           {examSeats.length === 0 ? (
             <View style={[styles.emptyContainer, { backgroundColor: colors.cardBackground }]}>
-              <Ionicons name="document-outline" size={48} color={colors.secondaryFont} />
               <Text style={[styles.emptyTitle, { color: colors.mainFont }]}>No Exam Seats Found</Text>
               <Text style={[styles.emptySubtitle, { color: colors.secondaryFont }]}>
                 You don&apos;t have any exam seats assigned at the moment.

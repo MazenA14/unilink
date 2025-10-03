@@ -139,6 +139,14 @@ export function ScheduleCard({ classData, periodName, scheduleType = 'personal',
               </Text>
             </View>
           )}
+          {firstLecture.instructor && (
+            <View style={styles.instructorContainer}>
+              <Ionicons name="person-outline" size={14} color={colors.secondaryFont} />
+              <Text style={[styles.instructor, { color: colors.secondaryFont }]} numberOfLines={1}>
+                {firstLecture.instructor}
+              </Text>
+            </View>
+          )}
           {renderTypeSpecificInfo()}
         </View>
         
@@ -198,7 +206,7 @@ const styles = StyleSheet.create({
   },
   instructor: {
     fontSize: 12,
-    marginBottom: 2,
+    marginLeft: 4,
   },
   roomContainer: {
     flexDirection: 'row',
@@ -208,6 +216,11 @@ const styles = StyleSheet.create({
   room: {
     fontSize: 12,
     marginLeft: 4,
+  },
+  instructorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
   },
   time: {
     fontSize: 12,

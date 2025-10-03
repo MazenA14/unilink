@@ -273,14 +273,14 @@ export function MultipleLecturesModal({
                 )}
 
                 {/* Instructor */}
-                {/* {lecture.instructor && (
+                {lecture.instructor && (
                   <View style={styles.infoRow}>
                     <Ionicons name="person-outline" size={16} color={colors.secondaryFont} />
                     <Text style={[styles.infoText, { color: colors.secondaryFont }]}>
                       {lecture.instructor}
                     </Text>
                   </View>
-                )} */}
+                )}
 
                 {/* Time */}
                 {lecture.time && (

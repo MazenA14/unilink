@@ -21,7 +21,7 @@ import { resetWhatsNewStatus } from '@/utils/whatsNewStorage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function SettingsScreen() {
   const colorScheme = useColorScheme();
@@ -37,7 +37,6 @@ export default function SettingsScreen() {
   const [username, setUsername] = useState<string>('');
   const [payments, setPayments] = useState<PaymentItem[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
-  const [payingIndex, setPayingIndex] = useState<number | null>(null);
   const [defaultScreenDropdownVisible, setDefaultScreenDropdownVisible] = useState(false);
   const [pillButtonLayout, setPillButtonLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const pillButtonRef = useRef<View>(null);
@@ -214,14 +213,14 @@ export default function SettingsScreen() {
 
         {/* Financials Section */}
         <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>FINANCIALS</Text>
-        <View style={[styles.warningCard, { backgroundColor: colorScheme === 'dark' ? '#2a0a0a' : '#f8d7da', borderColor: colors.error }]}>
+        {/* <View style={[styles.warningCard, { backgroundColor: colorScheme === 'dark' ? '#2a0a0a' : '#f8d7da', borderColor: colors.error }]}>
           <Text style={[styles.warningText, { color: colors.error }]}>
             Pay through the app at your own responsibility.
           </Text>
-        </View>
+        </View> */}
         <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
           {loadingPayments ? (
-            <View style={styles.rowBetween}>
+            <View style={styles.centerContainer}>
               <ActivityIndicator size="small" color={colors.tabColor} />
             </View>
           ) : payments.length === 0 ? (
@@ -243,49 +242,6 @@ export default function SettingsScreen() {
                   <Text style={[styles.paymentAmount, { color: colors.financials }]}>
                     {p.currency} {p.amount.toLocaleString()}
                   </Text>
-                  <TouchableOpacity
-                    disabled={!p.eventTarget || payingIndex === idx}
-                    onPress={async () => {
-                      if (!p.eventTarget) return;
-                      try {
-                        setPayingIndex(idx);
-                        const redirectUrl = await GUCAPIProxy.payOutstanding(p.eventTarget);
-                        if (redirectUrl) {
-                          const supported = await Linking.canOpenURL(redirectUrl);
-                          if (supported) {
-                            await Linking.openURL(redirectUrl);
-                          } else {
-                            showAlert({
-                              title: 'Payment',
-                              message: 'Unable to initiate payment. Please try again from the portal.',
-                              type: 'error',
-                              buttons: [{ text: 'Close', style: 'cancel' }],
-                            });
-                          }
-                        } else {
-                          // If no URL returned, refresh list anyway
-                          const refreshed = await GUCAPIProxy.getOutstandingPayments();
-                          setPayments(refreshed);
-                        }
-                      } catch {
-                        showAlert({
-                          title: 'Payment',
-                          message: 'Unable to initiate payment. Please try again from the portal.',
-                          type: 'error',
-                          buttons: [{ text: 'Close', style: 'cancel' }],
-                        });
-                      } finally {
-                        setPayingIndex(null);
-                      }
-                    }}
-                    style={[styles.payBtn, { backgroundColor: (!p.eventTarget ? colors.border : colors.tabColor) }]}
-                  >
-                    {payingIndex === idx ? (
-                      <ActivityIndicator size="small" color={colors.background} />
-                    ) : (
-                      <Text style={[styles.payBtnText, { color: colors.background }]}>Pay</Text>
-                    )}
-                  </TouchableOpacity>
                 </View>
               ))}
             </View>
@@ -843,6 +799,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  centerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
   primaryText: {
     fontSize: 16,
     fontWeight: '500',
@@ -860,17 +822,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginRight: 12,
-  },
-  payBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    minWidth: 60,
-    alignItems: 'center',
-  },
-  payBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   divider: {
     height: 1,

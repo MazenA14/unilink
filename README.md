@@ -19,14 +19,14 @@
 + Course Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
 + CMS Home https://cms.guc.edu.eg/apps/student/HomePageStn.aspx
 + CMS All Courses https://cms.guc.edu.eg/apps/student/ViewAllCourseStn
++ Weights
 
 ## To-Do List (Optional)
-- Add skeletons for everything that loads
-- Empty Slots (Rooms) https://gucroomschedule.web.app/
 - Evaluate Course (Release update when the university releases it)
 - Evaluate Staff (Release update when the university releases it)
+- Empty Slots (Rooms) https://gucroomschedule.web.app/
+- Add skeletons for everything that loads
 - Quizzes
-- Weight calculation
 - Bachelor endpoint
 - Reminder for Password Reset
 - Calendar
@@ -39,9 +39,7 @@
 + CMS button
 + Your Instructors this semester (List of view profiles separated by course)
 + View Attendance
-
-- CMS
-
++ CMS
 
 ## Database Schema
 ### Table 1 (Users)
@@ -60,37 +58,11 @@
 ## To-Do (Notes)
 - Clear Course previous grades cache on pull to refresh and not be visibile while refreshing
 - Redesign All cache timings
-
-- Add tutorial and lecture notifications by a variable time reminder (15min, 20 min...) time set in settings under preferences (Make the reminder optional, no lecture reminder)
-- See if guc notifications could be fetched while app is closed
-- Solve notifcations error if possible
-
 - Handle offline mode gracefully
 - Investigate multiple proxy calls (A lot & repetitive)
-
-+ Investigate 409 error in transcript page
-+ Add supabase hit on every app open to save last opened time and number of times opened
-- Add version joined from as an attribute in the users table
-- Add this might take a minute to the previous semester grades screen on pull to refresh
-
-- Remove file icon from exam seats page
-- Unify notifications and quick access modal heights
-- on auto login if 401 returned, go to login screen
-- Remove attendance auto fetch because of bulk fetching at the same time
 - Make all popup modals be swipable down from any area
 - In contact add created date and made by a 58- student and make it open after a certain date
-- Add weight calculator in readme
-- change dashboard slots to schedule slots in setttings
-- Make grades screen have the same drop-down and remove the hamburger menu and add to it the Grade Calculation Screen
-- Add weights button on the current grades screen
-- See nickname caching time
-- Remove pay button
-- Add Allow notifications under slot reminder
 - Implement stale-while-revalidate
-- Add instructor for the course schedule
-- Fix attendance preloading (Stop Preloading in general)
-- Attendance speed: 28 sec, 9 sec
-- Previous grades speed: 51 sec, 15 sec 
 
 - Wraping up the app:
     - Make it more efficient (Parsing Server Side, Parallel Data Fetching)
@@ -167,6 +139,23 @@
 + On loading don't show loading state, show cached data and after fetching is complete, replace notifications
 + Add the attendance level when I have one (Now there is commented static badge)
 + Change version in app settings
++ Add version joined from as an attribute in the users table
++ Add instructor for the course schedule
++ Add this might take a minute to the previous semester grades screen on pull to refresh
++ Investigate 409 error in transcript page
++ Add supabase hit on every app open to save last opened time and number of times opened
++ Remove file icon from exam seats page
++ On auto login if 401 returned, go to login screen
++ Remove attendance auto fetch because of bulk fetching at the same time
++ Change dashboard slots to schedule slots in setttings
++ Make grades screen have the same drop-down and remove the hamburger menu and add to it the Grade Calculation Screen
++ See nickname caching time
++ Add weights button on the current grades screen
++ Remove pay button
++ Fix attendance preloading (Stop Preloading in general)
++ Solve notifcations error if possible
++ Attendance speed: 28 sec, 9 sec
++ Previous grades speed: 51 sec, 15 sec 
 
 ## Run these next time
 - npx expo install @expo/metro-runtime react-native-worklets

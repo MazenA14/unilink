@@ -23,22 +23,22 @@ export default function Index() {
           setAuthed(isAuthenticated);
           
           // If user is already authenticated, preload schedule and grades data
-          if (isAuthenticated) {
-            const { SchedulePreloader } = await import('@/utils/schedulePreloader');
-            SchedulePreloader.preloadSchedule().catch(error => {
-              // Don't show error to user - preloading is optional
-            });
+          // if (isAuthenticated) {
+          //   const { SchedulePreloader } = await import('@/utils/schedulePreloader');
+          //   SchedulePreloader.preloadSchedule().catch(error => {
+          //     // Don't show error to user - preloading is optional
+          //   });
             
-            const { GradesPreloader } = await import('@/utils/gradesPreloader');
-            GradesPreloader.preloadCurrentGrades().catch(error => {
-              // Don't show error to user - preloading is optional
-            });
+          //   const { GradesPreloader } = await import('@/utils/gradesPreloader');
+          //   GradesPreloader.preloadCurrentGrades().catch(error => {
+          //     // Don't show error to user - preloading is optional
+          //   });
             
-            const { AttendancePreloader } = await import('@/utils/attendancePreloader');
-            AttendancePreloader.preloadAttendance().catch(error => {
-              // Don't show error to user - preloading is optional
-            });
-          }
+          //   const { AttendancePreloader } = await import('@/utils/attendancePreloader');
+          //   AttendancePreloader.preloadAttendance().catch(error => {
+          //     // Don't show error to user - preloading is optional
+          //   });
+          // }
         }
       } finally {
         setReady(true);
