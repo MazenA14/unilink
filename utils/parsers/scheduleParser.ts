@@ -208,22 +208,43 @@ function parseClassContent(content: string): ScheduleClass {
   const getSlotType = (courseName: string): string => {
     const name = courseName.toLowerCase();
     
-    if (name.includes('lab') || name.includes('laboratory')) {
-      return 'Lab';
+    // First check for parentheses format: "(Lecture)", "(Tutorial)", etc.
+    const parenthesesMatch = name.match(/\(([^)]+)\)/);
+    if (parenthesesMatch) {
+      const typeInParentheses = parenthesesMatch[1].trim();
+      if (typeInParentheses.includes('lecture')) return 'Lecture';
+      if (typeInParentheses.includes('tut') || typeInParentheses.includes('tutorial')) return 'Tutorial';
+      if (typeInParentheses.includes('lab') || typeInParentheses.includes('laboratory')) return 'Lab';
+      if (typeInParentheses.includes('practical')) return 'Practical';
+      if (typeInParentheses.includes('seminar')) return 'Seminar';
+      if (typeInParentheses.includes('workshop')) return 'Workshop';
+      if (typeInParentheses.includes('project')) return 'Project';
+      if (typeInParentheses.includes('thesis') || typeInParentheses.includes('dissertation')) return 'Thesis';
     }
-    if (name.includes('tutorial') || name.includes('tut')) {
+    
+    // Fallback to checking for space-separated format or direct inclusion
+    if (name.includes(' lecture') || name.includes('lecture')) {
+      return 'Lecture';
+    }
+    if (name.includes(' tutorial') || name.includes('tutorial') || name.includes(' tut')) {
       return 'Tutorial';
     }
-    if (name.includes('seminar')) {
+    if (name.includes(' lab') || name.includes('lab') || name.includes('laboratory')) {
+      return 'Lab';
+    }
+    if (name.includes(' practical') || name.includes('practical')) {
+      return 'Practical';
+    }
+    if (name.includes(' seminar') || name.includes('seminar')) {
       return 'Seminar';
     }
-    if (name.includes('workshop')) {
+    if (name.includes(' workshop') || name.includes('workshop')) {
       return 'Workshop';
     }
-    if (name.includes('project')) {
+    if (name.includes(' project') || name.includes('project')) {
       return 'Project';
     }
-    if (name.includes('thesis') || name.includes('dissertation')) {
+    if (name.includes(' thesis') || name.includes('thesis') || name.includes('dissertation')) {
       return 'Thesis';
     }
     

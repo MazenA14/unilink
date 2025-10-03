@@ -119,12 +119,28 @@ function extractCourseTables(html: string): CourseTable[] {
  * Example: 'MCTR 703 Lecture' -> 'Lecture'
  * Example: 'ELCT 708 Tut' -> 'Tutorial'
  * Example: 'CSEN 401 Lab' -> 'Lab'
+ * Example: 'NETW 502 - 5IET-COMM1 (Lecture)' -> 'Lecture'
  */
 function extractSlotTypeFromCourse(course: string): string {
   if (!course) return 'Lecture';
   
   const lowerCourse = course.toLowerCase();
-  // Check for explicit slot type indicators in the course field
+  
+  // First check for parentheses format: "(Lecture)", "(Tutorial)", etc.
+  const parenthesesMatch = lowerCourse.match(/\(([^)]+)\)/);
+  if (parenthesesMatch) {
+    const typeInParentheses = parenthesesMatch[1].trim();
+    if (typeInParentheses.includes('lecture')) return 'Lecture';
+    if (typeInParentheses.includes('tut') || typeInParentheses.includes('tutorial')) return 'Tutorial';
+    if (typeInParentheses.includes('lab') || typeInParentheses.includes('laboratory')) return 'Lab';
+    if (typeInParentheses.includes('practical')) return 'Practical';
+    if (typeInParentheses.includes('seminar')) return 'Seminar';
+    if (typeInParentheses.includes('workshop')) return 'Workshop';
+    if (typeInParentheses.includes('project')) return 'Project';
+    if (typeInParentheses.includes('thesis') || typeInParentheses.includes('dissertation')) return 'Thesis';
+  }
+  
+  // Fallback to checking for space-separated format: "Lecture", "Tutorial", etc.
   if (lowerCourse.includes(' lecture')) {
     return 'Lecture';
   }
@@ -133,6 +149,9 @@ function extractSlotTypeFromCourse(course: string): string {
   }
   if (lowerCourse.includes(' lab') || lowerCourse.includes(' laboratory')) {
     return 'Lab';
+  }
+  if (lowerCourse.includes(' practical')) {
+    return 'Practical';
   }
   if (lowerCourse.includes(' seminar')) {
     return 'Seminar';

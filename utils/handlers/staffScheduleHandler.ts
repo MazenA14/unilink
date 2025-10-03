@@ -888,15 +888,32 @@ function extractCourseData(course: any): any {
 
 /**
  * Extract slot type from subject field
+ * Handles formats like: "NETW 502 - 5IET-COMM1 (Lecture)" or "MCTR 702 Lecture"
  */
 function extractSlotTypeFromSubject(subject: string): string {
   if (!subject) return 'Lecture';
   
   const lowerSubject = subject.toLowerCase();
   
+  // First check for parentheses format: "(Lecture)", "(Tutorial)", etc.
+  const parenthesesMatch = lowerSubject.match(/\(([^)]+)\)/);
+  if (parenthesesMatch) {
+    const typeInParentheses = parenthesesMatch[1].trim();
+    if (typeInParentheses.includes('lecture')) return 'Lecture';
+    if (typeInParentheses.includes('tut') || typeInParentheses.includes('tutorial')) return 'Tutorial';
+    if (typeInParentheses.includes('lab') || typeInParentheses.includes('laboratory')) return 'Lab';
+    if (typeInParentheses.includes('practical')) return 'Practical';
+    if (typeInParentheses.includes('seminar')) return 'Seminar';
+    if (typeInParentheses.includes('workshop')) return 'Workshop';
+    if (typeInParentheses.includes('project')) return 'Project';
+    if (typeInParentheses.includes('thesis') || typeInParentheses.includes('dissertation')) return 'Thesis';
+  }
+  
+  // Fallback to checking for space-separated format: "Lecture", "Tutorial", etc.
   if (lowerSubject.includes(' lecture')) return 'Lecture';
   if (lowerSubject.includes(' tut') || lowerSubject.includes(' tutorial')) return 'Tutorial';
   if (lowerSubject.includes(' lab') || lowerSubject.includes(' laboratory')) return 'Lab';
+  if (lowerSubject.includes(' practical')) return 'Practical';
   if (lowerSubject.includes(' seminar')) return 'Seminar';
   if (lowerSubject.includes(' workshop')) return 'Workshop';
   if (lowerSubject.includes(' project')) return 'Project';

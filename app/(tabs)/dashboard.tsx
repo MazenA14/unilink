@@ -258,6 +258,7 @@ export default function DashboardScreen() {
       'Lecture': '#3B82F6',
       'Tutorial': '#10B981',
       'Lab': '#F59E0B',
+      'Practical': '#FF6B35',
       'Seminar': '#8B5CF6',
       'Workshop': '#EF4444',
       'Project': '#06B6D4',

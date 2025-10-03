@@ -10,7 +10,7 @@ export const WHATS_NEW_CONFIG = {
     "Added CMS",
     "Faster Loading Times",
     "Added Course Weights",
-    "Bug Fixes",
+    "Bug Fixes & UI Enhancements",
   ]
 };
 

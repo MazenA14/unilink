@@ -76,6 +76,7 @@ export const SlotTypeColors = {
   Lecture: '#3B82F6',    // Blue
   Tutorial: '#10B981',   // Green
   Lab: '#F59E0B',        // Amber/Orange
+  Practical: '#FF6B35',  // Orange-Red
   Seminar: '#8B5CF6',    // Purple
   Workshop: '#EF4444',   // Red
   Project: '#06B6D4',    // Cyan
