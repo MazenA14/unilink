@@ -515,7 +515,7 @@ export class AuthManager {
             
             // Cache the joined season if available
             if (joinedSeason) {
-              await this.storeJoinedSeason(joinedSeason);
+              await this.storeJoinedSeason(String(joinedSeason));
             }
           } catch (error) {
             // Don't fail login if tracking fails

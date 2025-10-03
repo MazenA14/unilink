@@ -66,10 +66,10 @@
 - Solve notifcations error if possible
 
 - Handle offline mode gracefully
-- Investigate 409 error in transcript page
 - Investigate multiple proxy calls (A lot & repetitive)
 
-- Add supabase hit on every app open to save last opened time and number of times opened
++ Investigate 409 error in transcript page
++ Add supabase hit on every app open to save last opened time and number of times opened
 - Add version joined from as an attribute in the users table
 - Add this might take a minute to the previous semester grades screen on pull to refresh
 

@@ -2,6 +2,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } fro
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { DefaultScreenProvider } from '@/contexts/DefaultScreenContext';
@@ -13,6 +14,20 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 
 function AppContent() {
   const colorScheme = useColorScheme();
+  
+  // Track app open on startup
+  useEffect(() => {
+    const trackAppOpen = async () => {
+      try {
+        const { userTrackingService } = await import('@/utils/services/userTrackingService');
+        await userTrackingService.trackAppOpen();
+      } catch {
+        // Don't fail app startup if tracking fails
+      }
+    };
+    
+    trackAppOpen();
+  }, []);
   
   // Attendance background fetching removed
   

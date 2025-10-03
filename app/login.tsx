@@ -118,7 +118,7 @@ const LoginScreen = () => {
               
               // Cache the joined season if available
               if (joinedSeason) {
-                await AuthManager.storeJoinedSeason(joinedSeason);
+                await AuthManager.storeJoinedSeason(String(joinedSeason));
               }
             } catch {
               // Don't fail login if tracking fails

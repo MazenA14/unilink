@@ -1,13 +1,17 @@
 import { SUPABASE_CONFIG } from '../config/supabaseConfig';
 import { supabase } from '../supabase';
+import { APP_VERSION } from '@/constants/Version';
 
 // Types based on your database schema
 export interface UserData {
   username: string;
   guc_id: string;
   date_joined_app: string;
-  joined_season?: string;
+  joined_season?: number;
   major?: string;
+  last_open_time?: string;
+  times_opened?: number;
+  joined_version?: number;
 }
 
 export interface FeedbackData {
@@ -41,7 +45,7 @@ class UserTrackingService {
   private async fetchUserAcademicData(userId?: string): Promise<{
     user_id?: string;
     major?: string;
-    joined_season?: string;
+    joined_season?: number;
   }> {
     try {
       if (!userId) {
@@ -49,7 +53,8 @@ class UserTrackingService {
       }
       
       // Extract joined season from user ID (split by "-" and get first element)
-      const joinedSeason = userId.split('-')[0];
+      const joinedSeasonStr = userId.split('-')[0];
+      const joinedSeason = parseInt(joinedSeasonStr, 10);
       
       // Get user info (user ID and faculty) from index page - much faster than transcript
       const { GUCAPIProxy } = await import('../gucApiProxy');
@@ -60,7 +65,7 @@ class UserTrackingService {
       return {
         user_id: userId,
         major,
-        joined_season: joinedSeason
+        joined_season: isNaN(joinedSeason) ? undefined : joinedSeason
       };
       
     } catch {
@@ -72,7 +77,7 @@ class UserTrackingService {
    * Track user login - add user to database if not exists, update last opened date
    * Returns the joined season if available for caching
    */
-  async trackUserLogin(username: string, gucId?: string, userId?: string): Promise<string | null> {
+  async trackUserLogin(username: string, gucId?: string, userId?: string): Promise<number | null> {
     // Prevent multiple simultaneous tracking calls for the same user
     if (this.trackingInProgress.has(username)) {
       return null;
@@ -93,6 +98,7 @@ class UserTrackingService {
       if (fetchError && fetchError.code === 'PGRST116') {
         // Fetch academic data from GUC portal before creating user
         const academicData = await this.fetchUserAcademicData(userId);
+        const joinedVersion = parseFloat(APP_VERSION);
         
         // User doesn't exist, create new user with academic data
         const newUser: UserData = {
@@ -100,7 +106,10 @@ class UserTrackingService {
           guc_id: userId || '',
           date_joined_app: now,
           joined_season: academicData.joined_season,
-          major: academicData.major
+          major: academicData.major,
+          last_open_time: now,
+          times_opened: 1,
+          joined_version: joinedVersion
         };
         
         await supabase
@@ -111,7 +120,18 @@ class UserTrackingService {
         // Return joined season for caching
         return academicData.joined_season || null;
       } else if (existingUser) {
-        // User already exists in database, return their joined season
+        // User already exists in database, update their tracking info
+        const currentTimesOpened = existingUser.times_opened || 0;
+        
+        await supabase
+          .from(SUPABASE_CONFIG.TABLES.USERDATA)
+          .update({
+            last_open_time: now,
+            times_opened: currentTimesOpened + 1
+          })
+          .eq('guc_id', existingUser.guc_id);
+        
+        // Return their joined season for caching
         return existingUser.joined_season || null;
       } else {
         // Unexpected state: No user found but no error either
@@ -123,6 +143,58 @@ class UserTrackingService {
     } finally {
       // Always release the lock
       this.trackingInProgress.delete(username);
+    }
+  }
+
+  /**
+   * Track app open - update last_open_time and increment times_opened for authenticated users
+   * This should be called on every app startup, not just login
+   */
+  async trackAppOpen(): Promise<void> {
+    try {
+      // Check if user is authenticated
+      const { AuthManager } = await import('../auth');
+      const { username } = await AuthManager.getCredentials();
+      
+      if (!username) {
+        // User not authenticated, skip tracking
+        return;
+      }
+      
+      // Get user ID for tracking
+      const { GUCAPIProxy } = await import('../gucApiProxy');
+      const userId = await GUCAPIProxy.getUserId();
+      
+      if (!userId) {
+        // No user ID available, skip tracking
+        return;
+      }
+      
+      const now = new Date().toISOString();
+      
+      // First, get the current times_opened value
+      const { data: currentUser, error: fetchError } = await supabase
+        .from(SUPABASE_CONFIG.TABLES.USERDATA)
+        .select('times_opened')
+        .eq('guc_id', userId)
+        .single();
+      
+      if (fetchError || !currentUser) {
+        // User not found, skip tracking
+        return;
+      }
+      
+      // Update existing user's tracking info
+      await supabase
+        .from(SUPABASE_CONFIG.TABLES.USERDATA)
+        .update({
+          last_open_time: now,
+          times_opened: (currentUser.times_opened || 0) + 1
+        })
+        .eq('guc_id', userId);
+        
+    } catch {
+      // Don't fail app startup if tracking fails
     }
   }
 
@@ -143,7 +215,7 @@ class UserTrackingService {
   /**
    * Update user major and season
    */
-  async updateUserInfo(username: string, major?: string, season?: string): Promise<void> {
+  async updateUserInfo(username: string, major?: string, season?: number): Promise<void> {
     try {
       const updateData: any = {};
       if (major) updateData.major = major;
