@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { DefaultScreenProvider } from '@/contexts/DefaultScreenContext';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ScheduleProvider } from '@/contexts/ScheduleContext';
 import { ShiftedScheduleProvider } from '@/contexts/ShiftedScheduleContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
@@ -46,7 +47,9 @@ export default function RootLayout() {
       <ShiftedScheduleProvider>
         <ScheduleProvider>
           <DefaultScreenProvider>
-            <AppContent />
+            <NotificationProvider>
+              <AppContent />
+            </NotificationProvider>
           </DefaultScreenProvider>
         </ScheduleProvider>
       </ShiftedScheduleProvider>

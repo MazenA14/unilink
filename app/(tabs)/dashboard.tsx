@@ -4,6 +4,7 @@ import UpdateModal from '@/components/UpdateModal';
 import WhatsNewModal from '@/components/WhatsNewModal';
 import { Colors, ScheduleTypeColors } from '@/constants/Colors';
  
+import { useNotifications } from '@/contexts/NotificationContext';
 import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useSchedule } from '@/hooks/useSchedule';
@@ -18,12 +19,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Animated,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function DashboardScreen() {
@@ -32,8 +33,7 @@ export default function DashboardScreen() {
   const [nickname, setNickname] = useState<string>('Student');
   const { scheduleData, loading: scheduleLoading, refetch: refetchSchedule } = useSchedule();
   const { isShiftedScheduleEnabled } = useShiftedSchedule();
-  const unreadCount = 0;
-  const fetchNotifications = () => {};
+  const { unreadCount, refreshNotifications } = useNotifications();
   const refreshRotation = useRef(new Animated.Value(0)).current;
   
   // Multiple lectures modal state
@@ -314,7 +314,7 @@ export default function DashboardScreen() {
     checkForUpdates();
     // Check if we should show What's New modal
     checkWhatsNew();
-  }, [loadNickname, fetchNotifications, checkForUpdates, checkWhatsNew]);
+  }, [loadNickname, checkForUpdates, checkWhatsNew]);
 
   // Update current time every minute for slot indicator
   useEffect(() => {
@@ -339,12 +339,13 @@ export default function DashboardScreen() {
       const newTime = new Date();
       setCurrentTime(newTime); // Update current time for slot indicator
       
-      // Refresh dashboard slots preference on focus
+      // Refresh dashboard slots preference on focus and fetch notifications
       (async () => {
         const stored = await AuthManager.getDashboardSlots();
         setDashboardSlots(stored || 5);
+        await refreshNotifications();
       })();
-    }, [loadNickname])
+    }, [loadNickname, refreshNotifications])
   );
 
   return (
