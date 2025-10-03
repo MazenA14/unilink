@@ -74,6 +74,44 @@ export default function CurrentGradesSection({
     }
   };
 
+  // Prefetch grades for all courses in parallel and populate state
+  const prefetchAllCourseGrades = async (courseList: Course[]) => {
+    try {
+      setLoadingGrades(true);
+      const gradePromises = courseList.map(async (course) => {
+        try {
+          const cachedGrades = await GradeCache.getCachedCurrentCourseGrades(course.value);
+          let courseGrades: GradeData[];
+          if (cachedGrades) {
+            courseGrades = cachedGrades;
+          } else {
+            courseGrades = await GUCAPIProxy.getCourseGrades(course.value);
+            await GradeCache.setCachedCurrentCourseGrades(course.value, courseGrades);
+          }
+          return {
+            ...course,
+            midtermGrade: courseGrades.length > 0 ? courseGrades[0] : undefined,
+            detailedGrades: courseGrades.length > 1 ? courseGrades.slice(1) : [],
+            isExpanded: false,
+            isLoadingDetails: false,
+          } as CourseWithGrades;
+        } catch {
+          return {
+            ...course,
+            midtermGrade: undefined,
+            detailedGrades: [],
+            isExpanded: false,
+            isLoadingDetails: false,
+          } as CourseWithGrades;
+        }
+      });
+      const results = await Promise.all(gradePromises);
+      setCoursesWithGrades(results);
+    } finally {
+      setLoadingGrades(false);
+    }
+  };
+
   const loadAvailableCourses = async (forceRefresh: boolean = false) => {
     try {
       setLoadingCourses(true);
@@ -83,16 +121,8 @@ export default function CurrentGradesSection({
         const cachedCourses = await GradeCache.getCachedCurrentCourses();
         if (cachedCourses) {
           setCourses(cachedCourses);
-          
-          // Initialize courses with empty grades
-          const initialCoursesWithGrades: CourseWithGrades[] = cachedCourses.map(course => ({
-            ...course,
-            midtermGrade: undefined,
-            detailedGrades: [],
-            isExpanded: false,
-            isLoadingDetails: false,
-          }));
-          setCoursesWithGrades(initialCoursesWithGrades);
+          // Prefetch all course grades in parallel
+          await prefetchAllCourseGrades(cachedCourses);
           setLoadingCourses(false);
           return;
         }
@@ -111,15 +141,8 @@ export default function CurrentGradesSection({
       });
       await GradeCache.setCachedCourseIdToName(courseIdToNameMapping);
       
-      // Initialize courses with empty grades
-      const initialCoursesWithGrades: CourseWithGrades[] = availableCourses.map(course => ({
-        ...course,
-        midtermGrade: undefined,
-        detailedGrades: [],
-        isExpanded: false,
-        isLoadingDetails: false,
-      }));
-      setCoursesWithGrades(initialCoursesWithGrades);
+      // Prefetch all course grades in parallel
+      await prefetchAllCourseGrades(availableCourses);
     } catch (error) {
       showAlert({
         title: 'Error',

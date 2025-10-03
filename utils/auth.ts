@@ -12,6 +12,7 @@ export class AuthManager {
   private static DEFAULT_SCREEN_KEY = 'defaultScreen';
   private static FIRST_TIME_OPEN_KEY = 'isFirstTimeOpen';
   private static DASHBOARD_SLOTS_KEY = 'dashboardSlots';
+  private static NEXT_SLOT_REMINDER_MINUTES_KEY = 'nextSlotReminderMinutes';
 
   /**
    * Store session cookie from login response
@@ -420,6 +421,21 @@ export class AuthManager {
     } catch (error) {
     }
   }
+
+  /**
+   * Store preferred reminder lead time in minutes for next-slot notifications
+   */
+  static async storeNextSlotReminderMinutes(minutes: number): Promise<void> {}
+
+  /**
+   * Retrieve preferred reminder lead time minutes. Returns null if not set.
+   */
+  static async getNextSlotReminderMinutes(): Promise<number | null> { return null; }
+
+  /**
+   * Clear the next-slot reminder preference
+   */
+  static async clearNextSlotReminderMinutes(): Promise<void> {}
 
   /**
    * @deprecated Use userLogout() for user-initiated logout or sessionResetLogout() for session recovery

@@ -186,29 +186,31 @@ export class GUCAPIProxy {
       // Step 1: Get all available seasons
       const allSeasons = await this.getAvailableSeasons();
       
-      // Step 2: Process each season to get courses and grades
-      const seasonsWithData: {
-        seasonId: string,
-        seasonName: string,
-        courses: {value: string, text: string}[],
-        midtermGrades: GradeData[]
-      }[] = [];
-      
-      for (const season of allSeasons) {
-        
+      // Step 2: Process each season to get courses and grades in parallel
+      const seasonPromises = allSeasons.map(async (season) => {
         const seasonData = await this.getSeasonWithCoursesAndGrades(season.value);
-        
         if (seasonData) {
-          seasonsWithData.push({
+          return {
             seasonId: seasonData.seasonId,
             seasonName: season.text,
             courses: seasonData.courses,
             midtermGrades: seasonData.midtermGrades
-          });
-        } else {
+          };
         }
-      }
-      
+        return null;
+      });
+
+      const results = await Promise.all(seasonPromises);
+
+      const seasonsWithData = results.filter(
+        (data): data is {
+          seasonId: string,
+          seasonName: string,
+          courses: { value: string, text: string }[],
+          midtermGrades: GradeData[]
+        } => data !== null
+      );
+
       return seasonsWithData;
     } catch (err) {
       throw err;

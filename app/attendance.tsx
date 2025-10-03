@@ -65,17 +65,19 @@ export default function AttendanceScreen() {
       
       // Load course attendance data for all courses to get session counts
       const updatedData = { ...data };
-      for (let i = 0; i < updatedData.courses.length; i++) {
-        const course = updatedData.courses[i];
+      const courseAttendancePromises = updatedData.courses.map(async (course) => {
         try {
           const courseDetails = await GUCAPIProxy.getCourseAttendance(course.courseId);
-          updatedData.courses[i] = courseDetails;
           // Cache individual course data
           await GradeCache.setCachedCourseAttendance(course.courseId, courseDetails);
+          return courseDetails;
         } catch {
-          // Keep the original course data if loading fails
+          // Use the base course object if fetching detailed data fails
+          return course;
         }
-      }
+      });
+
+      updatedData.courses = await Promise.all(courseAttendancePromises);
       
       setAttendanceData(updatedData);
       

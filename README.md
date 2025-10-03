@@ -86,6 +86,11 @@
 - Add weights button on the current grades screen
 - See nickname caching time
 - Remove pay button
+- Add Allow notifications under slot reminder
+- Implement stale-while-revalidate
+- Fix attendance preloading
+- Attendance speed: 28 sec, 9 sec
+- Previous grades speed: 51 sec, 15 sec 
 
 - Wraping up the app:
     - Make it more efficient (Parsing Server Side, Parallel Data Fetching)
@@ -93,7 +98,6 @@
     - Remove any console logs/warnings/errors
     - Replace Alert.alert with custom alert component
     - See how all aspects of the app works (Caching,...)
-
 
 ## To-Do (Done)
 + Remove the effect that occurs on pressing on the tabs at the bottom

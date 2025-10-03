@@ -4,37 +4,19 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
-import NotificationHandler from '@/components/NotificationHandler';
 import { DefaultScreenProvider } from '@/contexts/DefaultScreenContext';
-import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ScheduleProvider } from '@/contexts/ScheduleContext';
 import { ShiftedScheduleProvider } from '@/contexts/ShiftedScheduleContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { consumeAttendanceNavigateFlag, initializeAttendanceBackgroundTask } from '@/utils/services/backgroundTaskService';
-import { router } from 'expo-router';
-import { useEffect } from 'react';
 
 function AppContent() {
   const colorScheme = useColorScheme();
   
-  useEffect(() => {
-    initializeAttendanceBackgroundTask();
-  }, []);
-  
-  useEffect(() => {
-    const checkAndNavigate = async () => {
-      const shouldNavigate = await consumeAttendanceNavigateFlag();
-      if (shouldNavigate) {
-        router.push('/attendance');
-      }
-    };
-    checkAndNavigate();
-  });
+  // Attendance background fetching removed
   
   return (
     <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <NotificationHandler />
       <Stack initialRouteName="login">
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -61,15 +43,13 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider>
-      <NotificationProvider>
-        <ShiftedScheduleProvider>
-          <ScheduleProvider>
-            <DefaultScreenProvider>
-              <AppContent />
-            </DefaultScreenProvider>
-          </ScheduleProvider>
-        </ShiftedScheduleProvider>
-      </NotificationProvider>
+      <ShiftedScheduleProvider>
+        <ScheduleProvider>
+          <DefaultScreenProvider>
+            <AppContent />
+          </DefaultScreenProvider>
+        </ScheduleProvider>
+      </ShiftedScheduleProvider>
     </ThemeProvider>
   );
 }

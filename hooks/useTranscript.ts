@@ -3,7 +3,8 @@ import { StudyYear, TranscriptData } from '@/components/transcript/types';
 import { GradeCache } from '@/utils/gradeCache';
 import { GUCAPIProxy as GUCAPI } from '@/utils/gucApiProxy';
 import { parseTranscriptHTML } from '@/utils/parsers/transcriptParser';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert } from 'react-native';
 
 export function useTranscript() {
   const { showAlert } = useCustomAlert();
@@ -17,13 +18,14 @@ export function useTranscript() {
   const [loadingYears, setLoadingYears] = useState(false);
   const [loadingTranscript, setLoadingTranscript] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [revalidating, setRevalidating] = useState(false);
 
-  // Load study years on component mount
+  const showAlertRef = useRef(showAlert);
   useEffect(() => {
-    loadStudyYears();
-  }, []);
+    showAlertRef.current = showAlert;
+  }, [showAlert]);
 
-  const loadStudyYears = async (forceRefresh: boolean = false) => {
+  const loadStudyYears = useCallback(async (forceRefresh: boolean = false) => {
     try {
       setLoadingYears(true);
       
@@ -45,7 +47,7 @@ export function useTranscript() {
       setStudyYears(fetchedYears);
       
     } catch (error: any) {
-      showAlert({
+      showAlertRef.current({
         title: 'Error',
         message: `Failed to load study years: ${error.message}`,
         type: 'error',
@@ -53,79 +55,74 @@ export function useTranscript() {
     } finally {
       setLoadingYears(false);
     }
-  };
+  }, []);
+
+  // Load study years on component mount
+  useEffect(() => {
+    loadStudyYears();
+  }, [loadStudyYears]);
 
   const handleYearSelect = async (year: StudyYear) => {
-    
     setSelectedYear(year);
-    setParsedTranscript(null); // Clear previous data
-    
+    setParsedTranscript(null);
+
+    setLoadingTranscript(true);
+
+    // Kick off network request immediately
+    const networkPromise = (async () => {
+      const transcriptData = await GUCAPI.getTranscriptData(year.value);
+      const htmlContent = transcriptData.html || transcriptData.body;
+      if (!htmlContent) return null;
+      const parsed = parseTranscriptHTML(htmlContent);
+      if (!parsed) return null;
+      await GradeCache.setCachedTranscriptData(year.value, parsed);
+      return parsed;
+    })();
+
     try {
-      setLoadingTranscript(true);
-      
-      // Try to get cached transcript data first
+      // Try cache in parallel; if present, show it immediately
       const cachedTranscript = await GradeCache.getCachedTranscriptData(year.value);
       if (cachedTranscript) {
         setParsedTranscript(cachedTranscript);
+        setRevalidating(true);
         setLoadingTranscript(false);
-        return;
-      } else {
       }
-      
-      
-      // Call the existing getTranscriptData function
-      const transcriptData = await GUCAPI.getTranscriptData(year.value);
-      
-      
-      if (transcriptData && transcriptData.html) {
+
+      // Await fresh data and update UI/cache
+      const freshParsed = await networkPromise;
+      if (freshParsed) {
+        setParsedTranscript(freshParsed);
       }
-      
-      if (transcriptData && transcriptData.body) {
-      }
-      
-      
-      // Parse the HTML content
-      const htmlContent = transcriptData.html || transcriptData.body;
-      if (htmlContent) {
-        const parsed = parseTranscriptHTML(htmlContent);
-        
-        // Cache the parsed transcript data
-        await GradeCache.setCachedTranscriptData(year.value, parsed);
-        
-        setParsedTranscript(parsed);
-      }
-      
     } catch (error: any) {
-      
       const errorMessage = error?.message || 'Unknown error occurred';
-      
       if (errorMessage.includes('Session expired') || errorMessage.includes('login')) {
         Alert.alert(
           'Session Expired',
           'Your session has expired. Please login again.',
           [
-            { 
-              text: 'OK', 
+            {
+              text: 'OK',
               onPress: () => {
                 // Navigate back to login screen
-                // You can implement navigation logic here
-              }
-            }
+              },
+            },
           ]
         );
       } else {
         Alert.alert(
           'Error',
           `Failed to load transcript data: ${errorMessage}`,
-          [{ 
-            text: 'OK',
-            onPress: () => {
-            }
-          }]
+          [
+            {
+              text: 'OK',
+              onPress: () => {},
+            },
+          ]
         );
       }
     } finally {
       setLoadingTranscript(false);
+      setRevalidating(false);
     }
   };
 
@@ -137,7 +134,7 @@ export function useTranscript() {
     
     await loadStudyYears(true);
     setRefreshing(false);
-  }, []);
+  }, [loadStudyYears]);
 
   return {
     // State
@@ -147,6 +144,7 @@ export function useTranscript() {
     loadingYears,
     loadingTranscript,
     refreshing,
+    revalidating,
     
     // Actions
     handleYearSelect,

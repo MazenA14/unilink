@@ -81,9 +81,11 @@ export default function TranscriptScreen() {
 
       {/* Study Years Section */}
       <View style={styles.section}>
-        {loadingYears ? (
-          <LoadingIndicator message={refreshing ? 'Refreshing...' : 'Loading study years...'} />
-        ) : studyYears.length > 0 ? (
+        {
+        // loadingYears ? (
+        //   <LoadingIndicator message={refreshing ? 'Refreshing...' : 'Loading study years...'} />
+        // ) : 
+        studyYears.length > 0 ? (
           <YearSelector
             studyYears={studyYears}
             selectedYear={selectedYear}
