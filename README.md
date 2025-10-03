@@ -54,7 +54,6 @@
 - Use 'npx expo install --check' to review and upgrade your dependencies
 - npm install -g eas-cli (To upgrade eas-cli version)
 
-
 ## To-Do (Notes)
 - Clear Course previous grades cache on pull to refresh and not be visibile while refreshing
 - Redesign All cache timings
