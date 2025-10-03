@@ -424,12 +424,13 @@ export default function DashboardScreen() {
               <Text style={[styles.gridText, { color: 'white' }]}>Quick Access</Text>
             </TouchableOpacity>
             
-            {__DEV__ && (
-              <TouchableOpacity style={[styles.gridItem, { backgroundColor: '#4A90E2', borderColor: '#4A90E2' }]}>
-                <Text style={[styles.cmsText, { color: 'white' }]}>CMS</Text>
-                <Text style={[styles.comingSoonText, { color: 'white' }]}>Coming Soon</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity 
+              style={[styles.gridItem, { backgroundColor: '#4A90E2', borderColor: '#4A90E2', width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]} 
+              onPress={() => router.push('/cms/home')}
+            > 
+              <Ionicons name="document-attach" size={20} color="white" />
+              <Text style={[styles.cmsText, { color: 'white', marginLeft: 8 }]}>CMS</Text>
+            </TouchableOpacity>
           </View>
         </View>
 

@@ -21,10 +21,13 @@ function AppContent() {
       <Stack initialRouteName="login">
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="cms" options={{ headerShown: false }} />
         <Stack.Screen name="instructors" options={{ headerShown: false }} />
         <Stack.Screen name="notifications" options={{ headerShown: false }} />
         <Stack.Screen name="exam-seats" options={{ headerShown: false }} />
         <Stack.Screen name="attendance" options={{ headerShown: false }} />
+        <Stack.Screen name="course-view" options={{ headerShown: false }} />
+        <Stack.Screen name="course-weights" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />

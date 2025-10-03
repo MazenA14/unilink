@@ -15,11 +15,10 @@
 + GUC Notifications https://apps.guc.edu.eg/student_ext/Main/Notifications.aspx
 + Search for Staff https://apps.guc.edu.eg/student_ext/UserProfile/UserProfileSearch.aspx
 + View Attendance https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx?v=NXM874921
-
-- Staff Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
-- Course Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
-- General Group Schedule https://apps.guc.edu.eg/student_ext/Scheduling/GeneralGroupSchedule.aspx
-- Mobile Notifications (Slot Reminder)
++ Staff Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
++ Course Schedule https://apps.guc.edu.eg/student_ext/Scheduling/SearchAcademicScheduled_001.aspx
++ CMS Home https://cms.guc.edu.eg/apps/student/HomePageStn.aspx
++ CMS All Courses https://cms.guc.edu.eg/apps/student/ViewAllCourseStn
 
 ## To-Do List (Optional)
 - Add skeletons for everything that loads
@@ -88,7 +87,8 @@
 - Remove pay button
 - Add Allow notifications under slot reminder
 - Implement stale-while-revalidate
-- Fix attendance preloading
+- Add instructor for the course schedule
+- Fix attendance preloading (Stop Preloading in general)
 - Attendance speed: 28 sec, 9 sec
 - Previous grades speed: 51 sec, 15 sec 
 

@@ -1,11 +1,11 @@
 import { useCustomAlert } from '@/components/CustomAlert';
 import {
-    CourseWithGrades,
-    CurrentGradesSection,
-    GradeType,
-    PreviousGradesSection,
-    Season,
-    YearGroup
+  CourseWithGrades,
+  CurrentGradesSection,
+  GradeType,
+  PreviousGradesSection,
+  Season,
+  YearGroup
 } from '@/components/grades';
 import { GradesMenu } from '@/components/GradesMenu';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
@@ -15,6 +15,7 @@ import { GradeCache } from '@/utils/gradeCache';
 import { getGradeColor } from '@/utils/gradingColors';
 import { GUCAPIProxy as GUCAPI, GradeData } from '@/utils/gucApiProxy';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -570,28 +571,64 @@ export default function GradesScreen() {
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <Text style={[styles.title, { color: colors.text }]}>Grades</Text>
-            <TouchableOpacity
-              style={[styles.menuButton, { backgroundColor: colors.tint }]}
-              onPress={handleMenuPress}
-              activeOpacity={0.7}
-            >
-              <Ionicons 
-                name="menu" 
-                size={20} 
-                color={colorScheme === 'dark' ? '#000000' : '#FFFFFF'} 
-              />
-            </TouchableOpacity>
+          </View>
+          
+          {/* Grade Type Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionTitleContainer}>
+              <View style={styles.sectionTitleWithDropdown}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                  {gradeType === 'current' ? 'Current Grades' : 'Previous Grades'}
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.dropdownButton,
+                    {
+                      backgroundColor: colors.cardBackground,
+                      borderColor: colors.border,
+                    }
+                  ]}
+                  onPress={handleMenuPress}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons 
+                    name={menuVisible ? "chevron-up" : "chevron-down"} 
+                    size={16} 
+                    color={colors.secondaryFont} 
+                  />
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity
+                style={[
+                  styles.courseWeightsButton,
+                  {
+                    backgroundColor: colors.tint,
+                    borderColor: colors.tint,
+                  }
+                ]}
+                onPress={() => router.push('/course-weights')}
+                activeOpacity={0.7}
+              >
+                <Ionicons 
+                  name="calculator-outline" 
+                  size={16} 
+                  color="white" 
+                  style={styles.courseWeightsButtonIcon}
+                />
+                <Text style={styles.courseWeightsButtonText}>Weights</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
         {/* Custom refresh message for previous grades */}
-        {refreshing && gradeType === 'previous' && (
+        {/* {refreshing && gradeType === 'previous' && (
           <View style={[styles.refreshMessageContainer, { backgroundColor: colors.tabColor + '10' }]}>
             <Text style={[styles.refreshMessage, { color: colors.tabColor }]}>
               This might take a minute
             </Text>
           </View>
-        )}
+        )} */}
 
         {/* Current Grades Content */}
         {gradeType === 'current' && (
@@ -659,20 +696,53 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
   },
-  menuButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  section: {
+    // marginBottom: 20,
+  },
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 11,
+    marginBottom: 12,
+  },
+  sectionTitleWithDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginRight: 12,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  courseWeightsButton: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    borderWidth: 1,
+  },
+  courseWeightsButtonIcon: {
+    marginRight: 6,
+  },
+  courseWeightsButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  dropdownButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
   },
   refreshMessageContainer: {
     marginHorizontal: 20,

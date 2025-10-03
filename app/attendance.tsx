@@ -236,7 +236,7 @@ export default function AttendanceScreen() {
           </TouchableOpacity>
         </View>
 
-        {refreshing && (
+        {/* {refreshing && (
           <View style={[styles.updateNote, { 
             backgroundColor: colors.tint + '10', 
             borderColor: colors.tint + '20',
@@ -246,7 +246,7 @@ export default function AttendanceScreen() {
             <AntDesign name="hourglass" size={14} color={colors.tint} />
             <Text style={[styles.updateNoteText, { color: colors.tint }]}>This might take a minute</Text>
           </View>
-        )}
+        )} */}
 
         {attendanceData && (
           <>
