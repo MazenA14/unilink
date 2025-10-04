@@ -22,11 +22,11 @@
 + Weights
 
 ## To-Do List (Optional)
+- Quizzes Screen (Add and see all quizzes the user adds)
 - Evaluate Course (Release update when the university releases it)
 - Evaluate Staff (Release update when the university releases it)
 - Empty Slots (Rooms) https://gucroomschedule.web.app/
 - Add skeletons for everything that loads
-- Quizzes
 - Bachelor endpoint
 - Reminder for Password Reset
 - Calendar
@@ -62,6 +62,9 @@
 - Make all popup modals be swipable down from any area
 - In contact add created date and made by a 58- student and make it open after a certain date
 - Implement stale-while-revalidate
+- Add current version field to database
+- Adjust staff for personal schedule slots
+- Add schedule export function (.ics) to device calendar
 
 - Wraping up the app:
     - Make it more efficient (Parsing Server Side, Parallel Data Fetching)
