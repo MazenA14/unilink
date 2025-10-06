@@ -334,6 +334,8 @@ export function ScheduleDayView({ day, scheduleType = 'personal', currentTime: p
                   <ScheduleCard 
                     classData={classData.map(lecture => ({
                       ...lecture,
+                      // Hide instructor for personal schedule
+                      instructor: scheduleType === 'personal' ? undefined : lecture.instructor,
                       courseName: (() => {
                         // Try to get course name from mapping using matching
                         const mappedCourseName = getCourseNameByMatching(lecture.courseName);

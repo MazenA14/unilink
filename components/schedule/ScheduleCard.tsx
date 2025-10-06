@@ -139,7 +139,7 @@ export function ScheduleCard({ classData, periodName, scheduleType = 'personal',
               </Text>
             </View>
           )}
-          {firstLecture.instructor && (
+          {scheduleType !== 'personal' && firstLecture.instructor && (
             <View style={styles.instructorContainer}>
               <Ionicons name="person-outline" size={14} color={colors.secondaryFont} />
               <Text style={[styles.instructor, { color: colors.secondaryFont }]} numberOfLines={1}>

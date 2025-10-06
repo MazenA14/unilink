@@ -1,6 +1,6 @@
+import { APP_VERSION } from '@/constants/Version';
 import { SUPABASE_CONFIG } from '../config/supabaseConfig';
 import { supabase } from '../supabase';
-import { APP_VERSION } from '@/constants/Version';
 
 // Types based on your database schema
 export interface UserData {
@@ -12,6 +12,7 @@ export interface UserData {
   last_open_time?: string;
   times_opened?: number;
   joined_version?: number;
+  current_version?: number;
 }
 
 export interface FeedbackData {
@@ -109,7 +110,8 @@ class UserTrackingService {
           major: academicData.major,
           last_open_time: now,
           times_opened: 1,
-          joined_version: joinedVersion
+          joined_version: joinedVersion,
+          current_version: joinedVersion
         };
         
         await supabase
@@ -122,12 +124,14 @@ class UserTrackingService {
       } else if (existingUser) {
         // User already exists in database, update their tracking info
         const currentTimesOpened = existingUser.times_opened || 0;
+        const currentVersion = parseFloat(APP_VERSION);
         
         await supabase
           .from(SUPABASE_CONFIG.TABLES.USERDATA)
           .update({
             last_open_time: now,
-            times_opened: currentTimesOpened + 1
+            times_opened: currentTimesOpened + 1,
+            current_version: currentVersion
           })
           .eq('guc_id', existingUser.guc_id);
         
@@ -189,7 +193,8 @@ class UserTrackingService {
         .from(SUPABASE_CONFIG.TABLES.USERDATA)
         .update({
           last_open_time: now,
-          times_opened: (currentUser.times_opened || 0) + 1
+          times_opened: (currentUser.times_opened || 0) + 1,
+          current_version: parseFloat(APP_VERSION)
         })
         .eq('guc_id', userId);
         
@@ -205,7 +210,7 @@ class UserTrackingService {
     try {
       await supabase
         .from(SUPABASE_CONFIG.TABLES.USERDATA)
-        .update({ gpa })
+        .update({ gpa, current_version: parseFloat(APP_VERSION) })
         .eq('username', username);
     } catch {
       // Unexpected error updating GPA
@@ -220,6 +225,7 @@ class UserTrackingService {
       const updateData: any = {};
       if (major) updateData.major = major;
       if (season) updateData.joined_season = season;
+      updateData.current_version = parseFloat(APP_VERSION);
 
       await supabase
         .from(SUPABASE_CONFIG.TABLES.USERDATA)
@@ -235,9 +241,14 @@ class UserTrackingService {
    */
   async submitFeedback(feedback: FeedbackData): Promise<void> {
     try {
+      // Ensure version is always included with feedback
+      const payload: FeedbackData = {
+        ...feedback,
+        version: feedback.version || APP_VERSION,
+      };
       await supabase
         .from(SUPABASE_CONFIG.TABLES.FEEDBACK)
-        .insert([feedback]);
+        .insert([payload]);
     } catch {
       // Unexpected error submitting feedback
     }

@@ -579,7 +579,11 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
 
   const renderMediaFile = ({ item }: { item: MediaFile }) => (
     <TouchableOpacity
-      style={[styles.mediaFileCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+      style={[
+        styles.mediaFileCard,
+        { backgroundColor: colors.cardBackground, borderColor: colors.border },
+        dropdownVisible === item.id ? { zIndex: 2000, elevation: 12 } : null,
+      ]}
       onPress={() => handleImagePreview(item)}
     >
       <View style={styles.fileContent}>
@@ -1024,6 +1028,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    overflow: 'visible',
   },
   fileContent: {
     flexDirection: 'row',
@@ -1084,11 +1089,11 @@ const styles = StyleSheet.create({
     minWidth: 120,
     borderRadius: 8,
     borderWidth: 1,
-    elevation: 5,
+    elevation: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
     zIndex: 1000,
   },
   dropdownItem: {

@@ -62,16 +62,11 @@
 - Make all popup modals be swipable down from any area
 - In contact add created date and made by a 58- student and make it open after a certain date
 - Implement stale-while-revalidate
-- Add current version field to database
-- Adjust staff for personal schedule slots
 - Add schedule export function (.ics) to device calendar
-
-- Wraping up the app:
-    - Make it more efficient (Parsing Server Side, Parallel Data Fetching)
-    - Remove the unneeded dependencies (Smaller file size)
-    - Remove any console logs/warnings/errors
-    - Replace Alert.alert with custom alert component
-    - See how all aspects of the app works (Caching,...)
+- Make view course grayed out of not available
+- Fix previous grade duplicates
+- See how all aspects of the app works (Caching,...)
++ Quick access model drop-down use overlapping and not auto dismissing
 
 ## To-Do (Done)
 + Remove the effect that occurs on pressing on the tabs at the bottom
@@ -157,7 +152,14 @@
 + Fix attendance preloading (Stop Preloading in general)
 + Solve notifcations error if possible
 + Attendance speed: 28 sec, 9 sec
-+ Previous grades speed: 51 sec, 15 sec 
++ Previous grades speed: 51 sec, 15 sec
++ On sending feedback, send using username not nickname
++ Add current version field to database
++ Adjust staff for personal schedule slots
++ Make it more efficient (Parsing Server Side, Parallel Data Fetching)
++ Remove the unneeded dependencies (Smaller file size)
++ Remove any console logs/warnings/errors
++ Replace Alert.alert with custom alert component
 
 ## Run these next time
 - npx expo install @expo/metro-runtime react-native-worklets

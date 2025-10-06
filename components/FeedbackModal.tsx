@@ -6,16 +6,16 @@ import { supabase } from '@/utils/supabase';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 interface FeedbackModalProps {
@@ -58,7 +58,7 @@ export default function FeedbackModal({ visible, onClose, onSuccess, onError }: 
         .from('Feedback')
         .upsert({
           guc_id: gucId,
-          username: displayName,
+          username: username,
           notes: feedback.trim(),
           date: currentDate,
           version: APP_VERSION,
