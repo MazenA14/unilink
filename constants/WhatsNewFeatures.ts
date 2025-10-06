@@ -7,6 +7,8 @@ import { APP_VERSION } from './Version';
 export const WHATS_NEW_CONFIG = {
   version: APP_VERSION,
   features: [
+    "Added Dates Screen",
+    "Added Schedule Export to Calendar",
     "Bug Fixes & UI Enhancements"
   ]
 };

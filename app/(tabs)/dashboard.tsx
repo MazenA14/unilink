@@ -394,43 +394,51 @@ export default function DashboardScreen() {
         <View style={styles.section}>
           <View style={styles.gridContainer}>
             <TouchableOpacity 
-              style={[styles.gridItem, { backgroundColor: ScheduleTypeColors.instructor, borderColor: ScheduleTypeColors.instructor }]}
+              style={[styles.gridItem, { backgroundColor: ScheduleTypeColors.instructor, borderColor: ScheduleTypeColors.instructor, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}
               onPress={() => router.push('/instructors')}
             >
               <Ionicons name="people" size={20} color="white" />
-              <Text style={[styles.gridText, { color: 'white' }]}>Instructors</Text>
+              <Text style={[styles.gridText, { color: 'white', marginLeft: 8 }]}>Instructors</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={[styles.gridItem, { backgroundColor: colors.tint, borderColor: colors.tint }]}
+              style={[styles.gridItem, { backgroundColor: colors.tint, borderColor: colors.tint, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}
               onPress={() => router.push('/exam-seats')}
             >
               <Ionicons name="document-text" size={20} color="white" />
-              <Text style={[styles.gridText, { color: 'white' }]}>Exam Seats</Text>
+              <Text style={[styles.gridText, { color: 'white', marginLeft: 8 }]}>Exam Seats</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={[styles.gridItem, { backgroundColor: colors.gradeGood, borderColor: colors.gradeGood, justifyContent: 'center', alignItems: 'center' }]}
+              style={[styles.gridItem, { backgroundColor: colors.gradeGood, borderColor: colors.gradeGood, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}
               onPress={() => router.push('/attendance')}
             >
               <Feather name="check-circle" size={20} color="white" />
-              <Text style={[styles.gridText, { color: 'white' }]}>Attendance</Text>
+              <Text style={[styles.gridText, { color: 'white', marginLeft: 8 }]}>Attendance</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={[styles.gridItem, { backgroundColor: '#8B5CF6', borderColor: '#8B5CF6', justifyContent: 'center', alignItems: 'center' }]}
+              style={[styles.gridItem, { backgroundColor: '#8B5CF6', borderColor: '#8B5CF6', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}
               onPress={() => setQuickMediaModalVisible(true)}
             >
               <Ionicons name="folder-open" size={20} color="white" />
-              <Text style={[styles.gridText, { color: 'white' }]}>Quick Access</Text>
+              <Text style={[styles.gridText, { color: 'white', marginLeft: 8 }]}>Quick Access</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={[styles.gridItem, { backgroundColor: '#4A90E2', borderColor: '#4A90E2', width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]} 
+              style={[styles.gridItem, { backgroundColor: '#FF6B6B', borderColor: '#FF6B6B', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]} 
+              onPress={() => router.push('/dates')}
+            > 
+              <Ionicons name="calendar" size={20} color="white" />
+              <Text style={[styles.gridText, { color: 'white', marginLeft: 8 }]}>Dates</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.gridItem, { backgroundColor: '#4A90E2', borderColor: '#4A90E2', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]} 
               onPress={() => router.push('/cms/home')}
             > 
               <Ionicons name="document-attach" size={20} color="white" />
-              <Text style={[styles.cmsText, { color: 'white', marginLeft: 8 }]}>CMS</Text>
+              <Text style={[styles.gridText, { color: 'white', marginLeft: 8 }]}>CMS</Text>
             </TouchableOpacity>
           </View>
         </View>

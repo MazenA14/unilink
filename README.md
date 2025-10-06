@@ -22,7 +22,7 @@
 + Weights
 
 ## To-Do List (Optional)
-- Quizzes Screen (Add and see all quizzes the user adds)
++ Dates Screen (Add and see all quizzes the user adds)
 - Evaluate Course (Release update when the university releases it)
 - Evaluate Staff (Release update when the university releases it)
 - Empty Slots (Rooms) https://gucroomschedule.web.app/
@@ -62,11 +62,9 @@
 - Make all popup modals be swipable down from any area
 - In contact add created date and made by a 58- student and make it open after a certain date
 - Implement stale-while-revalidate
-- Add schedule export function (.ics) to device calendar
 - Make view course grayed out of not available
-- Fix previous grade duplicates
+- Make the files be viewed internaly without reauthorization
 - See how all aspects of the app works (Caching,...)
-+ Quick access model drop-down use overlapping and not auto dismissing
 
 ## To-Do (Done)
 + Remove the effect that occurs on pressing on the tabs at the bottom
@@ -160,6 +158,9 @@
 + Remove the unneeded dependencies (Smaller file size)
 + Remove any console logs/warnings/errors
 + Replace Alert.alert with custom alert component
++ Add schedule export function (.ics) to device calendar
++ Fix previous grade duplicates
++ Quick access model drop-down use overlapping and not auto dismissing
 
 ## Run these next time
 - npx expo install @expo/metro-runtime react-native-worklets
