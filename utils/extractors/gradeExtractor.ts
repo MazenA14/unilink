@@ -174,50 +174,41 @@ export function extractCourseGradeData(html: string): GradeData[] {
   try {
     const items: GradeData[] = [];
 
+    // Extract each row first to preserve order, then parse per-row
+    const rowRegex = /<tr[^>]*id="[^"]*rptrNtt[^"]*"[^>]*>[\s\S]*?<\/tr>/gi;
+    let rowMatch: RegExpExecArray | null;
+    let lastSeenTitle: string | null = null;
 
-    // Pattern 1: Rows with Quiz/Assignment name (span with evalMethLbl)
-    const rowPatternWithTitle = /<tr[^>]*id="[^"]*rptrNtt[^"]*"[^>]*>[\s\S]*?<span[^>]*id="[^"]*rptrNtt_evalMethLbl_[^"]+"[^>]*>([^<]+)<\/span>[\s\S]*?<td>\s*([^<]+?)\s*<\/td>[\s\S]*?<td>\s*([0-9.]+)\s*\/\s*([0-9.]+)\s*<\/td>[\s\S]*?<td>\s*([^<]+?)\s*<\/td>[\s\S]*?<\/tr>/gi;
+    while ((rowMatch = rowRegex.exec(html)) !== null) {
+      const rowHtml = rowMatch[0];
 
-    let match: RegExpExecArray | null;
-    while ((match = rowPatternWithTitle.exec(html)) !== null) {
-      const title = match[1].trim();
-      const elementName = match[2].trim();
-      const obtained = parseFloat(match[3]);
-      const total = parseFloat(match[4]);
-      // const instructor = match[5].trim(); // currently unused in UI
-
-      if (!isNaN(obtained) && !isNaN(total) && total > 0) {
-        const percentage = (obtained / total) * 100;
-        items.push({ 
-          course: `${title} - ${elementName}`, 
-          percentage,
-          obtained,
-          total
-        });
+      // Try to get the title from the first column if present
+      const titleMatch = rowHtml.match(/<span[^>]*id="[^"]*rptrNtt_evalMethLbl_[^"]+"[^>]*>([^<]+)<\/span>/i);
+      if (titleMatch && titleMatch[1]) {
+        lastSeenTitle = titleMatch[1].trim();
       }
-    }
 
-    // Pattern 2: Rows without Quiz/Assignment name (only hidden input, but has element name and grade)
-    const rowPatternWithoutTitle = /<tr[^>]*id="[^"]*rptrNtt[^"]*"[^>]*>[\s\S]*?<td[^>]*>[\s\S]*?<input[^>]*type="hidden"[^>]*>[\s\S]*?<\/td>[\s\S]*?<td>\s*([^<]+?)\s*<\/td>[\s\S]*?<td>\s*([0-9.]+)\s*\/\s*([0-9.]+)\s*<\/td>[\s\S]*?<td>\s*([^<]+?)\s*<\/td>[\s\S]*?<\/tr>/gi;
+      // Extract the element name (second column)
+      const elementMatch = rowHtml.match(/<td>\s*([^<]+?)\s*<\/td>/i);
 
-    // Reset regex lastIndex
-    rowPatternWithoutTitle.lastIndex = 0;
-    
-    while ((match = rowPatternWithoutTitle.exec(html)) !== null) {
-      const elementName = match[1].trim();
-      const obtained = parseFloat(match[2]);
-      const total = parseFloat(match[3]);
-      // const instructor = match[4].trim(); // currently unused in UI
+      // Extract obtained/total from the grade column
+      const gradeMatch = rowHtml.match(/<td>\s*([0-9.]+)\s*\/\s*([0-9.]+)\s*<\/td>/i);
 
-      if (!isNaN(obtained) && !isNaN(total) && total > 0 && elementName) {
-        const percentage = (obtained / total) * 100;
-        // Use just the element name since there's no Quiz/Assignment title
-        items.push({ 
-          course: elementName, 
-          percentage,
-          obtained,
-          total
-        });
+      if (elementMatch && gradeMatch) {
+        const elementName = elementMatch[1].trim();
+        const obtained = parseFloat(gradeMatch[1]);
+        const total = parseFloat(gradeMatch[2]);
+
+        if (!isNaN(obtained) && !isNaN(total) && total > 0 && elementName) {
+          const percentage = (obtained / total) * 100;
+          const courseName = lastSeenTitle ? `${lastSeenTitle} - ${elementName}` : elementName;
+          items.push({
+            course: courseName,
+            percentage,
+            obtained,
+            total
+          });
+        }
       }
     }
 

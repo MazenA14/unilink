@@ -1,11 +1,11 @@
 import { useCustomAlert } from '@/components/CustomAlert';
 import {
-  CourseWithGrades,
-  CurrentGradesSection,
-  GradeType,
-  PreviousGradesSection,
-  Season,
-  YearGroup
+    CourseWithGrades,
+    CurrentGradesSection,
+    GradeType,
+    PreviousGradesSection,
+    Season,
+    YearGroup
 } from '@/components/grades';
 import { GradesMenu } from '@/components/GradesMenu';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
@@ -390,8 +390,8 @@ export default function GradesScreen() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     if (gradeType === 'previous') {
-      // Clear courses cache for all seasons to ensure fresh data
-      await GradeCache.clearAllCache();
+      // Clear previous grades permanent caches to ensure fresh data
+      await GradeCache.clearPreviousGradesCache();
       
       // Force refresh from API (bypass cache)
       await loadSeasons(true);
