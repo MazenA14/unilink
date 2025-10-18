@@ -85,12 +85,49 @@ export default function CMSCourseViewScreen() {
   }, []);
 
   const parseAnnouncementText = useCallback((html: string) => {
-    // Split by both <p> and <h[1-6]> tags to handle paragraphs and headings separately
-    const elements = html.split(/(<p[^>]*>|<h[1-6][^>]*>)/i);
-    const allParts: { type: 'text' | 'link', content: string, url?: string, bold?: boolean }[] = [];
+    // First, extract tables and replace them with placeholders
+    const tableMatches: { placeholder: string; tableHtml: string }[] = [];
+    let processedHtml = html;
+    let tableIndex = 0;
+
+    // Find all tables in the HTML
+    const tableRegex = /<table[^>]*>.*?<\/table>/gs;
+    let match;
+    while ((match = tableRegex.exec(html)) !== null) {
+      const placeholder = `__TABLE_PLACEHOLDER_${tableIndex}__`;
+      tableMatches.push({
+        placeholder,
+        tableHtml: match[0]
+      });
+      processedHtml = processedHtml.replace(match[0], placeholder);
+      tableIndex++;
+    }
+
+    // Split by both <p>, <h[1-6]>, and table placeholders
+    const elements = processedHtml.split(/(<p[^>]*>|<h[1-6][^>]*>|__TABLE_PLACEHOLDER_\d+__)/i);
+    const allParts: { type: 'text' | 'link' | 'table', content: string, url?: string, bold?: boolean, tableData?: any }[] = [];
 
     elements.forEach((element, elementIndex) => {
       if (!element.trim()) return;
+
+      // Check if this is a table placeholder
+      const isTablePlaceholder = /__TABLE_PLACEHOLDER_\d+__/.test(element);
+      if (isTablePlaceholder) {
+        const tableMatch = tableMatches.find(t => t.placeholder === element);
+        if (tableMatch) {
+          // Parse the table HTML and add it as a table part
+          const { parseHtmlTable } = require('@/components/ui/Table');
+          const tableData = parseHtmlTable(tableMatch.tableHtml);
+          if (tableData) {
+            allParts.push({
+              type: 'table',
+              content: '',
+              tableData
+            });
+          }
+        }
+        return;
+      }
 
       // Check if this is a heading tag
       const isHeading = /<h[1-6][^>]*>/i.test(element);
@@ -284,29 +321,42 @@ export default function CMSCourseViewScreen() {
             
             {announcementsExpanded && (
               <View style={styles.announcementContent}>
-                {parseAnnouncementText(courseData.announcementsHtml).map((part, index) => (
-                  part.type === 'link' ? (
-                    <TouchableOpacity
-                      key={index}
-                      onPress={() => handleLinkPress(part.url!)}
-                      style={styles.linkContainer}
-                    >
-                      <Text style={[styles.linkText, { color: colors.tint }]}>{part.content}</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <Text 
-                      key={index} 
-                      style={[
-                        styles.announcementText, 
-                        { color: colors.text },
-                        part.content === '\n' && styles.paragraphBreak,
-                        part.bold && styles.boldText
-                      ]}
-                    >
-                      {part.content}
-                    </Text>
-                  )
-                ))}
+                {parseAnnouncementText(courseData.announcementsHtml).map((part, index) => {
+                  if (part.type === 'link') {
+                    return (
+                      <TouchableOpacity
+                        key={index}
+                        onPress={() => handleLinkPress(part.url!)}
+                        style={styles.linkContainer}
+                      >
+                        <Text style={[styles.linkText, { color: colors.tint }]}>{part.content}</Text>
+                      </TouchableOpacity>
+                    );
+                  } else if (part.type === 'table') {
+                    const Table = require('@/components/ui/Table').default;
+                    return (
+                      <Table
+                        key={index}
+                        data={part.tableData}
+                        style={styles.announcementTable}
+                      />
+                    );
+                  } else {
+                    return (
+                      <Text 
+                        key={index} 
+                        style={[
+                          styles.announcementText, 
+                          { color: colors.text },
+                          part.content === '\n' && styles.paragraphBreak,
+                          part.bold && styles.boldText
+                        ]}
+                      >
+                        {part.content}
+                      </Text>
+                    );
+                  }
+                })}
               </View>
             )}
           </View>
@@ -465,6 +515,7 @@ const styles = StyleSheet.create({
   paragraphBreak: { marginBottom: 12, height: 0 },
   linkContainer: { marginBottom: 8 },
   linkText: { fontSize: 14, textDecorationLine: 'underline' },
+  announcementTable: { marginVertical: 8 },
   weeksContainer: { marginBottom: 16 },
   weekCard: { borderRadius: 12, borderWidth: 1, marginBottom: 12, overflow: 'hidden' },
   weekHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingBottom: 12 },

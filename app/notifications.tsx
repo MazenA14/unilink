@@ -1,4 +1,3 @@
-import SelectableText from '@/components/ui/SelectableText';
 import { Colors } from '@/constants/Colors';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -7,18 +6,18 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    Animated,
-    Dimensions,
-    FlatList,
-    Modal,
-    PanResponder,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Animated,
+  Dimensions,
+  FlatList,
+  Modal,
+  PanResponder,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function NotificationsScreen() {
@@ -418,7 +417,10 @@ export default function NotificationsScreen() {
               {selectedNotification && (
                 <>
                   {/* Title */}
-                  <Text style={[styles.modalNotificationTitle, { color: colors.mainFont }]}>
+                  <Text 
+                    style={[styles.modalNotificationTitle, { color: colors.mainFont }]}
+                    selectable={true}
+                  >
                     {selectedNotification.title}
                   </Text>
 
@@ -426,14 +428,20 @@ export default function NotificationsScreen() {
                   <View style={styles.modalMetaContainer}>
                     <View style={styles.modalMetaRow}>
                       <Ionicons name="calendar-outline" size={16} color={colors.secondaryFont} />
-                        <Text style={[styles.modalMetaText, { color: colors.secondaryFont, opacity: 1 }]}>
+                        <Text 
+                          style={[styles.modalMetaText, { color: colors.secondaryFont, opacity: 1 }]}
+                          selectable={true}
+                        >
                           {formatDate(selectedNotification.date)}
                         </Text>
                     </View>
                     
                     <View style={styles.modalMetaRow}>
                       <Ionicons name="person-outline" size={16} color={colors.secondaryFont} />
-                        <Text style={[styles.modalMetaText, { color: colors.secondaryFont, opacity: 1 }]}>
+                        <Text 
+                          style={[styles.modalMetaText, { color: colors.secondaryFont, opacity: 1 }]}
+                          selectable={true}
+                        >
                           {selectedNotification.staff}
                         </Text>
                     </View>
@@ -452,8 +460,9 @@ export default function NotificationsScreen() {
                               styles.modalImportanceText,
                               { color: getImportanceColor(selectedNotification.importance) },
                             ]}
+                            selectable={true}
                           >
-                            {selectedNotification.importance} Priority
+                            {`${selectedNotification.importance} Priority`}
                           </Text>
                         </View>
                       </View>
@@ -462,11 +471,12 @@ export default function NotificationsScreen() {
 
                   {/* Body Content */}
                   <View style={[styles.modalBodyContainer, { borderTopColor: colors.border }]}>
-                      <SelectableText 
+                      <Text 
                         style={[styles.modalBodyText, { color: colors.secondaryFont, opacity: 1 }]}
+                        selectable={true}
                       >
                         {selectedNotification.body}
-                      </SelectableText>
+                      </Text>
                   </View>
                 </>
               )}

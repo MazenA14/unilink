@@ -24,6 +24,7 @@ export default function CourseWeightsScreen() {
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
   
   // Modal states
   const [courseModalVisible, setCourseModalVisible] = useState(false);
@@ -45,7 +46,7 @@ export default function CourseWeightsScreen() {
     'Final',
     'Labs',
     'Midterm',
-    'Projects',
+    'Project',
     'Quizzes'
   ];
 
@@ -90,6 +91,18 @@ export default function CourseWeightsScreen() {
       setRefreshing(false);
     }
   }, [loadCourses]);
+
+  const toggleCourseExpansion = (courseId: string) => {
+    setExpandedCourses(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(courseId)) {
+        newSet.delete(courseId);
+      } else {
+        newSet.add(courseId);
+      }
+      return newSet;
+    });
+  };
 
   // Course management functions
   const handleAddCourse = () => {
@@ -337,53 +350,70 @@ export default function CourseWeightsScreen() {
     );
   };
 
-  const renderCourseItem = ({ item: course }: { item: Course }) => (
-    <View style={[styles.courseCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-      <View style={styles.courseHeader}>
-        <Text style={[styles.courseName, { color: colors.text }]}>{course.name}</Text>
-        <View style={styles.courseActions}>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.tint + '20' }]}
-            onPress={() => handleEditCourse(course)}
-          >
-            <Ionicons name="pencil" size={16} color={colors.tint} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.error + '20' }]}
-            onPress={() => handleDeleteCourse(course.id)}
-          >
-            <Ionicons name="trash" size={16} color={colors.error} />
-          </TouchableOpacity>
-        </View>
-      </View>
-      
-      <View style={styles.weightsSection}>
-        <View style={styles.weightsHeader}>
-          <Text style={[styles.weightsTitle, { color: colors.text }]}>Weights</Text>
-          <TouchableOpacity
-            style={[styles.addWeightButton, { backgroundColor: colors.tint }]}
-            onPress={() => handleAddWeight(course)}
-          >
-            <Ionicons name="add" size={16} color={colorScheme === 'dark' ? '#000000' : '#FFFFFF'} />
-          </TouchableOpacity>
-        </View>
+  const renderCourseItem = ({ item: course }: { item: Course }) => {
+    const isExpanded = expandedCourses.has(course.id);
+    
+    return (
+      <View style={[styles.courseCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <TouchableOpacity 
+          style={styles.courseHeader}
+          onPress={() => toggleCourseExpansion(course.id)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.courseHeaderContent}>
+            <Text style={[styles.courseName, { color: colors.text }]}>{course.name}</Text>
+            <Ionicons 
+              name={isExpanded ? "chevron-up" : "chevron-down"} 
+              size={20} 
+              color={colors.text} 
+            />
+          </View>
+          <View style={styles.courseActions}>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.tint + '20' }]}
+              onPress={() => handleEditCourse(course)}
+            >
+              <Ionicons name="pencil" size={16} color={colors.tint} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.error + '20' }]}
+              onPress={() => handleDeleteCourse(course.id)}
+            >
+              <Ionicons name="trash" size={16} color={colors.error} />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
         
-        {course.weights.length > 0 ? (
-          <FlatList
-            data={course.weights}
-            renderItem={renderWeightItem}
-            keyExtractor={(weight) => weight.id}
-            scrollEnabled={false}
-            style={styles.weightsList}
-          />
-        ) : (
-          <Text style={[styles.emptyWeights, { color: colors.secondaryFont }]}>
-            No weights added yet
-          </Text>
+        {isExpanded && (
+          <View style={styles.weightsSection}>
+            <View style={styles.weightsHeader}>
+              <Text style={[styles.weightsTitle, { color: colors.text }]}>Weights</Text>
+              <TouchableOpacity
+                style={[styles.addWeightButton, { backgroundColor: colors.tint }]}
+                onPress={() => handleAddWeight(course)}
+              >
+                <Ionicons name="add" size={16} color={colorScheme === 'dark' ? '#000000' : '#FFFFFF'} />
+              </TouchableOpacity>
+            </View>
+            
+            {course.weights.length > 0 ? (
+              <FlatList
+                data={course.weights.sort((a, b) => b.percentage - a.percentage)}
+                renderItem={renderWeightItem}
+                keyExtractor={(weight) => weight.id}
+                scrollEnabled={false}
+                style={styles.weightsList}
+              />
+            ) : (
+              <Text style={[styles.emptyWeights, { color: colors.secondaryFont }]}>
+                No weights added yet
+              </Text>
+            )}
+          </View>
         )}
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -709,9 +739,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
   },
+  courseHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
   courseName: {
     fontSize: 18,
     fontWeight: '600',
+    flex: 1,
+    marginRight: 8,
   },
   courseActions: {
     flexDirection: 'row',

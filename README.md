@@ -62,9 +62,10 @@
 - Make all popup modals be swipable down from any area
 - In contact add created date and made by a 58- student and make it open after a certain date
 - Implement stale-while-revalidate
-- Make view course grayed out of not available
 - Make the files be viewed internaly without reauthorization
+- Nickname Reseting randomly
 - See how all aspects of the app works (Caching,...)
+- Add share button with link copy and qr code
 
 ## To-Do (Done)
 + Remove the effect that occurs on pressing on the tabs at the bottom
@@ -161,6 +162,12 @@
 + Add schedule export function (.ics) to device calendar
 + Fix previous grade duplicates
 + Quick access model drop-down use overlapping and not auto dismissing
++ Make view course grayed out of not available
++ Handle table correctly for CMS announcements
++ Make notifications text selectable
++ Make weights be sorted by the percentage
++ Make courses be a drop-down for the weights
++ Change from projects to project, name in weights
 
 ## Run these next time
 - npx expo install @expo/metro-runtime react-native-worklets

@@ -5,17 +5,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  Animated,
-  FlatList,
-  Modal,
-  PanResponder,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Animated,
+    FlatList,
+    Modal,
+    PanResponder,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 import DateTimePicker from '@react-native-community/datetimepicker';

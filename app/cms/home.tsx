@@ -101,6 +101,14 @@ export default function CMSHomeScreen() {
   const onPressViewCourse = useCallback(async (row: CMSCourseRow) => {
     try {
       setError(null);
+      
+      // Check if course is cancelled - prevent navigation
+      const isCancelled = row.status.toLowerCase() === 'canceled' || row.status.toLowerCase() === 'cancelled';
+      if (isCancelled) {
+        setError('Cannot view cancelled course');
+        return;
+      }
+      
       // Prefetch course view to validate access and warm cache, then navigate
       getCmsCourseView(row.courseId, row.seasonId).catch(() => {});
       router.push({ pathname: '/course-view', params: { id: row.courseId, sid: row.seasonId } });
@@ -171,15 +179,24 @@ export default function CMSHomeScreen() {
                     const courseCode = courseCodeMatch ? courseCodeMatch[1].replace(/\|/g, '') : '';
                     const cleanCourseName = course.name.replace(/\s*\([^)]+\)\s*/g, '').trim();
                     
+                    // Check if course is cancelled
+                    const isCancelled = course.status.toLowerCase() === 'canceled' || course.status.toLowerCase() === 'cancelled';
+                    
                     return (
                       <View key={`${course.courseId}-${course.seasonId}`} style={[styles.card, { backgroundColor: colors.background, borderColor: colors.border }]}>
                         <Text style={[styles.courseName, { color: colors.text }]}>
                           {cleanCourseName}{courseCode && ` - ${courseCode}`}
                         </Text>
                         <Text style={[styles.meta, { color: colors.secondaryFont }]}>{course.season}</Text>
-                        <TouchableOpacity style={[styles.button, { backgroundColor: colors.tint }]} onPress={() => onPressViewCourse(course)}>
-                          <Text style={styles.buttonText}>View Course</Text>
-                        </TouchableOpacity>
+                        {isCancelled ? (
+                          <View style={[styles.button, styles.disabledButton, { backgroundColor: colors.border }]}>
+                            <Text style={[styles.buttonText, styles.disabledButtonText]}>Course Cancelled</Text>
+                          </View>
+                        ) : (
+                          <TouchableOpacity style={[styles.button, { backgroundColor: colors.tint }]} onPress={() => onPressViewCourse(course)}>
+                            <Text style={styles.buttonText}>View Course</Text>
+                          </TouchableOpacity>
+                        )}
                       </View>
                     );
                   })}
@@ -213,6 +230,8 @@ const styles = StyleSheet.create({
   meta: { fontSize: 12, marginBottom: 2 },
   button: { alignSelf: 'flex-start', marginTop: 8, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 },
   buttonText: { color: '#fff', fontWeight: '600' },
+  disabledButton: { opacity: 0.6 },
+  disabledButtonText: { color: '#999', fontWeight: '500' },
   empty: { textAlign: 'center' },
   loadingText: { marginTop: 8 },
   error: { marginBottom: 8 },
