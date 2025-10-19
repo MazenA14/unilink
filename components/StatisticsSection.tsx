@@ -2,6 +2,7 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { supabase } from '@/utils/supabase';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -9,6 +10,7 @@ interface UserStats {
   totalUsers: number;
   usersBySeason: { [key: string]: number };
   usersByMajor: { [key: string]: number };
+  usersByVersion: { [key: string]: number };
   recentUsers: number; // Users who joined in the last 30 days
 }
 
@@ -16,6 +18,7 @@ interface FeedbackStats {
   totalFeedback: number;
   feedbackByVersion: { [key: string]: number };
   recentFeedback: number; // Feedback in the last 30 days
+  mostActiveFeedbackDay: string; // Day with most feedback
 }
 
 interface StatisticsData {
@@ -33,12 +36,14 @@ export default function StatisticsSection() {
       totalUsers: 0,
       usersBySeason: {},
       usersByMajor: {},
+      usersByVersion: {},
       recentUsers: 0,
     },
     feedback: {
       totalFeedback: 0,
       feedbackByVersion: {},
       recentFeedback: 0,
+      mostActiveFeedbackDay: 'N/A',
     },
     loading: true,
     error: null,
@@ -74,6 +79,7 @@ export default function StatisticsSection() {
       const totalUsers = usersData?.length || 0;
       const usersBySeason: { [key: string]: number } = {};
       const usersByMajor: { [key: string]: number } = {};
+      const usersByVersion: { [key: string]: number } = {};
       let recentUsers = 0;
 
       const thirtyDaysAgo = new Date();
@@ -91,6 +97,12 @@ export default function StatisticsSection() {
           usersByMajor[user.major] = (usersByMajor[user.major] || 0) + 1;
         }
 
+        // Count by version
+        if (user.joined_version) {
+          const version = user.joined_version.toString();
+          usersByVersion[version] = (usersByVersion[version] || 0) + 1;
+        }
+
         // Count recent users
         if (user.date_joined_app) {
           const joinDate = new Date(user.date_joined_app);
@@ -100,9 +112,11 @@ export default function StatisticsSection() {
         }
       });
 
+
       // Process Feedback data
       const totalFeedback = feedbackData?.length || 0;
       const feedbackByVersion: { [key: string]: number } = {};
+      const feedbackByDay: { [key: string]: number } = {};
       let recentFeedback = 0;
 
       feedbackData?.forEach(feedback => {
@@ -117,6 +131,21 @@ export default function StatisticsSection() {
           if (feedbackDate >= thirtyDaysAgo) {
             recentFeedback++;
           }
+
+          // Count by day
+          const dayKey = feedbackDate.toISOString().split('T')[0];
+          feedbackByDay[dayKey] = (feedbackByDay[dayKey] || 0) + 1;
+        }
+      });
+
+
+      // Find most active feedback day
+      let mostActiveFeedbackDay = 'N/A';
+      let maxFeedbackCount = 0;
+      Object.entries(feedbackByDay).forEach(([day, count]) => {
+        if (count > maxFeedbackCount) {
+          maxFeedbackCount = count;
+          mostActiveFeedbackDay = new Date(day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         }
       });
 
@@ -125,12 +154,14 @@ export default function StatisticsSection() {
           totalUsers,
           usersBySeason,
           usersByMajor,
+          usersByVersion,
           recentUsers,
         },
         feedback: {
           totalFeedback,
           feedbackByVersion,
           recentFeedback,
+          mostActiveFeedbackDay,
         },
         loading: false,
         error: null,
@@ -246,11 +277,35 @@ export default function StatisticsSection() {
         {renderStatCard('Recent Feedback', stats.feedback.recentFeedback, 'Last 30 days')}
       </View>
 
+      {/* Table View Buttons */}
+      <View style={styles.tableButtonsContainer}>
+        <TouchableOpacity
+          style={[styles.tableButton, { backgroundColor: colors.tint }]}
+          onPress={() => router.push('/users-table')}
+        >
+          <Ionicons name="people" size={20} color="white" />
+          <Text style={styles.tableButtonText}>View Full Users Table</Text>
+          <Ionicons name="arrow-forward" size={16} color="white" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tableButton, { backgroundColor: colors.tint }]}
+          onPress={() => router.push('/feedback-table')}
+        >
+          <Ionicons name="chatbubbles" size={20} color="white" />
+          <Text style={styles.tableButtonText}>View Full Feedback Table</Text>
+          <Ionicons name="arrow-forward" size={16} color="white" />
+        </TouchableOpacity>
+      </View>
+
       {/* All Majors */}
       {renderAllItems(stats.users.usersByMajor, 'All Majors')}
 
       {/* All Seasons */}
       {renderAllItems(stats.users.usersBySeason, 'All Seasons')}
+
+      {/* All Versions */}
+      {renderAllItems(stats.users.usersByVersion, 'Joined Versions')}
 
       {/* Top Versions */}
       {renderTopItems(stats.feedback.feedbackByVersion, 'Feedback by Version')}
@@ -380,5 +435,25 @@ const styles = StyleSheet.create({
   allItemValue: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  tableButtonsContainer: {
+    gap: 12,
+    marginBottom: 16,
+  },
+  tableButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  tableButtonText: {
+    color: 'white',
+    fontSize: 15,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
   },
 });

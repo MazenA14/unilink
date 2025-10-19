@@ -44,6 +44,8 @@ function AppContent() {
         <Stack.Screen name="course-view" options={{ headerShown: false }} />
         <Stack.Screen name="course-weights" options={{ headerShown: false }} />
         <Stack.Screen name="dates" options={{ headerShown: false }} />
+        <Stack.Screen name="feedback-table" options={{ headerShown: false }} />
+        <Stack.Screen name="users-table" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
