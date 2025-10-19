@@ -182,16 +182,16 @@ export function extractCourseGradeData(html: string): GradeData[] {
     while ((rowMatch = rowRegex.exec(html)) !== null) {
       const rowHtml = rowMatch[0];
 
-      // Try to get the title from the first column if present
+      // Try to get the title from the first column if present (Quiz 1, Quiz 2, etc.)
       const titleMatch = rowHtml.match(/<span[^>]*id="[^"]*rptrNtt_evalMethLbl_[^"]+"[^>]*>([^<]+)<\/span>/i);
       if (titleMatch && titleMatch[1]) {
         lastSeenTitle = titleMatch[1].trim();
       }
 
-      // Extract the element name (second column)
+      // Extract the element name (second column) - like "Question1", "Question 2"
       const elementMatch = rowHtml.match(/<td>\s*([^<]+?)\s*<\/td>/i);
 
-      // Extract obtained/total from the grade column
+      // Extract obtained/total from the grade column - like "7/10", "8/10"
       const gradeMatch = rowHtml.match(/<td>\s*([0-9.]+)\s*\/\s*([0-9.]+)\s*<\/td>/i);
 
       if (elementMatch && gradeMatch) {
@@ -201,6 +201,7 @@ export function extractCourseGradeData(html: string): GradeData[] {
 
         if (!isNaN(obtained) && !isNaN(total) && total > 0 && elementName) {
           const percentage = (obtained / total) * 100;
+          // Create a descriptive course name that matches the structure from the HTML
           const courseName = lastSeenTitle ? `${lastSeenTitle} - ${elementName}` : elementName;
           items.push({
             course: courseName,

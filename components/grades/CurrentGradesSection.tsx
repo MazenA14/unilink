@@ -88,10 +88,24 @@ export default function CurrentGradesSection({
             courseGrades = await GUCAPIProxy.getCourseGrades(course.value);
             await GradeCache.setCachedCurrentCourseGrades(course.value, courseGrades);
           }
+          // Separate midterm grades from detailed grades
+          const midtermGrades = courseGrades.filter(grade => 
+            !grade.course.includes(' - ') && 
+            !grade.course.toLowerCase().includes('quiz') &&
+            !grade.course.toLowerCase().includes('assignment') &&
+            !grade.course.toLowerCase().includes('question')
+          );
+          const detailedGrades = courseGrades.filter(grade => 
+            grade.course.includes(' - ') || 
+            grade.course.toLowerCase().includes('quiz') ||
+            grade.course.toLowerCase().includes('assignment') ||
+            grade.course.toLowerCase().includes('question')
+          );
+
           return {
             ...course,
-            midtermGrade: courseGrades.length > 0 ? courseGrades[0] : undefined,
-            detailedGrades: courseGrades.length > 1 ? courseGrades.slice(1) : [],
+            midtermGrade: midtermGrades.length > 0 ? midtermGrades[0] : undefined,
+            detailedGrades: detailedGrades,
             isExpanded: false,
             isLoadingDetails: false,
           } as CourseWithGrades;
@@ -172,9 +186,22 @@ export default function CurrentGradesSection({
         await GradeCache.setCachedCurrentCourseGrades(courseId, courseGrades);
       }
       
-      // Set the first grade as midterm grade and the rest as detailed grades
-      updatedCourses[courseIndex].midtermGrade = courseGrades.length > 0 ? courseGrades[0] : undefined;
-      updatedCourses[courseIndex].detailedGrades = courseGrades.length > 1 ? courseGrades.slice(1) : [];
+      // Separate midterm grades from detailed grades
+      const midtermGrades = courseGrades.filter(grade => 
+        !grade.course.includes(' - ') && 
+        !grade.course.toLowerCase().includes('quiz') &&
+        !grade.course.toLowerCase().includes('assignment') &&
+        !grade.course.toLowerCase().includes('question')
+      );
+      const detailedGrades = courseGrades.filter(grade => 
+        grade.course.includes(' - ') || 
+        grade.course.toLowerCase().includes('quiz') ||
+        grade.course.toLowerCase().includes('assignment') ||
+        grade.course.toLowerCase().includes('question')
+      );
+
+      updatedCourses[courseIndex].midtermGrade = midtermGrades.length > 0 ? midtermGrades[0] : undefined;
+      updatedCourses[courseIndex].detailedGrades = detailedGrades;
       updatedCourses[courseIndex].isLoadingDetails = false;
       setCoursesWithGrades([...updatedCourses]);
     } catch (error) {
@@ -286,7 +313,17 @@ export default function CurrentGradesSection({
             getGradeColor={getGradeColor}
             formatCourseName={formatCourseName}
             getCourseCodeParts={getCourseCodeParts}
-            formatGradeDisplay={(grade) => `${grade.percentage.toFixed(1)}%`}
+            formatGradeDisplay={(grade) => {
+              if (grade.obtained !== undefined && grade.total !== undefined) {
+                // Only show decimals if they exist (not .00)
+                const obtainedStr = grade.obtained % 1 === 0 ? grade.obtained.toString() : grade.obtained.toFixed(2);
+                const totalStr = grade.total % 1 === 0 ? grade.total.toString() : grade.total.toFixed(2);
+                return `${obtainedStr}/${totalStr}`;
+              }
+              // Only show decimals if they exist for percentage
+              const percentageStr = grade.percentage % 1 === 0 ? grade.percentage.toString() : grade.percentage.toFixed(2);
+              return `${percentageStr}%`;
+            }}
           />
         ))}
       </View>
