@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
+    Modal,
     ScrollView,
     StyleSheet,
     Text,
@@ -50,7 +51,9 @@ export default function UsersTableScreen() {
     joined_season: '',
     major: '',
   });
+  const [columnWidths, setColumnWidths] = useState<{[key: string]: number}>({});
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedCell, setSelectedCell] = useState<{content: string, title: string} | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -70,6 +73,10 @@ export default function UsersTableScreen() {
       }
 
       setUsers(data || []);
+      // Calculate column widths after data is loaded
+      setTimeout(() => {
+        calculateColumnWidths();
+      }, 100);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch users');
     } finally {
@@ -160,6 +167,80 @@ export default function UsersTableScreen() {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
+  const handleCellPress = (content: string, title: string) => {
+    setSelectedCell({ content, title });
+  };
+
+  const calculateColumnWidths = () => {
+    const widths: {[key: string]: number} = {};
+    
+    // Define column headers and their text
+    const headers = {
+      username: 'Username',
+      guc_id: 'GUC ID',
+      joined_season: 'Season',
+      major: 'Major',
+      date_joined_app: 'Date Joined',
+      last_open_time: 'Last Open',
+      times_opened: 'Times Opened',
+      joined_version: 'Joined Version',
+      current_version: 'Current Version'
+    };
+
+    // Calculate width for each column
+    Object.keys(headers).forEach(key => {
+      let maxWidth = 0;
+      
+      // Measure content width for each user (prioritize cell content over header)
+      users.forEach(user => {
+        let content = '';
+        switch (key) {
+          case 'username':
+            content = user.username || '';
+            break;
+          case 'guc_id':
+            content = user.guc_id || '';
+            break;
+          case 'joined_season':
+            content = user.joined_season?.toString() || 'N/A';
+            break;
+          case 'major':
+            content = user.major || 'N/A';
+            break;
+          case 'date_joined_app':
+            content = formatDate(user.date_joined_app);
+            break;
+          case 'last_open_time':
+            content = formatDate(user.last_open_time);
+            break;
+          case 'times_opened':
+            content = user.times_opened?.toString() || 'N/A';
+            break;
+          case 'joined_version':
+            content = user.joined_version?.toString() || 'N/A';
+            break;
+          case 'current_version':
+            content = user.current_version?.toString() || 'N/A';
+            break;
+        }
+        
+        // More accurate width calculation - use 10px per character for better accuracy
+        const contentWidth = content.length * 10 + 32; // Increased padding for better fit
+        maxWidth = Math.max(maxWidth, contentWidth);
+      });
+      
+      // Only use header width if no data or header is wider than all content
+      const headerText = headers[key as keyof typeof headers];
+      const headerWidth = headerText.length * 10 + 32;
+      maxWidth = Math.max(maxWidth, headerWidth);
+      
+      // Set minimum width and apply calculated width with extra buffer
+      widths[key] = Math.max(maxWidth + 20, 100); // Extra 20px buffer + higher minimum
+    });
+    
+    setColumnWidths(widths);
   };
 
   const renderTopBar = () => (
@@ -258,66 +339,66 @@ export default function UsersTableScreen() {
   const renderTableHeader = () => (
     <View style={[styles.tableHeader, { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#f0f0f0', borderColor: colors.border }]}>
       <TouchableOpacity
-        style={[styles.headerCell, styles.usernameCell]}
+        style={[styles.headerCell, { width: columnWidths.username || 120 }]}
         onPress={() => handleSort('username')}
       >
         <Text style={[styles.headerText, { color: colors.mainFont }]}>Username</Text>
         {renderSortIcon('username')}
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.headerCell, styles.gucIdCell]}
+        style={[styles.headerCell, { width: columnWidths.guc_id || 100 }]}
         onPress={() => handleSort('guc_id')}
       >
         <Text style={[styles.headerText, { color: colors.mainFont }]}>GUC ID</Text>
         {renderSortIcon('guc_id')}
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.headerCell, styles.seasonCell]}
+        style={[styles.headerCell, { width: columnWidths.joined_season || 80 }]}
         onPress={() => handleSort('joined_season')}
       >
         <Text style={[styles.headerText, { color: colors.mainFont }]}>Season</Text>
         {renderSortIcon('joined_season')}
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.headerCell, styles.majorCell]}
+        style={[styles.headerCell, { width: columnWidths.major || 120 }]}
         onPress={() => handleSort('major')}
       >
         <Text style={[styles.headerText, { color: colors.mainFont }]}>Major</Text>
         {renderSortIcon('major')}
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.headerCell, styles.dateCell]}
+        style={[styles.headerCell, { width: columnWidths.date_joined_app || 120 }]}
         onPress={() => handleSort('date_joined_app')}
       >
         <Text style={[styles.headerText, { color: colors.mainFont }]}>Date Joined</Text>
         {renderSortIcon('date_joined_app')}
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.headerCell, styles.lastOpenCell]}
+        style={[styles.headerCell, { width: columnWidths.last_open_time || 120 }]}
         onPress={() => handleSort('last_open_time')}
       >
         <Text style={[styles.headerText, { color: colors.mainFont }]}>Last Open</Text>
         {renderSortIcon('last_open_time')}
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.headerCell, styles.timesOpenedCell]}
+        style={[styles.headerCell, { width: columnWidths.times_opened || 100 }]}
         onPress={() => handleSort('times_opened')}
       >
         <Text style={[styles.headerText, { color: colors.mainFont }]}>Times Opened</Text>
         {renderSortIcon('times_opened')}
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.headerCell, styles.versionCell]}
+        style={[styles.headerCell, { width: columnWidths.joined_version || 100 }]}
         onPress={() => handleSort('joined_version')}
       >
-        <Text style={[styles.headerText, { color: colors.mainFont }]}>Joined Ver</Text>
+        <Text style={[styles.headerText, { color: colors.mainFont }]}>Joined Version</Text>
         {renderSortIcon('joined_version')}
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.headerCell, styles.versionCell]}
+        style={[styles.headerCell, { width: columnWidths.current_version || 100 }]}
         onPress={() => handleSort('current_version')}
       >
-        <Text style={[styles.headerText, { color: colors.mainFont }]}>Current Ver</Text>
+        <Text style={[styles.headerText, { color: colors.mainFont }]}>Current Version</Text>
         {renderSortIcon('current_version')}
       </TouchableOpacity>
     </View>
@@ -327,54 +408,81 @@ export default function UsersTableScreen() {
     <View
       style={[
         styles.tableRow,
-        { backgroundColor: index % 2 === 0 ? colors.background : (colorScheme === 'dark' ? '#1a1a1a' : '#f9f9f9'), borderColor: colors.border }
+        { backgroundColor: index % 2 === 0 ? colors.background : (colorScheme === 'dark' ? '#2a2a2a' : '#f9f9f9'), borderColor: colors.border }
       ]}
     >
-      <View style={[styles.cell, styles.usernameCell]}>
+      <TouchableOpacity 
+        style={[styles.cell, { width: columnWidths.username || 120 }]}
+        onPress={() => handleCellPress(item.username || 'N/A', 'Username')}
+      >
         <Text style={[styles.cellText, { color: colors.mainFont }]} numberOfLines={2}>
           {item.username || 'N/A'}
         </Text>
-      </View>
-      <View style={[styles.cell, styles.gucIdCell]}>
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={[styles.cell, { width: columnWidths.guc_id || 100 }]}
+        onPress={() => handleCellPress(item.guc_id || 'N/A', 'GUC ID')}
+      >
         <Text style={[styles.cellText, { color: colors.mainFont }]} numberOfLines={1}>
           {item.guc_id || 'N/A'}
         </Text>
-      </View>
-      <View style={[styles.cell, styles.seasonCell]}>
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={[styles.cell, { width: columnWidths.joined_season || 80 }]}
+        onPress={() => handleCellPress(item.joined_season?.toString() || 'N/A', 'Season')}
+      >
         <Text style={[styles.cellText, { color: colors.mainFont }]}>
           {item.joined_season || 'N/A'}
         </Text>
-      </View>
-      <View style={[styles.cell, styles.majorCell]}>
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={[styles.cell, { width: columnWidths.major || 120 }]}
+        onPress={() => handleCellPress(item.major || 'N/A', 'Major')}
+      >
         <Text style={[styles.cellText, { color: colors.mainFont }]} numberOfLines={2}>
           {item.major || 'N/A'}
         </Text>
-      </View>
-      <View style={[styles.cell, styles.dateCell]}>
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={[styles.cell, { width: columnWidths.date_joined_app || 120 }]}
+        onPress={() => handleCellPress(formatDate(item.date_joined_app), 'Date Joined')}
+      >
         <Text style={[styles.cellText, styles.dateText, { color: colors.secondaryFont }]} numberOfLines={2}>
           {formatDate(item.date_joined_app)}
         </Text>
-      </View>
-      <View style={[styles.cell, styles.lastOpenCell]}>
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={[styles.cell, { width: columnWidths.last_open_time || 120 }]}
+        onPress={() => handleCellPress(formatDate(item.last_open_time), 'Last Open')}
+      >
         <Text style={[styles.cellText, styles.dateText, { color: colors.secondaryFont }]} numberOfLines={2}>
           {formatDate(item.last_open_time)}
         </Text>
-      </View>
-      <View style={[styles.cell, styles.timesOpenedCell]}>
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={[styles.cell, { width: columnWidths.times_opened || 100 }]}
+        onPress={() => handleCellPress(item.times_opened?.toString() || 'N/A', 'Times Opened')}
+      >
         <Text style={[styles.cellText, { color: colors.mainFont }]}>
           {item.times_opened ?? 'N/A'}
         </Text>
-      </View>
-      <View style={[styles.cell, styles.versionCell]}>
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={[styles.cell, { width: columnWidths.joined_version || 100 }]}
+        onPress={() => handleCellPress(item.joined_version?.toString() || 'N/A', 'Joined Version')}
+      >
         <Text style={[styles.cellText, { color: colors.secondaryFont }]}>
           {item.joined_version ?? 'N/A'}
         </Text>
-      </View>
-      <View style={[styles.cell, styles.versionCell]}>
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={[styles.cell, { width: columnWidths.current_version || 100 }]}
+        onPress={() => handleCellPress(item.current_version?.toString() || 'N/A', 'Current Version')}
+      >
         <Text style={[styles.cellText, { color: colors.secondaryFont }]}>
           {item.current_version ?? 'N/A'}
         </Text>
-      </View>
+      </TouchableOpacity>
     </View>
   );
 
@@ -439,6 +547,35 @@ export default function UsersTableScreen() {
           </ScrollView>
         </View>
       </ScrollView>
+
+      {/* Cell Content Modal */}
+      <Modal
+        visible={selectedCell !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSelectedCell(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.mainFont }]}>
+                {selectedCell?.title}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setSelectedCell(null)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color={colors.mainFont} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalBody}>
+              <Text style={[styles.modalText, { color: colors.mainFont }]}>
+                {selectedCell?.content}
+              </Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -526,7 +663,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   tableWrapper: {
-    minWidth: 1500,
+    flex: 1,
+    minWidth: '100%',
   },
   tableScrollView: {
     flex: 1,
@@ -560,28 +698,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   usernameCell: {
-    width: 180,
+    flex: 2,
+    minWidth: 120,
   },
   gucIdCell: {
-    width: 120,
+    flex: 1.5,
+    minWidth: 80,
   },
   seasonCell: {
-    width: 100,
+    flex: 1,
+    minWidth: 60,
   },
   majorCell: {
-    width: 150,
+    flex: 2,
+    minWidth: 100,
   },
   dateCell: {
-    width: 160,
+    flex: 1.5,
+    minWidth: 100,
   },
   lastOpenCell: {
-    width: 160,
+    flex: 1.5,
+    minWidth: 100,
   },
   timesOpenedCell: {
-    width: 120,
+    flex: 1,
+    minWidth: 80,
   },
   versionCell: {
-    width: 100,
+    flex: 1,
+    minWidth: 60,
   },
   cellText: {
     fontSize: 13,
@@ -626,6 +772,42 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '90%',
+    maxHeight: '80%',
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalBody: {
+    padding: 16,
+  },
+  modalText: {
+    fontSize: 16,
+    lineHeight: 24,
   },
 });
 
