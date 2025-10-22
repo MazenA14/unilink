@@ -9,12 +9,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function ExamSeatsScreen() {
@@ -159,9 +159,6 @@ export default function ExamSeatsScreen() {
                     <Text style={[styles.courseName, { color: colors.mainFont }]} numberOfLines={2}>
                       {exam.courseName}
                     </Text>
-                     <View style={[styles.examTypeBadge, { backgroundColor: getExamTypeColor(exam.examType, exam.date) }]}>
-                       <Text style={styles.examTypeText}>{exam.examType}</Text>
-                     </View>
                   </View>
                 </View>
 
@@ -349,19 +346,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     flex: 1,
-    marginRight: 12,
     lineHeight: 18,
-  },
-  examTypeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  examTypeText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: '600',
-    textAlign: 'center',
   },
   examDetails: {
     gap: 8,

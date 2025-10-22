@@ -5,8 +5,6 @@ module.exports = function (api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      // keep worklets plugin first (replaces reanimated plugin in v4)
-      'react-native-worklets/plugin',
       // strip console.* calls in production to reduce bundle size
       isProd && [
         'transform-remove-console',

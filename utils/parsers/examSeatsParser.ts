@@ -115,7 +115,7 @@ export function getExamTypeColor(examType: string, examDate?: string): string {
     return '#8B5CF6'; // Purple for quizzes
   }
   
-  return '#10B981'; // Green for regular exams
+  return '#FCA5A5'; // Soft red for upcoming exams
 }
 
 /**
