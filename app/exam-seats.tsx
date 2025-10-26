@@ -3,7 +3,7 @@ import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { GUCAPIProxy } from '@/utils/gucApiProxy';
-import { ExamSeat, formatExamDate, getExamTypeColor, parseExamSeatsHTML } from '@/utils/parsers/examSeatsParser';
+import { ExamSeat, formatExamDate, getExamTypeColor, parseExamDate } from '@/utils/parsers/examSeatsParser';
 import { MaterialIcons } from '@expo/vector-icons';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, Stack } from 'expo-router';
@@ -39,12 +39,20 @@ export default function ExamSeatsScreen() {
         setLoading(true);
       }
       
-      // Fetch exam seats data from the real API
-      const htmlData = await GUCAPIProxy.getExamSeats();
-      const { examSeats: parsedSeats } = parseExamSeatsHTML(htmlData);
-      setExamSeats(parsedSeats);
+      // Fetch exam seats data with caching (bypass cache on refresh)
+      const parsedSeats = await GUCAPIProxy.getExamSeatsData(isRefresh);
+      
+      // Sort exam seats by date (earliest first)
+      const sortedSeats = parsedSeats.sort((a, b) => {
+        const dateA = parseExamDate(a.date);
+        const dateB = parseExamDate(b.date);
+        return dateA.getTime() - dateB.getTime();
+      });
+      
+      setExamSeats(sortedSeats);
       // setStudentName(parsedName);
     } catch (error) {
+      console.error('Failed to load exam seats:', error);
       showAlert({
         title: 'Error',
         message: 'Failed to load exam seats. Please try again.',

@@ -2,6 +2,7 @@ import { useCustomAlert } from '@/components/CustomAlert';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { GradeCache } from '@/utils/gradeCache';
+import { GradeTracking } from '@/utils/gradeTracking';
 import { GUCAPIProxy, GradeData } from '@/utils/gucApiProxy';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
@@ -45,6 +46,7 @@ export default function CurrentGradesSection({
   const [coursesWithGrades, setCoursesWithGrades] = useState<CourseWithGrades[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [loadingGrades, setLoadingGrades] = useState(false);
+  const [gradeCounts, setGradeCounts] = useState<{ [courseId: string]: { total: number; unseen: number } }>({});
 
   // Load available courses on component mount
   useEffect(() => {
@@ -71,6 +73,18 @@ export default function CurrentGradesSection({
       return course ? course.text : null;
     } catch (error) {
       return null;
+    }
+  };
+
+  // Calculate grade counts for a course
+  const calculateGradeCounts = async (courseId: string, allGrades: GradeData[]): Promise<{ total: number; unseen: number }> => {
+    try {
+      const total = allGrades.length;
+      const unseen = await GradeTracking.getUnseenGradesCount(courseId, allGrades);
+      return { total, unseen };
+    } catch (error) {
+      console.error('Error calculating grade counts:', error);
+      return { total: allGrades.length, unseen: 0 };
     }
   };
 
@@ -121,6 +135,23 @@ export default function CurrentGradesSection({
       });
       const results = await Promise.all(gradePromises);
       setCoursesWithGrades(results);
+
+      // Calculate grade counts for all courses
+      const gradeCountPromises = results.map(async (course) => {
+        const allGrades = [
+          ...(course.midtermGrade ? [course.midtermGrade] : []),
+          ...(course.detailedGrades || [])
+        ];
+        const counts = await calculateGradeCounts(course.value, allGrades);
+        return { courseId: course.value, counts };
+      });
+
+      const gradeCountResults = await Promise.all(gradeCountPromises);
+      const newGradeCounts: { [courseId: string]: { total: number; unseen: number } } = {};
+      gradeCountResults.forEach(({ courseId, counts }) => {
+        newGradeCounts[courseId] = counts;
+      });
+      setGradeCounts(newGradeCounts);
     } finally {
       setLoadingGrades(false);
     }
@@ -204,6 +235,17 @@ export default function CurrentGradesSection({
       updatedCourses[courseIndex].detailedGrades = detailedGrades;
       updatedCourses[courseIndex].isLoadingDetails = false;
       setCoursesWithGrades([...updatedCourses]);
+
+      // Update grade counts for this course
+      const allGrades = [
+        ...(updatedCourses[courseIndex].midtermGrade ? [updatedCourses[courseIndex].midtermGrade] : []),
+        ...(updatedCourses[courseIndex].detailedGrades || [])
+      ];
+      const counts = await calculateGradeCounts(courseId, allGrades);
+      setGradeCounts(prev => ({
+        ...prev,
+        [courseId]: counts
+      }));
     } catch (error) {
       const updatedCourses = [...coursesWithGrades];
       updatedCourses[courseIndex].isLoadingDetails = false;
@@ -225,6 +267,22 @@ export default function CurrentGradesSection({
       course.isExpanded = true;
       if (!course.midtermGrade && (!course.detailedGrades || course.detailedGrades.length === 0)) {
         await loadCourseGrades(course.value, courseIndex);
+      }
+      
+      // Mark grades as seen when expanding
+      const allGrades = [
+        ...(course.midtermGrade ? [course.midtermGrade] : []),
+        ...(course.detailedGrades || [])
+      ];
+      if (allGrades.length > 0) {
+        await GradeTracking.markCourseGradesAsSeen(course.value, allGrades);
+        
+        // Update grade counts to reflect seen grades
+        const counts = await calculateGradeCounts(course.value, allGrades);
+        setGradeCounts(prev => ({
+          ...prev,
+          [course.value]: counts
+        }));
       }
     } else {
       // Collapsing
@@ -305,27 +363,38 @@ export default function CurrentGradesSection({
 
       {/* Course Grid */}
       <View style={styles.courseGrid}>
-        {coursesWithGrades.map((course, index) => (
-          <ExpandableCourseCard
-            key={course.value}
-            course={course}
-            onToggle={() => handleCourseToggle(index)}
-            getGradeColor={getGradeColor}
-            formatCourseName={formatCourseName}
-            getCourseCodeParts={getCourseCodeParts}
-            formatGradeDisplay={(grade) => {
-              if (grade.obtained !== undefined && grade.total !== undefined) {
-                // Only show decimals if they exist (not .00)
-                const obtainedStr = grade.obtained % 1 === 0 ? grade.obtained.toString() : grade.obtained.toFixed(2);
-                const totalStr = grade.total % 1 === 0 ? grade.total.toString() : grade.total.toFixed(2);
-                return `${obtainedStr}/${totalStr}`;
-              }
-              // Only show decimals if they exist for percentage
-              const percentageStr = grade.percentage % 1 === 0 ? grade.percentage.toString() : grade.percentage.toFixed(2);
-              return `${percentageStr}%`;
-            }}
-          />
-        ))}
+        {coursesWithGrades.map((course, index) => {
+          const courseGradeCounts = gradeCounts[course.value] || { total: 0, unseen: 0 };
+          return (
+            <ExpandableCourseCard
+              key={course.value}
+              course={course}
+              onToggle={() => handleCourseToggle(index)}
+              getGradeColor={getGradeColor}
+              formatCourseName={formatCourseName}
+              getCourseCodeParts={getCourseCodeParts}
+              totalGradesCount={courseGradeCounts.total}
+              unseenGradesCount={courseGradeCounts.unseen}
+              formatGradeDisplay={(grade) => {
+                if (grade.total !== undefined) {
+                  if (grade.obtained !== undefined) {
+                    // Both obtained and total are available
+                    const obtainedStr = grade.obtained % 1 === 0 ? grade.obtained.toString() : grade.obtained.toFixed(2);
+                    const totalStr = grade.total % 1 === 0 ? grade.total.toString() : grade.total.toFixed(2);
+                    return `${obtainedStr}/${totalStr}`;
+                  } else {
+                    // Only total is available, show placeholder
+                    const totalStr = grade.total % 1 === 0 ? grade.total.toString() : grade.total.toFixed(2);
+                    return `PLACEHOLDER:${totalStr}`;
+                  }
+                }
+                // Only show decimals if they exist for percentage
+                const percentageStr = grade.percentage % 1 === 0 ? grade.percentage.toString() : grade.percentage.toFixed(2);
+                return `${percentageStr}%`;
+              }}
+            />
+          );
+        })}
       </View>
       
       {/* Custom Alert Component */}

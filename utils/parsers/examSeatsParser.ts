@@ -100,7 +100,7 @@ export function getExamTypeColor(examType: string, examDate?: string): string {
     
     // Check if exam is today
     if (examDateObj.toDateString() === today.toDateString()) {
-      return '#93C5FD'; // Soft blue for today's exams
+      return '#FDE047'; // Soft yellow for today's exams
     }
   }
   
@@ -123,7 +123,7 @@ export function getExamTypeColor(examType: string, examDate?: string): string {
  * @param dateStr - The date string in format "14 - September - 2025"
  * @returns Date object
  */
-function parseExamDate(dateStr: string): Date {
+export function parseExamDate(dateStr: string): Date {
   try {
     const parts = dateStr.split(' - ');
     if (parts.length === 3) {

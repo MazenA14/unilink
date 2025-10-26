@@ -1,6 +1,7 @@
 import { StudyYear, TranscriptData } from '@/components/transcript/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GradeData, ScheduleData } from './gucApiProxy';
+import { ExamSeat } from './parsers/examSeatsParser';
 
 // Course interface
 interface Course {
@@ -32,6 +33,10 @@ const ATTENDANCE_CACHE_EXPIRY_MS = ATTENDANCE_CACHE_EXPIRY_DAYS * 24 * 60 * 60 *
 const INSTRUCTORS_BY_COURSE_CACHE_EXPIRY_HOURS = 1; // 1 hour for instructors by course data
 const INSTRUCTORS_BY_COURSE_CACHE_EXPIRY_MS = INSTRUCTORS_BY_COURSE_CACHE_EXPIRY_HOURS * 60 * 60 * 1000;
 
+// Exam seats cache configuration (2 weeks since exam seats data changes infrequently)
+const EXAM_SEATS_CACHE_EXPIRY_DAYS = 14; // 2 weeks for exam seats data
+const EXAM_SEATS_CACHE_EXPIRY_MS = EXAM_SEATS_CACHE_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+
 // Previous grades cache configuration (permanent - never expires)
 // Previous grades data is cached permanently since it represents historical data that doesn't change
 
@@ -58,6 +63,8 @@ const CACHE_KEYS = {
   // Attendance cache keys
   ATTENDANCE_DATA: 'guc_cache_attendance_data',
   COURSE_ATTENDANCE: 'guc_cache_course_attendance',
+  // Exam seats cache keys
+  EXAM_SEATS_DATA: 'guc_cache_exam_seats_data',
 } as const;
 
 // Interface definitions
@@ -1196,6 +1203,54 @@ export class GradeCache {
     try {
       await AsyncStorage.removeItem(CACHE_KEYS.ATTENDANCE_DATA);
       await AsyncStorage.removeItem(CACHE_KEYS.COURSE_ATTENDANCE);
+    } catch (error) {
+    }
+  }
+
+  /**
+   * Get cached exam seats data
+   */
+  static async getCachedExamSeats(): Promise<ExamSeat[] | null> {
+    try {
+      const cachedData = await AsyncStorage.getItem(CACHE_KEYS.EXAM_SEATS_DATA);
+      if (!cachedData) return null;
+
+      const parsed: CachedData<ExamSeat[]> = JSON.parse(cachedData);
+      
+      const now = Date.now();
+      if (now - parsed.timestamp > EXAM_SEATS_CACHE_EXPIRY_MS) {
+        // Remove expired data
+        await AsyncStorage.removeItem(CACHE_KEYS.EXAM_SEATS_DATA);
+        return null;
+      }
+
+      return parsed.data;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Set cached exam seats data
+   */
+  static async setCachedExamSeats(data: ExamSeat[]): Promise<void> {
+    try {
+      const cachedData: CachedData<ExamSeat[]> = {
+        data,
+        timestamp: Date.now(),
+      };
+      
+      await AsyncStorage.setItem(CACHE_KEYS.EXAM_SEATS_DATA, JSON.stringify(cachedData));
+    } catch (error) {
+    }
+  }
+
+  /**
+   * Clear exam seats data cache
+   */
+  static async clearExamSeatsCache(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(CACHE_KEYS.EXAM_SEATS_DATA);
     } catch (error) {
     }
   }

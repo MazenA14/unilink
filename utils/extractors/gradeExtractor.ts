@@ -191,24 +191,54 @@ export function extractCourseGradeData(html: string): GradeData[] {
       // Extract the element name (second column) - like "Question1", "Question 2"
       const elementMatch = rowHtml.match(/<td>\s*([^<]+?)\s*<\/td>/i);
 
-      // Extract obtained/total from the grade column - like "7/10", "8/10"
-      const gradeMatch = rowHtml.match(/<td>\s*([0-9.]+)\s*\/\s*([0-9.]+)\s*<\/td>/i);
+      // Extract obtained/total from the grade column - like "7/10", "8/10", "/10", or just "10"
+      const gradeMatch = rowHtml.match(/<td>\s*([0-9.]*)\s*\/\s*([0-9.]+)\s*<\/td>/i);
+      const totalOnlyMatch = rowHtml.match(/<td>\s*([0-9.]+)\s*<\/td>/i);
 
-      if (elementMatch && gradeMatch) {
+      if (elementMatch) {
         const elementName = elementMatch[1].trim();
-        const obtained = parseFloat(gradeMatch[1]);
-        const total = parseFloat(gradeMatch[2]);
-
-        if (!isNaN(obtained) && !isNaN(total) && total > 0 && elementName) {
-          const percentage = (obtained / total) * 100;
-          // Create a descriptive course name that matches the structure from the HTML
-          const courseName = lastSeenTitle ? `${lastSeenTitle} - ${elementName}` : elementName;
-          items.push({
-            course: courseName,
-            percentage,
-            obtained,
-            total
-          });
+        
+        if (gradeMatch) {
+          // Pattern like "7/10" or "/10"
+          const obtainedStr = gradeMatch[1].trim();
+          const total = parseFloat(gradeMatch[2]);
+          
+          if (!isNaN(total) && total > 0 && elementName) {
+            const courseName = lastSeenTitle ? `${lastSeenTitle} - ${elementName}` : elementName;
+            
+            if (obtainedStr && obtainedStr !== '') {
+              // Both obtained and total are available
+              const obtained = parseFloat(obtainedStr);
+              if (!isNaN(obtained)) {
+                const percentage = (obtained / total) * 100;
+                items.push({
+                  course: courseName,
+                  percentage,
+                  obtained,
+                  total
+                });
+              }
+            } else {
+              // Only total is available (placeholder case)
+              items.push({
+                course: courseName,
+                percentage: 0, // Placeholder grade
+                total
+              });
+            }
+          }
+        } else if (totalOnlyMatch) {
+          // Pattern like just "10" (total only)
+          const total = parseFloat(totalOnlyMatch[1]);
+          
+          if (!isNaN(total) && total > 0 && elementName) {
+            const courseName = lastSeenTitle ? `${lastSeenTitle} - ${elementName}` : elementName;
+            items.push({
+              course: courseName,
+              percentage: 0, // Placeholder grade
+              total
+            });
+          }
         }
       }
     }

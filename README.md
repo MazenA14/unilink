@@ -22,7 +22,6 @@
 + Weights
 
 ## To-Do List (Optional)
-+ Dates Screen (Add and see all quizzes the user adds)
 - Evaluate Course (Release update when the university releases it)
 - Evaluate Staff (Release update when the university releases it)
 - Empty Slots (Rooms) https://gucroomschedule.web.app/
@@ -31,6 +30,8 @@
 - Reminder for Password Reset
 - Calendar
 - Game
+
++ Dates Screen (Add and see all quizzes the user adds)
 
 ## Dashboard should contain:
 + Notifications

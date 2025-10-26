@@ -483,11 +483,17 @@ export default function GradesScreen() {
 
   // Format grade display to show actual marks instead of percentage
   const formatGradeDisplay = (grade: GradeData) => {
-    if (grade.obtained !== undefined && grade.total !== undefined) {
-      // Only show decimals if they exist (not .00)
-      const obtainedStr = grade.obtained % 1 === 0 ? grade.obtained.toString() : grade.obtained.toFixed(2);
-      const totalStr = grade.total % 1 === 0 ? grade.total.toString() : grade.total.toFixed(2);
-      return `${obtainedStr}/${totalStr}`;
+    if (grade.total !== undefined) {
+      if (grade.obtained !== undefined) {
+        // Both obtained and total are available
+        const obtainedStr = grade.obtained % 1 === 0 ? grade.obtained.toString() : grade.obtained.toFixed(2);
+        const totalStr = grade.total % 1 === 0 ? grade.total.toString() : grade.total.toFixed(2);
+        return `${obtainedStr}/${totalStr}`;
+      } else {
+        // Only total is available, show placeholder
+        const totalStr = grade.total % 1 === 0 ? grade.total.toString() : grade.total.toFixed(2);
+        return `PLACEHOLDER:${totalStr}`;
+      }
     }
     // Only show decimals if they exist for percentage
     const percentageStr = grade.percentage % 1 === 0 ? grade.percentage.toString() : grade.percentage.toFixed(2);

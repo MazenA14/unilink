@@ -11,6 +11,8 @@ interface ExpandableCourseCardProps {
   formatCourseName: (courseText: string) => string;
   getCourseCodeParts: (courseText: string) => { code: string; number: string };
   formatGradeDisplay: (grade: any) => string;
+  totalGradesCount?: number;
+  unseenGradesCount?: number;
 }
 
 export default function ExpandableCourseCard({
@@ -20,6 +22,8 @@ export default function ExpandableCourseCard({
   formatCourseName,
   getCourseCodeParts,
   formatGradeDisplay,
+  totalGradesCount = 0,
+  unseenGradesCount = 0,
 }: ExpandableCourseCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -96,10 +100,17 @@ export default function ExpandableCourseCard({
                   <Text
                     style={[
                       styles.statusBadgeGrade,
-                      { color: getGradeColor(course.midtermGrade.percentage) }
+                      { 
+                        color: formatGradeDisplay(course.midtermGrade).startsWith('PLACEHOLDER:') 
+                          ? 'white' 
+                          : getGradeColor(course.midtermGrade.percentage) 
+                      }
                     ]}
                   >
-                    {formatGradeDisplay(course.midtermGrade)}
+                    {formatGradeDisplay(course.midtermGrade).startsWith('PLACEHOLDER:') 
+                      ? `/${formatGradeDisplay(course.midtermGrade).replace('PLACEHOLDER:', '')}`
+                      : formatGradeDisplay(course.midtermGrade)
+                    }
                   </Text>
                 )}
               </View>
@@ -108,6 +119,27 @@ export default function ExpandableCourseCard({
           
           {/* Grade and Action Section */}
           <View style={styles.expandableCourseRight}>
+            {/* Grade Count and Unseen Badge */}
+            <View style={styles.gradeInfoContainer}>
+              {totalGradesCount > 0 && (
+                <View style={styles.gradeCountContainer}>
+                  <Text style={[styles.gradeCountText, { color: colors.tabIconDefault }]}>
+                    {totalGradesCount} grade{totalGradesCount !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+              )}
+              {unseenGradesCount > 0 && (
+                <View style={[
+                  styles.unseenBadge,
+                  { backgroundColor: colors.tint }
+                ]}>
+                  <Text style={[styles.unseenBadgeText, { color: 'white' }]}>
+                    {unseenGradesCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+            
             <View style={[
               styles.expandButton,
               { 
@@ -156,10 +188,17 @@ export default function ExpandableCourseCard({
                     <Text
                       style={[
                         styles.detailedGradePercentage,
-                        { color: getGradeColor(grade.percentage) },
+                        { 
+                          color: formatGradeDisplay(grade).startsWith('PLACEHOLDER:') 
+                            ? 'white' 
+                            : getGradeColor(grade.percentage) 
+                        },
                       ]}
                     >
-                      {formatGradeDisplay(grade)}
+                      {formatGradeDisplay(grade).startsWith('PLACEHOLDER:') 
+                        ? `/${formatGradeDisplay(grade).replace('PLACEHOLDER:', '')}`
+                        : formatGradeDisplay(grade)
+                      }
                     </Text>
                   </View>
                 </View>
@@ -170,7 +209,10 @@ export default function ExpandableCourseCard({
               {course.midtermGrade && (
                 <View style={styles.expandedHeader}>
                   <Text style={[styles.expandedTitle, { color: colors.text }]}>
-                    Midterm Grade: {formatGradeDisplay(course.midtermGrade)}
+                    Midterm Grade: {formatGradeDisplay(course.midtermGrade).startsWith('PLACEHOLDER:') 
+                      ? `/${formatGradeDisplay(course.midtermGrade).replace('PLACEHOLDER:', '')}`
+                      : formatGradeDisplay(course.midtermGrade)
+                    }
                   </Text>
                 </View>
               )}
@@ -264,6 +306,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
     marginLeft: 8,
+  },
+  gradeInfoContainer: {
+    alignItems: 'flex-end',
+    marginBottom: 8,
+  },
+  gradeCountContainer: {
+    marginBottom: 4,
+  },
+  gradeCountText: {
+    fontSize: 12,
+    fontWeight: '500',
+    textAlign: 'right',
+  },
+  unseenBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  unseenBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   gradeBadge: {
     paddingHorizontal: 12,

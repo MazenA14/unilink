@@ -13,6 +13,7 @@ export class AuthManager {
   private static FIRST_TIME_OPEN_KEY = 'isFirstTimeOpen';
   private static DASHBOARD_SLOTS_KEY = 'dashboardSlots';
   private static NEXT_SLOT_REMINDER_MINUTES_KEY = 'nextSlotReminderMinutes';
+  private static LAST_USER_INFO_REFRESH_KEY = 'lastUserInfoRefresh';
 
   /**
    * Store session cookie from login response
@@ -280,8 +281,8 @@ export class AuthManager {
       ]);
       
       // Clear push notification cache using the service
-      const { pushNotificationService } = await import('./services/pushNotificationService');
-      await pushNotificationService.clearCachedToken();
+      // const { pushNotificationService } = await import('./services/pushNotificationService');
+      // await pushNotificationService.clearCachedToken();
       
       // Clear What's New cache
       await Promise.all([
@@ -348,7 +349,8 @@ export class AuthManager {
           this.clearUserId(),
           this.clearJoinedSeason(),
           this.clearShiftedSchedulePreference(),
-          this.clearDefaultScreen()
+          this.clearDefaultScreen(),
+          this.clearLastUserInfoRefresh()
         ]);
         
         // Clear all application cache
@@ -356,6 +358,9 @@ export class AuthManager {
         
         // Clear Quick Media files
         await this.clearQuickMediaFiles();
+        
+        // Note: Grade tracking data will be cleared when the user logs in again
+        // This avoids potential import issues during logout
       }
       
     } catch (error) {
@@ -378,7 +383,8 @@ export class AuthManager {
         this.clearJoinedSeason(),
         this.clearShiftedSchedulePreference(),
         this.clearDefaultScreen(),
-        this.clearDashboardSlots()
+        this.clearDashboardSlots(),
+        this.clearLastUserInfoRefresh()
       ]);
       
     } catch (error) {
@@ -436,6 +442,85 @@ export class AuthManager {
    * Clear the next-slot reminder preference
    */
   static async clearNextSlotReminderMinutes(): Promise<void> {}
+
+  /**
+   * Store the last user info refresh timestamp
+   */
+  static async storeLastUserInfoRefresh(timestamp: number): Promise<void> {
+    try {
+      await AsyncStorage.setItem(this.LAST_USER_INFO_REFRESH_KEY, String(timestamp));
+    } catch (error) {
+      // Ignore errors
+    }
+  }
+
+  /**
+   * Retrieve the last user info refresh timestamp
+   */
+  static async getLastUserInfoRefresh(): Promise<number | null> {
+    try {
+      const value = await AsyncStorage.getItem(this.LAST_USER_INFO_REFRESH_KEY);
+      if (!value) return null;
+      const timestamp = parseInt(value, 10);
+      return isNaN(timestamp) ? null : timestamp;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Clear the last user info refresh timestamp
+   */
+  static async clearLastUserInfoRefresh(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(this.LAST_USER_INFO_REFRESH_KEY);
+    } catch (error) {
+      // Ignore errors
+    }
+  }
+
+  /**
+   * Check if user info should be refreshed (30 days have passed)
+   */
+  static async shouldRefreshUserInfo(): Promise<boolean> {
+    try {
+      const lastRefresh = await this.getLastUserInfoRefresh();
+      if (!lastRefresh) return true; // Never refreshed before
+      
+      const now = Date.now();
+      const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+      
+      return (now - lastRefresh) >= thirtyDaysInMs;
+    } catch (error) {
+      return true; // Default to refresh on error
+    }
+  }
+
+  /**
+   * Test function to simulate monthly refresh check
+   * This can be used for testing the monthly refresh functionality
+   */
+  static async testMonthlyRefresh(): Promise<{
+    shouldRefresh: boolean;
+    lastRefresh: number | null;
+    daysSinceLastRefresh: number | null;
+  }> {
+    const shouldRefresh = await this.shouldRefreshUserInfo();
+    const lastRefresh = await this.getLastUserInfoRefresh();
+    
+    let daysSinceLastRefresh: number | null = null;
+    if (lastRefresh) {
+      const now = Date.now();
+      const daysInMs = now - lastRefresh;
+      daysSinceLastRefresh = Math.floor(daysInMs / (24 * 60 * 60 * 1000));
+    }
+    
+    return {
+      shouldRefresh,
+      lastRefresh,
+      daysSinceLastRefresh
+    };
+  }
 
   /**
    * @deprecated Use userLogout() for user-initiated logout or sessionResetLogout() for session recovery

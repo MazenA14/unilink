@@ -4,6 +4,7 @@ import { GradeCache } from './gradeCache';
 import { getOutstandingPayments, payOutstanding } from './handlers/paymentHandler';
 import { getScheduleData } from './handlers/scheduleHandler';
 import { getAvailableStudyYears, getTranscriptData, resetSession } from './handlers/transcriptHandler';
+import { ExamSeat } from './parsers/examSeatsParser';
 import { GradeData, Instructor, ScheduleData } from './types/gucTypes';
 
 export { GradeData, Instructor, PaymentItem, ScheduleClass, ScheduleData, ScheduleDay, ViewStateData } from './types/gucTypes';
@@ -648,6 +649,33 @@ export class GUCAPIProxy {
       }
 
       return html;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  /**
+   * Get exam seats data with caching
+   */
+  static async getExamSeatsData(bypassCache: boolean = false): Promise<ExamSeat[]> {
+    try {
+      // Try to get cached data first (unless bypassing cache)
+      if (!bypassCache) {
+        const cachedData = await GradeCache.getCachedExamSeats();
+        if (cachedData) {
+          return cachedData;
+        }
+      }
+
+      // Fetch fresh data
+      const html = await this.getExamSeats();
+      const { parseExamSeatsHTML } = await import('./parsers/examSeatsParser');
+      const { examSeats } = parseExamSeatsHTML(html);
+      
+      // Cache the fresh data
+      await GradeCache.setCachedExamSeats(examSeats);
+      
+      return examSeats;
     } catch (err) {
       throw err;
     }

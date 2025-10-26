@@ -7,15 +7,15 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const LoginScreen = () => {
@@ -136,6 +136,14 @@ const LoginScreen = () => {
           GradesPreloader.preloadCurrentGrades().catch(error => {
             // Don't show error to user - preloading is optional
           });
+          
+          // Clear any existing grade tracking data for fresh start
+          try {
+            const { GradeTracking } = await import('@/utils/gradeTracking');
+            await GradeTracking.clearAllTracking();
+          } catch (error) {
+            // Grade tracking clearing is optional
+          }
         } 
         // else {
         //   // Still proceed if we got HTTP 200, assuming login worked

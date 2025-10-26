@@ -19,12 +19,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Animated,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Animated,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function DashboardScreen() {
@@ -340,13 +340,46 @@ export default function DashboardScreen() {
       const newTime = new Date();
       setCurrentTime(newTime); // Update current time for slot indicator
       
-      // Refresh dashboard slots preference on focus and fetch notifications
+      // Refresh dashboard slots preference on focus
       (async () => {
         const stored = await AuthManager.getDashboardSlots();
         setDashboardSlots(stored || 5);
-        await refreshNotifications();
       })();
-    }, [loadNickname, refreshNotifications])
+
+      // Check if user info should be refreshed (every 30 days)
+      (async () => {
+        try {
+          const shouldRefresh = await AuthManager.shouldRefreshUserInfo();
+          if (shouldRefresh) {
+            // Get user info and update cache and Supabase
+            const userInfo = await GUCAPIProxy.getUserInfo();
+            
+            // Update user tracking in Supabase with fresh data
+            const { userTrackingService } = await import('@/utils/services/userTrackingService');
+            const { username } = await AuthManager.getCredentials();
+            
+            if (username && userInfo.userId) {
+              await userTrackingService.trackUserLogin(username.trim(), undefined, userInfo.userId);
+              
+              // Cache the joined season if available
+              if (userInfo.userId) {
+                const joinedSeasonStr = userInfo.userId.split('-')[0];
+                const joinedSeason = parseInt(joinedSeasonStr, 10);
+                if (!isNaN(joinedSeason)) {
+                  await AuthManager.storeJoinedSeason(String(joinedSeason));
+                }
+              }
+            }
+            
+            // Update the last refresh timestamp
+            await AuthManager.storeLastUserInfoRefresh(Date.now());
+          }
+        } catch (error) {
+          // Don't show error to user - monthly refresh is optional
+          console.log('Monthly user info refresh failed:', error);
+        }
+      })();
+    }, [loadNickname])
   );
 
   return (
