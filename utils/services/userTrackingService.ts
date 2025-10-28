@@ -294,6 +294,40 @@ class UserTrackingService {
       return [];
     }
   }
+
+  /**
+   * Track easter egg access
+   */
+  async trackEasterEggAccess(): Promise<void> {
+    try {
+      // Get user information
+      const { AuthManager } = await import('../auth');
+      const [credentials, userId, nickname] = await Promise.all([
+        AuthManager.getCredentials(),
+        AuthManager.getUserId(),
+        AuthManager.getNickname(),
+      ]);
+
+      const username = credentials?.username || '';
+      const gucId = userId || '';
+      const displayName = nickname || username.split('@')[0] || '';
+      const currentDate = new Date().toISOString();
+
+      // Log easter egg access to Feedback table
+      await supabase
+        .from(SUPABASE_CONFIG.TABLES.FEEDBACK)
+        .insert({
+          guc_id: gucId,
+          username: username,
+          notes: 'Easter Egg Seen',
+          date: currentDate,
+          version: APP_VERSION,
+          joined_season: gucId ? gucId.split('-')[0] : null,
+        });
+    } catch {
+      // Don't fail the easter egg if tracking fails
+    }
+  }
 }
 
 // Export singleton instance

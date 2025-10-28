@@ -47,6 +47,11 @@ export default function SettingsScreen() {
   const [slotsDropdownVisible, setSlotsDropdownVisible] = useState(false);
   const slotsPillRef = useRef<View>(null);
   const [slotsPillLayout, setSlotsPillLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  
+  // Easter egg state
+  const [easterEggTapCount, setEasterEggTapCount] = useState(0);
+  const [easterEggLastTapTime, setEasterEggLastTapTime] = useState(0);
+  const [showEasterEggModal, setShowEasterEggModal] = useState(false);
 
   const testUserTracking = async () => {
     try {
@@ -61,6 +66,37 @@ export default function SettingsScreen() {
       await userTrackingService.testConnection();
     } catch {
       // Connection test failed
+    }
+  };
+
+  // Easter egg handler
+  const handleEasterEggTap = () => {
+    const currentTime = Date.now();
+    const timeDiff = currentTime - easterEggLastTapTime;
+    
+    // Reset count if more than 15 seconds have passed
+    if (timeDiff > 15000) {
+      setEasterEggTapCount(1);
+    } else {
+      setEasterEggTapCount(prev => prev + 1);
+    }
+    
+    setEasterEggLastTapTime(currentTime);
+    
+    // Show easter egg modal if 9 taps within 15 seconds
+    if (easterEggTapCount >= 8) { // 8 because we just incremented
+      setShowEasterEggModal(true);
+      setEasterEggTapCount(0); // Reset after showing
+      
+      // Track easter egg access
+      (async () => {
+        try {
+          const { userTrackingService } = await import('@/utils/services/userTrackingService');
+          await userTrackingService.trackEasterEggAccess();
+        } catch {
+          // Don't fail easter egg if tracking fails
+        }
+      })();
     }
   };
   
@@ -529,9 +565,11 @@ export default function SettingsScreen() {
 
         {/* App Version */}
         <View style={styles.versionContainer}>
-          <Text style={[styles.versionText, { color: colors.secondaryFont }]}>
-            UniLink v{APP_VERSION}
-          </Text>
+          <TouchableOpacity onPress={handleEasterEggTap}>
+            <Text style={[styles.versionText, { color: colors.secondaryFont }]}>
+              UniLink v{APP_VERSION}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -747,6 +785,29 @@ export default function SettingsScreen() {
         }}
       />
 
+      {/* Easter Egg Modal */}
+      <Modal
+        visible={showEasterEggModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowEasterEggModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
+            {/* <Text style={[styles.modalTitle, { color: colors.mainFont }]}>Easter Egg Found!</Text> */}
+            <Text style={[styles.easterEggText, { color: colors.mainFont }]}>
+              App created by Mazen Ahmed MET 58- on 23/9/2025
+            </Text>
+            <TouchableOpacity
+              style={[styles.easterEggButton, { backgroundColor: colors.tabColor }]}
+              onPress={() => setShowEasterEggModal(false)}
+            >
+              <Text style={[styles.easterEggButtonText, { color: '#ffffff' }]}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {AlertComponent()}
     </ScrollView>
   );
@@ -945,5 +1006,25 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginLeft: 8,
     flex: 1,
+  },
+  easterEggText: {
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  easterEggButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    alignSelf: 'center',
+  },
+  easterEggButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

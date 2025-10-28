@@ -1,4 +1,5 @@
 import { Colors } from '@/constants/Colors';
+import { APP_VERSION } from '@/constants/Version';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { supabase } from '@/utils/supabase';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -11,7 +12,8 @@ interface UserStats {
   usersBySeason: { [key: string]: number };
   usersByMajor: { [key: string]: number };
   usersByVersion: { [key: string]: number };
-  recentUsers: number; // Users who joined in the last 30 days
+  recentUsers: number; // Active users who used the app in the last 10 days
+  latestVersionUsers: number; // Users on the current app version
 }
 
 interface FeedbackStats {
@@ -38,6 +40,7 @@ export default function StatisticsSection() {
       usersByMajor: {},
       usersByVersion: {},
       recentUsers: 0,
+      latestVersionUsers: 0,
     },
     feedback: {
       totalFeedback: 0,
@@ -81,6 +84,10 @@ export default function StatisticsSection() {
       const usersByMajor: { [key: string]: number } = {};
       const usersByVersion: { [key: string]: number } = {};
       let recentUsers = 0;
+      let latestVersionUsers = 0;
+
+      const tenDaysAgo = new Date();
+      tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
 
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -98,16 +105,24 @@ export default function StatisticsSection() {
         }
 
         // Count by version
-        if (user.joined_version) {
+        if (user.joined_version !== null && user.joined_version !== undefined) {
           const version = user.joined_version.toString();
           usersByVersion[version] = (usersByVersion[version] || 0) + 1;
         }
 
-        // Count recent users
-        if (user.date_joined_app) {
-          const joinDate = new Date(user.date_joined_app);
-          if (joinDate >= thirtyDaysAgo) {
+        // Count active users (used app in last 10 days)
+        if (user.last_open_time) {
+          const lastOpenDate = new Date(user.last_open_time);
+          if (lastOpenDate >= tenDaysAgo) {
             recentUsers++;
+          }
+        }
+
+        // Count users on latest version
+        if (user.current_version !== null && user.current_version !== undefined) {
+          const currentVersion = parseFloat(APP_VERSION);
+          if (user.current_version === currentVersion) {
+            latestVersionUsers++;
           }
         }
       });
@@ -121,7 +136,7 @@ export default function StatisticsSection() {
 
       feedbackData?.forEach(feedback => {
         // Count by version
-        if (feedback.version) {
+        if (feedback.version !== null && feedback.version !== undefined) {
           feedbackByVersion[feedback.version] = (feedbackByVersion[feedback.version] || 0) + 1;
         }
 
@@ -156,6 +171,7 @@ export default function StatisticsSection() {
           usersByMajor,
           usersByVersion,
           recentUsers,
+          latestVersionUsers,
         },
         feedback: {
           totalFeedback,
@@ -272,9 +288,9 @@ export default function StatisticsSection() {
       {/* User Statistics */}
       <View style={styles.statsGrid}>
         {renderStatCard('Total Users', stats.users.totalUsers)}
-        {renderStatCard('Recent Users', stats.users.recentUsers, 'Last 30 days')}
+        {renderStatCard('Active Users', stats.users.recentUsers, 'Last 10 days')}
         {renderStatCard('Total Feedback', stats.feedback.totalFeedback)}
-        {renderStatCard('Recent Feedback', stats.feedback.recentFeedback, 'Last 30 days')}
+        {renderStatCard('Latest Version Users', stats.users.latestVersionUsers, `v${APP_VERSION}`)}
       </View>
 
       {/* Table View Buttons */}
