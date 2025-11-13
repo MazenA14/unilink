@@ -41,7 +41,7 @@ function cleanAnnouncementHtml(html: string): string {
   return html
     // Remove style attributes but keep the tags
     .replace(/<([^>]+)\s+style="[^"]*"([^>]*)>/gi, '<$1$2>')
-    // Remove empty spans and divs
+    // Remove empty spans and divs, but be more careful about table content
     .replace(/<span[^>]*>\s*<\/span>/gi, '')
     .replace(/<div[^>]*>\s*<\/div>/gi, '')
     // Ensure headings create proper line breaks
@@ -87,9 +87,31 @@ export function parseCmsCourseView(html: string): CMSCourseView {
   // Announcements area HTML
   let announcementsHtml: string | undefined;
   try {
-    const descMatch = html.match(/<div[^>]*id="ContentPlaceHolderright_ContentPlaceHoldercontent_desc"[^>]*>([\s\S]*?)<\/div>/i);
-    if (descMatch) {
-      announcementsHtml = cleanAnnouncementHtml(descMatch[1]);
+    // Use a more robust regex to extract the full announcement content
+    // Look for the opening div and find its matching closing div
+    const descStartMatch = html.match(/<div[^>]*id="ContentPlaceHolderright_ContentPlaceHoldercontent_desc"[^>]*>/i);
+    if (descStartMatch) {
+      const startIndex = descStartMatch.index! + descStartMatch[0].length;
+      let depth = 1;
+      let endIndex = startIndex;
+      
+      // Find the matching closing div by counting nested divs
+      for (let i = startIndex; i < html.length && depth > 0; i++) {
+        if (html.substring(i, i + 4) === '<div') {
+          depth++;
+        } else if (html.substring(i, i + 6) === '</div>') {
+          depth--;
+          if (depth === 0) {
+            endIndex = i;
+            break;
+          }
+        }
+      }
+      
+      if (depth === 0) {
+        const content = html.substring(startIndex, endIndex);
+        announcementsHtml = cleanAnnouncementHtml(content);
+      }
     }
   } catch {}
 

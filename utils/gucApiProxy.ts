@@ -508,14 +508,24 @@ export class GUCAPIProxy {
       } else {
       }
       
-      // Extract both mid-term results and quiz/assignment grades
-      const midtermGrades = extractGradeData(courseHtml);
+      // Check if we're on the course-specific page (indicated by the course dropdown smCrsLst)
+      // On this page, the midterm table shows ALL courses' midterms, not just the selected course
+      // So we should NOT include midterm grades here - they should only come from the season-level view
+      const hasCourseDropdown = courseHtml.includes('smCrsLst') || courseHtml.includes('ContentPlaceHolderright_ContentPlaceHoldercontent_smCrsLst');
+      
+      // Extract course-specific grade items (Quiz/Assignment table)
       const courseGrades = extractCourseGradeData(courseHtml);
       
-      const allGrades = [...midtermGrades, ...courseGrades];
+      // Only extract midterm grades if we're NOT on the course-specific page
+      // (i.e., if there's no course dropdown, we're on the season-level view)
+      if (!hasCourseDropdown) {
+        const midtermGrades = extractGradeData(courseHtml);
+        return [...midtermGrades, ...courseGrades];
+      }
       
-      
-      return allGrades;
+      // On course-specific page, only return course-specific grades
+      // Midterm grades should come from the season-level data, not from individual course views
+      return courseGrades;
     } catch (err) {
       throw err;
     }

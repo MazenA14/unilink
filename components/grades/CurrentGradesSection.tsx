@@ -92,6 +92,43 @@ export default function CurrentGradesSection({
   const prefetchAllCourseGrades = async (courseList: Course[]) => {
     try {
       setLoadingGrades(true);
+      
+      // First, load midterm grades from the season-level view
+      let midtermGrades: GradeData[] = [];
+      try {
+        const cachedMidtermGrades = await GradeCache.getCachedCurrentGrades();
+        if (cachedMidtermGrades) {
+          midtermGrades = cachedMidtermGrades;
+        } else {
+          midtermGrades = await GUCAPIProxy.getCurrentGrades();
+          await GradeCache.setCachedCurrentGrades(midtermGrades);
+        }
+      } catch (error) {
+        console.error('Error loading midterm grades:', error);
+      }
+      
+      // Helper function to match midterm grades to courses
+      const matchMidtermGradeToCourse = (course: Course): GradeData | undefined => {
+        const extractCourseCode = (text: string) => {
+          const match = text.match(/([A-Z]{2,4}[a-z]?\d{3,4})/);
+          return match ? match[1] : '';
+        };
+        
+        const courseCode = extractCourseCode(course.text);
+        
+        return midtermGrades.find(grade => {
+          const gradeCode = extractCourseCode(grade.course);
+          
+          const exactMatch = grade.course === course.text;
+          const containsMatch1 = grade.course.toLowerCase().includes(course.text.toLowerCase());
+          const containsMatch2 = course.text.toLowerCase().includes(grade.course.toLowerCase());
+          const codeMatch = courseCode && gradeCode && courseCode === gradeCode;
+          
+          return exactMatch || containsMatch1 || containsMatch2 || codeMatch;
+        });
+      };
+      
+      // Load course-specific grades (quizzes, assignments) for each course
       const gradePromises = courseList.map(async (course) => {
         try {
           const cachedGrades = await GradeCache.getCachedCurrentCourseGrades(course.value);
@@ -99,34 +136,30 @@ export default function CurrentGradesSection({
           if (cachedGrades) {
             courseGrades = cachedGrades;
           } else {
+            // This will now only return course-specific grades (no midterm grades)
             courseGrades = await GUCAPIProxy.getCourseGrades(course.value);
             await GradeCache.setCachedCurrentCourseGrades(course.value, courseGrades);
           }
-          // Separate midterm grades from detailed grades
-          const midtermGrades = courseGrades.filter(grade => 
-            !grade.course.includes(' - ') && 
-            !grade.course.toLowerCase().includes('quiz') &&
-            !grade.course.toLowerCase().includes('assignment') &&
-            !grade.course.toLowerCase().includes('question')
-          );
-          const detailedGrades = courseGrades.filter(grade => 
-            grade.course.includes(' - ') || 
-            grade.course.toLowerCase().includes('quiz') ||
-            grade.course.toLowerCase().includes('assignment') ||
-            grade.course.toLowerCase().includes('question')
-          );
+          
+          // All grades from getCourseGrades are now course-specific (quizzes, assignments)
+          const detailedGrades = courseGrades;
+          
+          // Match midterm grade from season-level data
+          const midtermGrade = matchMidtermGradeToCourse(course);
 
           return {
             ...course,
-            midtermGrade: midtermGrades.length > 0 ? midtermGrades[0] : undefined,
+            midtermGrade,
             detailedGrades: detailedGrades,
             isExpanded: false,
             isLoadingDetails: false,
           } as CourseWithGrades;
         } catch {
+          // Even on error, try to match midterm grade
+          const midtermGrade = matchMidtermGradeToCourse(course);
           return {
             ...course,
-            midtermGrade: undefined,
+            midtermGrade,
             detailedGrades: [],
             isExpanded: false,
             isLoadingDetails: false,
@@ -213,25 +246,44 @@ export default function CurrentGradesSection({
         courseGrades = cachedGrades;
       } else {
         // Load from API and cache the results
+        // This will now only return course-specific grades (no midterm grades)
         courseGrades = await GUCAPIProxy.getCourseGrades(courseId);
         await GradeCache.setCachedCurrentCourseGrades(courseId, courseGrades);
       }
       
-      // Separate midterm grades from detailed grades
-      const midtermGrades = courseGrades.filter(grade => 
-        !grade.course.includes(' - ') && 
-        !grade.course.toLowerCase().includes('quiz') &&
-        !grade.course.toLowerCase().includes('assignment') &&
-        !grade.course.toLowerCase().includes('question')
-      );
-      const detailedGrades = courseGrades.filter(grade => 
-        grade.course.includes(' - ') || 
-        grade.course.toLowerCase().includes('quiz') ||
-        grade.course.toLowerCase().includes('assignment') ||
-        grade.course.toLowerCase().includes('question')
-      );
+      // All grades from getCourseGrades are now course-specific (quizzes, assignments)
+      const detailedGrades = courseGrades;
+      
+      // Don't overwrite midterm grade - it should already be set from season-level data
+      // If it's not set, try to load and match it
+      if (!updatedCourses[courseIndex].midtermGrade) {
+        try {
+          const midtermGrades = await GUCAPIProxy.getCurrentGrades();
+          const extractCourseCode = (text: string) => {
+            const match = text.match(/([A-Z]{2,4}[a-z]?\d{3,4})/);
+            return match ? match[1] : '';
+          };
+          
+          const course = updatedCourses[courseIndex];
+          const courseCode = extractCourseCode(course.text);
+          
+          const midtermGrade = midtermGrades.find(grade => {
+            const gradeCode = extractCourseCode(grade.course);
+            
+            const exactMatch = grade.course === course.text;
+            const containsMatch1 = grade.course.toLowerCase().includes(course.text.toLowerCase());
+            const containsMatch2 = course.text.toLowerCase().includes(grade.course.toLowerCase());
+            const codeMatch = courseCode && gradeCode && courseCode === gradeCode;
+            
+            return exactMatch || containsMatch1 || containsMatch2 || codeMatch;
+          });
+          
+          updatedCourses[courseIndex].midtermGrade = midtermGrade;
+        } catch (error) {
+          // If we can't load midterm grades, keep existing (or undefined)
+        }
+      }
 
-      updatedCourses[courseIndex].midtermGrade = midtermGrades.length > 0 ? midtermGrades[0] : undefined;
       updatedCourses[courseIndex].detailedGrades = detailedGrades;
       updatedCourses[courseIndex].isLoadingDetails = false;
       setCoursesWithGrades([...updatedCourses]);
@@ -304,9 +356,10 @@ export default function CurrentGradesSection({
 
   const handleRefresh = async () => {
     try {
-      // Clear current grades cache
+      // Clear current grades cache (including midterm grades)
       await GradeCache.clearCurrentCoursesCache();
       await GradeCache.clearCurrentCourseGradesCache();
+      await GradeCache.clearCurrentGradesCache(); // Clear midterm grades cache
       await GradeCache.clearCourseIdToNameCache();
       
       // Reload courses with force refresh

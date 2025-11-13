@@ -91,6 +91,41 @@ export default function Table({ data, style }: TableProps) {
 }
 
 /**
+ * Recursively extracts text content from nested HTML elements
+ */
+function extractTextFromHtml(html: string): string {
+  // Remove HTML tags but preserve text content
+  let text = html
+    .replace(/<[^>]*>/g, ' ') // Replace HTML tags with spaces
+    .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+    .replace(/&amp;/g, '&') // Replace HTML entities
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim();
+  
+  return text;
+}
+
+/**
+ * Determines if a cell should be treated as a header based on content analysis
+ */
+function isHeaderCell(cellContent: string): boolean {
+  const content = extractTextFromHtml(cellContent).toLowerCase();
+  
+  // Check for common header indicators
+  const headerKeywords = [
+    'day', 'time', 'topic', 'ta', 'date', 'subject', 'instructor',
+    'room', 'location', 'description', 'title', 'name', 'id', 'code'
+  ];
+  
+  return headerKeywords.some(keyword => content.includes(keyword)) || 
+         content.length < 20; // Short content is often headers
+}
+
+/**
  * Parses HTML table content into TableData format
  */
 export function parseHtmlTable(html: string): TableData | null {
@@ -123,22 +158,16 @@ export function parseHtmlTable(html: string): TableData | null {
         const cellMatch = cellHtml.match(/<(td|th)[^>]*>(.*?)<\/(td|th)>/s);
         if (!cellMatch) continue;
 
-        const isHeader = cellMatch[1] === 'th';
+        const isExplicitHeader = cellMatch[1] === 'th';
         const cellContent = cellMatch[2];
         
-        // Clean up the cell content
-        const cleanContent = cellContent
-          .replace(/<[^>]*>/g, '') // Remove HTML tags
-          .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
-          .replace(/&amp;/g, '&') // Replace HTML entities
-          .replace(/&lt;/g, '<')
-          .replace(/&gt;/g, '>')
-          .replace(/&quot;/g, '"')
-          .replace(/&#39;/g, "'")
-          .replace(/\s+/g, ' ') // Normalize whitespace
-          .trim();
+        // Extract text content from nested HTML
+        const cleanContent = extractTextFromHtml(cellContent);
 
         if (cleanContent) {
+          // Determine if this is a header cell
+          const isHeader = isExplicitHeader || isHeaderCell(cellContent);
+          
           cells.push({
             content: cleanContent,
             isHeader,

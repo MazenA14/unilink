@@ -61,7 +61,6 @@
 - Handle offline mode gracefully
 - Investigate multiple proxy calls (A lot & repetitive)
 - Make all popup modals be swipable down from any area
-- In contact add created date and made by a 58- student and make it open after a certain date
 - Implement stale-while-revalidate
 - Make the files be viewed internaly without reauthorization
 - Nickname Reseting randomly
@@ -169,6 +168,7 @@
 + Make weights be sorted by the percentage
 + Make courses be a drop-down for the weights
 + Change from projects to project, name in weights
++ In contact add created date and made by a 58- student and make it open after a certain date
 
 ## Run these next time
 - npx expo install @expo/metro-runtime react-native-worklets
