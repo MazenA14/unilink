@@ -1,4 +1,5 @@
 import { useCustomAlert } from '@/components/CustomAlert';
+import { AppBar } from '@/components/navigation/AppBar';
 import FeedbackModal from '@/components/FeedbackModal';
  
 import ResetPasswordModal from '@/components/ResetPasswordModal';
@@ -6,6 +7,7 @@ import StatisticsSection from '@/components/StatisticsSection';
 import UpdateModal from '@/components/UpdateModal';
 import WhatsNewModal from '@/components/WhatsNewModal';
 import { Colors } from '@/constants/Colors';
+import { Radius, Shadow, withAlpha } from '@/constants/Theme';
 import { APP_VERSION } from '@/constants/Version';
 import { getWhatsNewConfig } from '@/constants/WhatsNewFeatures';
 import { DefaultScreenType, useDefaultScreen } from '@/contexts/DefaultScreenContext';
@@ -226,16 +228,15 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={{ paddingBottom: 32 }}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.mainFont }]}>Settings</Text>
-      </View>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <AppBar title="Settings" large />
+      <ScrollView style={[styles.container, { backgroundColor: colors.background }]}
+        contentContainerStyle={{ paddingBottom: 32 }}>
       <View style={styles.content}>
 
         {/* Profile Section */}
         <Text style={[styles.sectionTitle, { color: colors.secondaryFont, marginTop: 0 }]}>PROFILE</Text>
-        <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}> 
           <View style={styles.rowBetween}>
             <View style={{ flex: 1 }}>
               <Text style={[styles.primaryText, { color: colors.mainFont }]}>
@@ -255,7 +256,7 @@ export default function SettingsScreen() {
             Pay through the app at your own responsibility.
           </Text>
         </View> */}
-        <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}> 
           {loadingPayments ? (
             <View style={styles.centerContainer}>
               <ActivityIndicator size="small" color={colors.tabColor} />
@@ -287,7 +288,7 @@ export default function SettingsScreen() {
 
         {/* Appearance Section */}
         <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>APPEARANCE</Text>
-        <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}> 
           <View style={styles.rowBetween}>
             <Text style={[styles.primaryText, { color: colors.mainFont }]}>Dark Mode</Text>
             <Switch
@@ -314,7 +315,7 @@ export default function SettingsScreen() {
 
         <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>PREFERENCES</Text>
         
-        <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}> 
           <View style={styles.rowBetween}>
             <View style={{ flex: 1, marginRight: 12 }}>
               <Text style={[styles.primaryText, { color: colors.mainFont }]}>Default Screen</Text>
@@ -383,7 +384,7 @@ export default function SettingsScreen() {
 
             
 
-            <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}> 
               <TouchableOpacity
                 style={styles.rowBetween}
                 onPress={async () => {
@@ -403,7 +404,7 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}> 
               <TouchableOpacity
                 style={styles.rowBetween}
                 onPress={testConnection}
@@ -415,7 +416,7 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}> 
               <TouchableOpacity
                 style={styles.rowBetween}
                 onPress={testUserTracking}
@@ -427,7 +428,7 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}> 
               <TouchableOpacity
                 style={styles.rowBetween}
                 onPress={async () => {
@@ -476,7 +477,7 @@ export default function SettingsScreen() {
 
         {/* Support & Actions */}
         <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>SUPPORT</Text>
-        <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}> 
           <TouchableOpacity
             style={styles.rowBetween}
             onPress={showWhatsNewManually}
@@ -645,7 +646,7 @@ export default function SettingsScreen() {
                   style={[
                     styles.dropdownItem,
                     { 
-                      backgroundColor: defaultScreen === option.value ? colors.tabColor + '20' : 'transparent',
+                      backgroundColor: defaultScreen === option.value ? withAlpha(colors.tabColor, 0.14) : 'transparent',
                       borderBottomColor: index < screenOptions.length - 1 ? colors.border : 'transparent',
                       borderTopLeftRadius: index === 0 ? 12 : 0,
                       borderTopRightRadius: index === 0 ? 12 : 0,
@@ -706,7 +707,7 @@ export default function SettingsScreen() {
                   style={[
                     styles.dropdownItem,
                     { 
-                      backgroundColor: dashboardSlots === val ? colors.tabColor + '20' : 'transparent',
+                      backgroundColor: dashboardSlots === val ? withAlpha(colors.tabColor, 0.14) : 'transparent',
                       borderBottomColor: index < arr.length - 1 ? colors.border : 'transparent',
                       borderTopLeftRadius: index === 0 ? 12 : 0,
                       borderTopRightRadius: index === 0 ? 12 : 0,
@@ -811,7 +812,8 @@ export default function SettingsScreen() {
       </Modal>
 
       {AlertComponent()}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -819,31 +821,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    padding: 20,
-    paddingBottom: 10,
-    paddingTop: 60,
-  },
   content: {
     padding: 16,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 24,
-    letterSpacing: -0.5,
+    fontSize: 30,
+    fontWeight: '800',
+    marginBottom: 8,
+    letterSpacing: -0.6,
   },
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 24,
-    marginBottom: 8,
-    letterSpacing: 0.5,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 26,
+    marginBottom: 10,
+    marginLeft: 4,
+    letterSpacing: 0.8,
   },
   card: {
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: Radius.lg,
+    padding: 18,
     borderWidth: 1,
+    marginBottom: 10,
   },
   warningCard: {
     borderRadius: 12,
@@ -897,19 +896,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    width: '80%',
-    padding: 20,
-    borderRadius: 12,
+    width: '84%',
+    padding: 24,
+    borderRadius: Radius.xl,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 19,
+    fontWeight: '800',
     marginBottom: 16,
+    letterSpacing: -0.3,
   },
   textInput: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: Radius.md,
+    padding: 14,
     fontSize: 16,
     marginBottom: 16,
   },

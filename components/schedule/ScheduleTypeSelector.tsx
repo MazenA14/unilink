@@ -30,7 +30,7 @@ export function ScheduleTypeSelector({ scheduleType, onScheduleTypeChange }: Sch
             style={[
               styles.scheduleTypeButton,
               {
-                backgroundColor: isActive ? typeColor : (colorScheme === 'dark' ? '#232323' : '#f3f3f3'),
+                backgroundColor: isActive ? typeColor : (colors.surface),
                 borderColor: isActive ? typeColor : colors.border,
               },
             ]}

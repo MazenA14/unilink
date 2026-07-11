@@ -19,7 +19,7 @@ export default function YearSelector({ studyYears, selectedYear, onYearSelect }:
       style={[
         styles.yearCard,
         {
-          backgroundColor: selectedYear?.value === item.value ? colors.tabColor : (colorScheme === 'dark' ? '#232323' : '#f3f3f3'),
+          backgroundColor: selectedYear?.value === item.value ? colors.tabColor : (colors.surface),
           borderColor: selectedYear?.value === item.value ? colors.tabColor : colors.border,
         },
       ]}

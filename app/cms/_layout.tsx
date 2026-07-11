@@ -16,6 +16,7 @@ export default function CMSTabLayout() {
         tabBarActiveTintColor: colors.tint,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
+        tabBarStyle: { display: 'none' },
       }}
     >
       <Tabs.Screen

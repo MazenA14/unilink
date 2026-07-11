@@ -1,5 +1,6 @@
 import AttendanceWarningInfoModal from '@/components/AttendanceWarningInfoModal';
 import { useCustomAlert } from '@/components/CustomAlert';
+import { AppBar } from '@/components/navigation/AppBar';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -204,37 +205,35 @@ export default function AttendanceScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.centered, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.tint} />
-        <Text style={[styles.loadingText, { color: colors.tabIconDefault }]}>Loading attendance data...</Text>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <AppBar title="Attendance" />
+        <View style={[styles.centered, { flex: 1 }]}>
+          <ActivityIndicator size="large" color={colors.tint} />
+          <Text style={[styles.loadingText, { color: colors.tabIconDefault }]}>Loading attendance data...</Text>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <AppBar
+        title="Attendance"
+        rightActions={
+          <TouchableOpacity
+            onPress={() => setShowWarningInfo(true)}
+            style={[styles.appBarAction, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            accessibilityLabel="Attendance warning info"
+          >
+            <Ionicons name="information-circle-outline" size={22} color={colors.mainFont} />
+          </TouchableOpacity>
+        }
+      />
       <ScrollView
         style={styles.scrollView}
         refreshControl={<AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.text }]}>Attendance</Text>
-          <TouchableOpacity 
-            onPress={() => setShowWarningInfo(true)}
-            style={styles.infoButton}
-          >
-            <Ionicons name="information-circle-outline" size={27} color={colors.tint} />
-          </TouchableOpacity>
-        </View>
 
         {/* {refreshing && (
           <View style={[styles.updateNote, { 
@@ -265,7 +264,7 @@ export default function AttendanceScreen() {
               </View>
               
               {attendanceData.summary.absenceReport.length > 0 && (
-                <View style={styles.warningBanner}>
+                <View style={[styles.warningBanner, { backgroundColor: colors.warningSoft, borderColor: colors.warning }]}>
                   <Ionicons name="warning" size={16} color={colors.gradeAverage} />
                   <Text style={[styles.warningText, { color: colors.gradeAverage }]}>
                     {attendanceData.summary.absenceReport.length} absence warning{attendanceData.summary.absenceReport.length !== 1 ? 's' : ''}
@@ -495,33 +494,13 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
+  appBarAction: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
-  },
-  backButton: {
-    padding: 8,
-    marginLeft: -8,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: 16,
-  },
-  placeholder: {
-    width: 40,
-  },
-  infoButton: {
-    padding: 8,
-    marginRight: -8,
   },
   loadingText: {
     marginTop: 16,

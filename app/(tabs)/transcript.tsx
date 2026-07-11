@@ -4,9 +4,11 @@ import {
     SemesterTable,
     YearSelector,
 } from '@/components/transcript';
+import { AppBar } from '@/components/navigation/AppBar';
 import GradingInfoModal from '@/components/transcript/GradingInfoModal';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
+import { Radius, Shadow } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTranscript } from '@/hooks/useTranscript';
 import { getCumulativeGPAColor } from '@/utils/gradingColors';
@@ -59,34 +61,39 @@ export default function TranscriptScreen() {
 
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      refreshControl={<AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <AppBar
+        title="Transcript"
+        large
+        rightActions={
+          <TouchableOpacity
+            onPress={() => setShowGradingInfo(true)}
+            style={[styles.appBarAction, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            accessibilityLabel="Grading info"
+          >
+            <Ionicons name="information-circle-outline" size={22} color={colors.mainFont} />
+          </TouchableOpacity>
+        }
+      />
+      <ScrollView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        refreshControl={<AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text style={[styles.title, { color: colors.mainFont }]}>Transcript</Text>
-          <TouchableOpacity 
-            onPress={() => setShowGradingInfo(true)}
-            style={styles.gradingInfoButton}
-          >
-            <Ionicons name="information-circle-outline" size={27} color={colors.tint} />
-          </TouchableOpacity>
-        </View>
-        
+
         {/* Maintenance banner (shown when GUC redirects to the maintenance page) */}
         {maintenanceMessage && (
           <View
             style={[
               styles.maintenanceBanner,
               {
-                backgroundColor: colorScheme === 'dark' ? '#3a2e12' : '#FFF4E5',
-                borderColor: '#F5A623',
+                backgroundColor: colors.warningSoft,
+                borderColor: colors.warning,
               },
             ]}
           >
-            <Ionicons name="construct-outline" size={20} color="#F5A623" style={styles.maintenanceIcon} />
+            <Ionicons name="construct-outline" size={20} color={colors.warning} style={styles.maintenanceIcon} />
             <Text style={[styles.maintenanceText, { color: colors.mainFont }]}>
               {maintenanceMessage}
             </Text>
@@ -99,12 +106,12 @@ export default function TranscriptScreen() {
             style={[
               styles.maintenanceBanner,
               {
-                backgroundColor: colorScheme === 'dark' ? '#12253a' : '#E5F0FF',
-                borderColor: '#2F80ED',
+                backgroundColor: colors.infoSoft,
+                borderColor: colors.info,
               },
             ]}
           >
-            <Ionicons name="clipboard-outline" size={20} color="#2F80ED" style={styles.maintenanceIcon} />
+            <Ionicons name="clipboard-outline" size={20} color={colors.info} style={styles.maintenanceIcon} />
             <Text style={[styles.maintenanceText, { color: colors.mainFont }]}>
               {evaluationRequiredMessage}
             </Text>
@@ -139,7 +146,7 @@ export default function TranscriptScreen() {
       {selectedYear && (
         <View style={styles.transcriptSection}>
           {/* Header with Season Title and GPAs */}
-          <View style={[styles.seasonHeader, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}>
+          <View style={[styles.seasonHeader, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}>
             <View style={styles.seasonTitleContainer}>
               <Text style={[styles.seasonLabel, { color: colors.secondaryFont }]}>Academic Year</Text>
               <Text style={[styles.selectedYearTitle, { color: colors.mainFont }]}>
@@ -194,11 +201,12 @@ export default function TranscriptScreen() {
         </View>
       )}
       
-      <GradingInfoModal 
-        visible={showGradingInfo} 
-        onClose={() => setShowGradingInfo(false)} 
+      <GradingInfoModal
+        visible={showGradingInfo}
+        onClose={() => setShowGradingInfo(false)}
       />
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -207,9 +215,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 20,
+    paddingHorizontal: 20,
     paddingBottom: 10,
-    paddingTop: 58,
+    paddingTop: 4,
+  },
+  appBarAction: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerContent: {
     flexDirection: 'row',
@@ -218,7 +234,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
   gradingInfoButton: {
     padding: 8,
@@ -285,18 +302,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 20,
-    borderRadius: 12,
+    borderRadius: Radius.lg,
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
   },
   seasonTitleContainer: {
     flex: 1,

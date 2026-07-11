@@ -1,9 +1,9 @@
+import { AppBar } from '@/components/navigation/AppBar';
 import { Colors } from '@/constants/Colors';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Notification } from '@/utils/types/notificationTypes';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -255,18 +255,7 @@ export default function NotificationsScreen() {
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.mainFont} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.mainFont }]}>
-            Notifications
-          </Text>
-          <View style={styles.placeholder} />
-        </View>
+        <AppBar title="Notifications" showNotifications={false} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.tint} />
           <Text style={[styles.loadingText, { color: colors.secondaryFont }]}>
@@ -280,18 +269,7 @@ export default function NotificationsScreen() {
   if (error) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.mainFont} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.mainFont }]}>
-            Notifications
-          </Text>
-          <View style={styles.placeholder} />
-        </View>
+        <AppBar title="Notifications" showNotifications={false} />
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.gradeFailing} />
           <Text style={[styles.errorText, { color: colors.mainFont }]}>
@@ -313,18 +291,7 @@ export default function NotificationsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.mainFont} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.mainFont }]}>
-          Notifications
-        </Text>
-        <View style={styles.placeholder} />
-      </View>
+      <AppBar title="Notifications" showNotifications={false} />
 
       {unreadCount > 0 && (
         <View style={[styles.unreadBanner, { backgroundColor: colors.tint + '15' }]}>
@@ -491,25 +458,6 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 16,
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-  },
-  placeholder: {
-    width: 40,
   },
   markAllButton: {
     flexDirection: 'row',

@@ -36,7 +36,7 @@ export default function WhatsNewModal({
         <View style={[
           styles.modalContainer,
           {
-            backgroundColor: colorScheme === 'dark' ? '#232323' : '#ffffff',
+            backgroundColor: colors.surfaceElevated,
             borderColor: colors.border,
           }
         ]}>

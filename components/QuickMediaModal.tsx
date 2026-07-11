@@ -907,7 +907,7 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
             
             <TextInput
               style={[styles.renameInput, { 
-                backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3',
+                backgroundColor: colors.surface,
                 borderColor: colors.border,
                 color: colors.mainFont
               }]}

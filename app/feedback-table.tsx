@@ -1,8 +1,8 @@
+import { AppBar } from '@/components/navigation/AppBar';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { supabase } from '@/utils/supabase';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
@@ -234,31 +234,30 @@ export default function FeedbackTableScreen() {
 
   const renderTopBar = () => (
     <View style={[styles.topBar, { backgroundColor: colors.background, borderColor: colors.border }]}>
-      <View style={styles.titleRow}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.mainFont} />
-        </TouchableOpacity>
-        <Text style={[styles.screenTitle, { color: colors.mainFont }]}>Feedback Table</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            onPress={() => setShowFilters(!showFilters)}
-            style={[styles.iconButton, { backgroundColor: showFilters ? colors.tint : 'transparent' }]}
-          >
-            <Ionicons name="filter" size={20} color={showFilters ? 'white' : colors.mainFont} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={fetchFeedback}
-            style={styles.iconButton}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color={colors.tint} />
-            ) : (
-              <Ionicons name="refresh" size={20} color={colors.mainFont} />
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
+      <AppBar
+        title="Feedback Table"
+        rightActions={
+          <>
+            <TouchableOpacity
+              onPress={() => setShowFilters(!showFilters)}
+              style={[styles.iconButton, { backgroundColor: showFilters ? colors.tint : 'transparent' }]}
+            >
+              <Ionicons name="filter" size={20} color={showFilters ? 'white' : colors.mainFont} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={fetchFeedback}
+              style={styles.iconButton}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color={colors.tint} />
+              ) : (
+                <Ionicons name="refresh" size={20} color={colors.mainFont} />
+              )}
+            </TouchableOpacity>
+          </>
+        }
+      />
 
       <View style={styles.statsRow}>
         <Text style={[styles.statsText, { color: colors.secondaryFont }]}>
@@ -556,29 +555,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   topBar: {
-    paddingTop: 60,
     paddingBottom: 12,
-    paddingHorizontal: 16,
     borderBottomWidth: 1,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  backButton: {
-    padding: 4,
-  },
-  screenTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    flex: 1,
-    marginLeft: 12,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 8,
   },
   iconButton: {
     width: 36,
@@ -589,6 +567,7 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     marginBottom: 12,
+    paddingHorizontal: 16,
   },
   statsText: {
     fontSize: 14,
@@ -598,6 +577,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     marginBottom: 12,
+    marginHorizontal: 16,
   },
   filtersTitle: {
     fontSize: 16,

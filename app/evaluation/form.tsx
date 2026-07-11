@@ -1,4 +1,5 @@
 import { useCustomAlert } from '@/components/CustomAlert';
+import { AppBar } from '@/components/navigation/AppBar';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { EvaluationHandler, isAlreadyEvaluatedError } from '@/utils/handlers/evaluationHandler';
@@ -115,15 +116,7 @@ export default function EvaluationFormScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={colors.mainFont} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.mainFont }]} numberOfLines={1}>
-            {name || 'Evaluation'}
-          </Text>
-          <View style={styles.placeholder} />
-        </View>
+        <AppBar title={name || 'Evaluation'} />
 
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -315,17 +308,6 @@ export default function EvaluationFormScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 16,
-  },
-  backButton: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3, flex: 1, textAlign: 'center' },
-  placeholder: { width: 40 },
   content: { flex: 1, paddingHorizontal: 16 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 60, paddingHorizontal: 32 },
   loadingText: { marginTop: 16, fontSize: 16, fontWeight: '500', textAlign: 'center' },

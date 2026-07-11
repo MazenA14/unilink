@@ -30,34 +30,38 @@ export default function Table({ data, style }: TableProps) {
     table: {
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: 4,
+      borderRadius: 12,
       overflow: 'hidden',
       marginVertical: 8,
+      backgroundColor: colors.surface,
     },
     row: {
       flexDirection: 'row',
       borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      borderBottomColor: colors.divider,
     },
     cell: {
       flex: 1,
-      padding: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 8,
       borderRightWidth: 1,
-      borderRightColor: colors.border,
+      borderRightColor: colors.divider,
       justifyContent: 'center',
       alignItems: 'center',
     },
     headerCell: {
-      backgroundColor: colors.background,
-      fontWeight: 'bold',
+      backgroundColor: colors.surfaceSunken,
     },
     cellText: {
-      color: colors.text,
+      color: colors.textPrimary,
+      fontSize: 13,
       textAlign: 'center',
     },
     headerText: {
-      fontWeight: 'bold',
-      color: colors.text,
+      fontWeight: '700',
+      fontSize: 12,
+      letterSpacing: 0.2,
+      color: colors.textSecondary,
     },
   });
 

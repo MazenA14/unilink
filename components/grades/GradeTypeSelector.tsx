@@ -19,7 +19,7 @@ export default function GradeTypeSelector({ gradeType, onGradeTypeChange }: Grad
         style={[
           styles.gradeTypeButton,
           {
-            backgroundColor: gradeType === 'current' ? colors.tint : (colorScheme === 'dark' ? '#232323' : '#f3f3f3'),
+            backgroundColor: gradeType === 'current' ? colors.tint : (colors.surface),
             borderColor: gradeType === 'current' ? colors.tabColor : colors.border,
           },
         ]}
@@ -41,7 +41,7 @@ export default function GradeTypeSelector({ gradeType, onGradeTypeChange }: Grad
         style={[
           styles.gradeTypeButton,
           {
-            backgroundColor: gradeType === 'previous' ? colors.tint : (colorScheme === 'dark' ? '#232323' : '#f3f3f3'),
+            backgroundColor: gradeType === 'previous' ? colors.tint : (colors.surface),
             borderColor: gradeType === 'previous' ? colors.tabColor : colors.border,
           },
         ]}

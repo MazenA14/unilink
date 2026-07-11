@@ -71,7 +71,7 @@ export default function UpdateModal({ visible, onClose, onUpdate, forceUpdate = 
         <View style={[
           styles.modalContainer,
           {
-            backgroundColor: colorScheme === 'dark' ? '#232323' : '#ffffff',
+            backgroundColor: colors.surfaceElevated,
             borderColor: colors.border,
           }
         ]}>

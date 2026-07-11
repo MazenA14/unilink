@@ -34,7 +34,7 @@ export default function ExpandableCourseCard({
         style={[
           styles.expandableCourseCard,
           {
-            backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3',
+            backgroundColor: colors.surface,
             borderColor: colors.border,
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
@@ -161,7 +161,7 @@ export default function ExpandableCourseCard({
         <View style={[
           styles.expandedContent,
           {
-            backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3',
+            backgroundColor: colors.surface,
             borderColor: colors.border,
           }
         ]}>

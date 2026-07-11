@@ -3,13 +3,22 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { View } from 'react-native';
 
+import { Sidebar } from '@/components/navigation/Sidebar';
+import QuickMediaModal from '@/components/QuickMediaModal';
 import { DefaultScreenProvider } from '@/contexts/DefaultScreenContext';
+import { NavigationUIProvider, useNavigationUI } from '@/contexts/NavigationUIContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ScheduleProvider } from '@/contexts/ScheduleContext';
 import { ShiftedScheduleProvider } from '@/contexts/ShiftedScheduleContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
+
+function GlobalQuickAccess() {
+  const { quickAccessOpen, closeQuickAccess } = useNavigationUI();
+  return <QuickMediaModal visible={quickAccessOpen} onClose={closeQuickAccess} />;
+}
 
 function AppContent() {
   const colorScheme = useColorScheme();
@@ -32,22 +41,27 @@ function AppContent() {
   
   return (
     <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack initialRouteName="login">
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="cms" options={{ headerShown: false }} />
-        <Stack.Screen name="evaluation" options={{ headerShown: false }} />
-        <Stack.Screen name="instructors" options={{ headerShown: false }} />
-        <Stack.Screen name="notifications" options={{ headerShown: false }} />
-        <Stack.Screen name="exam-seats" options={{ headerShown: false }} />
-        <Stack.Screen name="attendance" options={{ headerShown: false }} />
-        <Stack.Screen name="course-view" options={{ headerShown: false }} />
-        <Stack.Screen name="course-weights" options={{ headerShown: false }} />
-        <Stack.Screen name="dates" options={{ headerShown: false }} />
-        <Stack.Screen name="feedback-table" options={{ headerShown: false }} />
-        <Stack.Screen name="users-table" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
+      <View style={{ flex: 1 }}>
+        <Stack initialRouteName="login">
+          <Stack.Screen name="login" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="cms" options={{ headerShown: false }} />
+          <Stack.Screen name="evaluation" options={{ headerShown: false }} />
+          <Stack.Screen name="instructors" options={{ headerShown: false }} />
+          <Stack.Screen name="notifications" options={{ headerShown: false }} />
+          <Stack.Screen name="exam-seats" options={{ headerShown: false }} />
+          <Stack.Screen name="attendance" options={{ headerShown: false }} />
+          <Stack.Screen name="course-view" options={{ headerShown: false }} />
+          <Stack.Screen name="course-weights" options={{ headerShown: false }} />
+          <Stack.Screen name="dates" options={{ headerShown: false }} />
+          <Stack.Screen name="feedback-table" options={{ headerShown: false }} />
+          <Stack.Screen name="users-table" options={{ headerShown: false }} />
+          <Stack.Screen name="+not-found" />
+        </Stack>
+        {/* App-wide navigation chrome, overlaid above every screen */}
+        <Sidebar />
+        <GlobalQuickAccess />
+      </View>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
     </NavigationThemeProvider>
   );
@@ -69,7 +83,9 @@ export default function RootLayout() {
         <ScheduleProvider>
           <DefaultScreenProvider>
             <NotificationProvider>
-              <AppContent />
+              <NavigationUIProvider>
+                <AppContent />
+              </NavigationUIProvider>
             </NotificationProvider>
           </DefaultScreenProvider>
         </ScheduleProvider>

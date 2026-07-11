@@ -8,6 +8,7 @@ import {
     YearGroup
 } from '@/components/grades';
 import { GradesMenu } from '@/components/GradesMenu';
+import { AppBar } from '@/components/navigation/AppBar';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -569,16 +570,13 @@ export default function GradesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <AppBar title="Grades" large />
       <ScrollView
         style={styles.scrollView}
         refreshControl={<AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <Text style={[styles.title, { color: colors.text }]}>Grades</Text>
-          </View>
-          
           {/* Grade Type Section */}
           <View style={styles.section}>
             <View style={styles.sectionTitleContainer}>
@@ -689,9 +687,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 20,
+    paddingHorizontal: 20,
     paddingBottom: 10,
-    paddingTop: 60,
+    paddingTop: 4,
   },
   headerContent: {
     flexDirection: 'row',
@@ -700,7 +698,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
   section: {
     // marginBottom: 20,

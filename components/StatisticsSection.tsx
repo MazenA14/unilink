@@ -193,7 +193,7 @@ export default function StatisticsSection() {
   };
 
   const renderStatCard = (title: string, value: string | number, subtitle?: string) => (
-    <View style={[styles.statCard, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}>
+    <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <Text style={[styles.statValue, { color: colors.mainFont }]}>{value}</Text>
       <Text style={[styles.statTitle, { color: colors.mainFont }]}>{title}</Text>
       {subtitle && <Text style={[styles.statSubtitle, { color: colors.secondaryFont }]}>{subtitle}</Text>}
@@ -207,7 +207,7 @@ export default function StatisticsSection() {
     if (sortedItems.length === 0) return null;
 
     return (
-      <View style={[styles.allItemsContainer, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}>
+      <View style={[styles.allItemsContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <Text style={[styles.allItemsTitle, { color: colors.mainFont }]}>{title}</Text>
         {sortedItems.map(([key, count]) => (
           <View key={key} style={styles.allItemRow}>
@@ -227,7 +227,7 @@ export default function StatisticsSection() {
     if (sortedItems.length === 0) return null;
 
     return (
-      <View style={[styles.topItemsContainer, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}>
+      <View style={[styles.topItemsContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <Text style={[styles.topItemsTitle, { color: colors.mainFont }]}>{title}</Text>
         {sortedItems.map(([key, count]) => (
           <View key={key} style={styles.topItemRow}>
@@ -241,7 +241,7 @@ export default function StatisticsSection() {
 
   if (stats.loading && stats.users.totalUsers === 0) {
     return (
-      <View style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}>
+      <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={styles.headerContainer}>
           <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>STATISTICS</Text>
           <TouchableOpacity
@@ -262,14 +262,14 @@ export default function StatisticsSection() {
 
   if (stats.error) {
     return (
-      <View style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}>
+      <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <Text style={[styles.errorText, { color: colors.gradeFailing }]}>Error: {stats.error}</Text>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}>
+    <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={styles.headerContainer}>
         <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>STATISTICS</Text>
         <TouchableOpacity

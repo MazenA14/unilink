@@ -1,6 +1,7 @@
 import { useCustomAlert } from '@/components/CustomAlert';
 import ResetPasswordModal from '@/components/ResetPasswordModal';
 import { Colors } from '@/constants/Colors';
+import { Radius, Shadow, Spacing } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthManager } from '@/utils/auth';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -24,6 +25,7 @@ const LoginScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [focusedField, setFocusedField] = useState<'username' | 'password' | null>(null);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { showAlert, AlertComponent } = useCustomAlert();
@@ -124,100 +126,113 @@ const LoginScreen = () => {
           alwaysBounceVertical={false}
           scrollEventThrottle={16}
         >
-        <View style={styles.headerContainer}>
-          <Text style={[styles.title, { color: colors.mainFont }]}>UniLink</Text>
-          <Text style={[styles.subtitle, { color: colors.secondaryFont }]}>Sign in to your account</Text>
-        </View>
-
-        <View style={[styles.card, { 
-          backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3',
-          borderColor: colors.border 
-        }]}>
-          <View style={styles.formContainer}>
-            <View style={styles.inputContainer}>
-              <Text style={[styles.inputLabel, { color: colors.mainFont }]}>Username</Text>
-              <View style={[styles.inputWrapper, { borderColor: colors.border }]}>
-                <Ionicons name="person-outline" size={20} color={colors.secondaryFont} style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.input, { 
-                    color: colors.mainFont 
-                  }]}
-                  value={username}
-                  onChangeText={setUsername}
-                  placeholder="Username"
-                  placeholderTextColor={colors.secondaryFont}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!isLoading}
-                />
-              </View>
+          {/* Brand header */}
+          <View style={styles.headerContainer}>
+            <View style={[styles.logoMark, { backgroundColor: colors.primary }, Shadow.glow(colors.primary)]}>
+              <Ionicons name="school" size={38} color={colors.onPrimary} />
+              <View style={[styles.logoDot, { backgroundColor: colors.secondary, borderColor: colors.background }]} />
             </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={[styles.inputLabel, { color: colors.mainFont }]}>Password</Text>
-              <View style={[styles.inputWrapper, { borderColor: colors.border }]}>
-                <Ionicons name="lock-closed-outline" size={20} color={colors.secondaryFont} style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.input, styles.passwordInput, { 
-                    color: colors.mainFont 
-                  }]}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Password"
-                  placeholderTextColor={colors.secondaryFont}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!isLoading}
-                />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
-                >
-                  <Ionicons
-                    name={showPassword ? "eye-off" : "eye"}
-                    size={20}
-                    color={colors.secondaryFont}
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.loginButton, 
-                { backgroundColor: colors.tabColor },
-                isLoading && { backgroundColor: colors.secondaryFont, opacity: 0.7 }
-              ]}
-              onPress={handleLogin}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator color={colors.background} size="small" />
-                  {/* <Text style={[styles.loadingText, { color: colors.background }]}>Signing In</Text> */}
-                </View>
-              ) : (
-                <View style={styles.buttonContent}>
-                  <Text style={[styles.loginButtonText, { color: colors.background }]}>Sign In</Text>
-                  {/* <Ionicons name="arrow-forward" size={20} color={colors.background} /> */}
-                </View>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.resetPasswordButton}
-              onPress={() => setShowResetModal(true)}
-              disabled={isLoading}
-            >
-              <Ionicons name="key-outline" size={16} color={colors.tabColor} />
-              <Text style={[styles.resetPasswordText, { color: colors.tabColor }]}>
-                Reset Password
-              </Text>
-            </TouchableOpacity>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>UniLink</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+              Sign in to your student portal
+            </Text>
           </View>
-        </View>
+
+          {/* Auth card */}
+          <View style={[styles.card, {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+          }, Shadow.md(colors)]}>
+            <View style={styles.formContainer}>
+              <View style={styles.inputContainer}>
+                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>USERNAME</Text>
+                <View style={[styles.inputWrapper, {
+                  backgroundColor: colors.surfaceSunken,
+                  borderColor: focusedField === 'username' ? colors.primary : colors.border,
+                }]}>
+                  <Ionicons name="person-outline" size={20} color={focusedField === 'username' ? colors.primary : colors.textTertiary} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, { color: colors.textPrimary }]}
+                    value={username}
+                    onChangeText={setUsername}
+                    onFocus={() => setFocusedField('username')}
+                    onBlur={() => setFocusedField(null)}
+                    placeholder="your.name"
+                    placeholderTextColor={colors.textTertiary}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>PASSWORD</Text>
+                <View style={[styles.inputWrapper, {
+                  backgroundColor: colors.surfaceSunken,
+                  borderColor: focusedField === 'password' ? colors.primary : colors.border,
+                }]}>
+                  <Ionicons name="lock-closed-outline" size={20} color={focusedField === 'password' ? colors.primary : colors.textTertiary} style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, styles.passwordInput, { color: colors.textPrimary }]}
+                    value={password}
+                    onChangeText={setPassword}
+                    onFocus={() => setFocusedField('password')}
+                    onBlur={() => setFocusedField(null)}
+                    placeholder="••••••••"
+                    placeholderTextColor={colors.textTertiary}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowPassword(!showPassword)}
+                    disabled={isLoading}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
+                      color={colors.textTertiary}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                activeOpacity={0.85}
+                style={[
+                  styles.loginButton,
+                  { backgroundColor: colors.primary },
+                  !isLoading && Shadow.glow(colors.primary),
+                  isLoading && { opacity: 0.7 },
+                ]}
+                onPress={handleLogin}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color={colors.onPrimary} size="small" />
+                ) : (
+                  <View style={styles.buttonContent}>
+                    <Text style={[styles.loginButtonText, { color: colors.onPrimary }]}>Sign In</Text>
+                    <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.resetPasswordButton}
+                onPress={() => setShowResetModal(true)}
+                disabled={isLoading}
+              >
+                <Ionicons name="key-outline" size={15} color={colors.secondary} />
+                <Text style={[styles.resetPasswordText, { color: colors.secondary }]}>
+                  Reset Password
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
       <AlertComponent />
@@ -239,156 +254,124 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 40,
-    paddingBottom: 20,
+    paddingHorizontal: Spacing.xxl,
+    paddingVertical: Spacing.huge,
   },
   headerContainer: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: Spacing.xxxl,
   },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  logoMark: {
+    width: 84,
+    height: 84,
+    borderRadius: Radius.xl,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
+    marginBottom: Spacing.xl,
   },
-  logoText: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#ffffff',
+  logoDot: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    fontSize: 34,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    marginBottom: Spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: '500',
     textAlign: 'center',
-    opacity: 0.8,
   },
   card: {
-    borderRadius: 20,
+    borderRadius: Radius.xxl,
     borderWidth: 1,
-    padding: 32,
-    marginHorizontal: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 12,
+    padding: Spacing.xxl,
   },
   formContainer: {
     width: '100%',
   },
   inputContainer: {
-    marginBottom: 28,
+    marginBottom: Spacing.xl,
   },
   inputLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    marginBottom: Spacing.sm,
+    marginLeft: Spacing.xs,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 56,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 18,
-    backgroundColor: 'transparent',
+    height: 54,
+    borderWidth: 1.5,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.lg,
   },
   inputIcon: {
-    marginRight: 12,
+    marginRight: Spacing.md,
   },
   input: {
     flex: 1,
     height: '100%',
     fontSize: 16,
+    fontWeight: '500',
     paddingVertical: 0,
   },
   passwordInput: {
-    paddingRight: 60,
+    paddingRight: 44,
   },
   eyeButton: {
     position: 'absolute',
-    right: 18,
+    right: Spacing.lg,
     top: 0,
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 4,
+    padding: Spacing.xs,
   },
   loginButton: {
-    height: 40,
-    width: 120,
-    borderRadius: 8,
+    height: 54,
+    width: '100%',
+    borderRadius: Radius.md,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 16,
-    alignSelf: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
+    marginTop: Spacing.sm,
   },
   buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.sm,
   },
   loginButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  loadingText: {
-    fontSize: 16,
-    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   resetPasswordButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 16,
-    paddingVertical: 12,
-    gap: 8,
+    marginTop: Spacing.lg,
+    paddingVertical: Spacing.md,
+    gap: Spacing.sm,
   },
   resetPasswordText: {
     fontSize: 14,
     fontWeight: '600',
   },
-  footerContainer: {
-    alignItems: 'center',
-    marginTop: 32,
-  },
-  footerText: {
-    fontSize: 14,
-    color: '#666',
+  footerHint: {
+    fontSize: 13,
+    fontWeight: '500',
     textAlign: 'center',
+    marginTop: Spacing.xxl,
   },
 });
 

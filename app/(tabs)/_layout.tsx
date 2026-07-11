@@ -2,7 +2,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Tabs, useRouter } from 'expo-router';
 import { useEffect, useMemo } from 'react';
-import { Platform } from 'react-native';
 
 import { AuthGuard } from '@/components/AuthGuard';
 import { HapticTab } from '@/components/HapticTab';
@@ -19,11 +18,11 @@ export default function TabLayout() {
 
   // Memoize icon components to prevent re-creation and improve performance
   const tabIcons = useMemo(() => ({
-    dashboard: (color: string) => <MaterialIcons name="dashboard" size={28} color={color} />,
-    courses: (color: string) => <Ionicons name="book" size={28} color={color} />,
-    schedule: (color: string) => <Ionicons name="calendar" size={28} color={color} />,
-    transcript: (color: string) => <Ionicons name="document-text" size={28} color={color} />,
-    settings: (color: string) => <Ionicons name="settings" size={28} color={color} />,
+    dashboard: (color: string, focused: boolean) => <MaterialIcons name="dashboard" size={24} color={color} />,
+    courses: (color: string, focused: boolean) => <Ionicons name={focused ? 'book' : 'book-outline'} size={23} color={color} />,
+    schedule: (color: string, focused: boolean) => <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={23} color={color} />,
+    transcript: (color: string, focused: boolean) => <Ionicons name={focused ? 'document-text' : 'document-text-outline'} size={23} color={color} />,
+    settings: (color: string, focused: boolean) => <Ionicons name={focused ? 'settings' : 'settings-outline'} size={23} color={color} />,
   }), []);
 
   // Navigate to the default screen when it's loaded and different from dashboard
@@ -46,51 +45,49 @@ export default function TabLayout() {
       <Tabs
         initialRouteName={initialRouteName}
         screenOptions={{
-          tabBarActiveTintColor: colors.tint,
+          tabBarActiveTintColor: colors.tabIconSelected,
+          tabBarInactiveTintColor: colors.tabIconDefault,
           headerShown: false,
           tabBarButton: HapticTab,
           tabBarBackground: TabBarBackground,
-          tabBarStyle: Platform.select({
-            ios: {
-              // Use a transparent background on iOS to show the blur effect
-              position: 'absolute',
-            },
-            default: {},
-          }),
+          // Bottom tab bar is hidden — navigation is driven by the slide-in
+          // Sidebar. The Tabs navigator is kept so screen state is preserved
+          // when switching between the primary views.
+          tabBarStyle: { display: 'none' },
         }}>
         <Tabs.Screen
           name="dashboard"
           options={{
             title: 'Dashboard',
-            tabBarIcon: ({ color }) => tabIcons.dashboard(color),
+            tabBarIcon: ({ color, focused }) => tabIcons.dashboard(color, focused),
           }}
         />
         <Tabs.Screen
           name="grades"
           options={{
             title: 'Grades',
-            tabBarIcon: ({ color }) => tabIcons.courses(color),
+            tabBarIcon: ({ color, focused }) => tabIcons.courses(color, focused),
           }}
         />
         <Tabs.Screen
           name="schedule"
           options={{
             title: 'Schedule',
-            tabBarIcon: ({ color }) => tabIcons.schedule(color),
+            tabBarIcon: ({ color, focused }) => tabIcons.schedule(color, focused),
           }}
         />
         <Tabs.Screen
           name="transcript"
           options={{
             title: 'Transcript',
-            tabBarIcon: ({ color }) => tabIcons.transcript(color),
+            tabBarIcon: ({ color, focused }) => tabIcons.transcript(color, focused),
           }}
         />
         <Tabs.Screen
           name="settings"
           options={{
             title: 'Settings',
-            tabBarIcon: ({ color }) => tabIcons.settings(color),
+            tabBarIcon: ({ color, focused }) => tabIcons.settings(color, focused),
           }}
         />
       </Tabs>

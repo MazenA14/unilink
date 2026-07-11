@@ -52,7 +52,7 @@ export default function NotificationSettings({ onClose }: NotificationSettingsPr
 
   return (
     <>
-      <View style={[styles.card, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}> 
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
         <View style={styles.rowBetween}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.primaryText, { color: colors.mainFont }]}>

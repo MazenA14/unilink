@@ -1,8 +1,8 @@
 import { useCustomAlert } from '@/components/CustomAlert';
+import { AppBar } from '@/components/navigation/AppBar';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
     Animated,
@@ -364,30 +364,25 @@ export default function DatesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.mainFont} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.mainFont }]}>Dates</Text>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity
-            style={[styles.headerActionButton, { backgroundColor: colors.gradeFailing }]}
-            onPress={handleDeleteAll}
-          >
-            <Ionicons name="trash" size={20} color="white" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.headerActionButton, { backgroundColor: colors.tint }]}
-            onPress={handleOpenModal}
-          >
-            <Ionicons name="add" size={20} color="white" />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <AppBar
+        title="Dates"
+        rightActions={
+          <>
+            <TouchableOpacity
+              style={[styles.headerActionButton, { backgroundColor: colors.gradeFailing }]}
+              onPress={handleDeleteAll}
+            >
+              <Ionicons name="trash" size={18} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.headerActionButton, { backgroundColor: colors.tint }]}
+              onPress={handleOpenModal}
+            >
+              <Ionicons name="add" size={20} color="white" />
+            </TouchableOpacity>
+          </>
+        }
+      />
 
       {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -581,27 +576,6 @@ export default function DatesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 16,
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    gap: 8,
   },
   headerActionButton: {
     width: 40,

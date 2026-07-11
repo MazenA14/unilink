@@ -1,17 +1,17 @@
+import { AppBar } from '@/components/navigation/AppBar';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { getCmsCourseView, previewCmsContent, saveCmsContent } from '@/utils/handlers/cmsHandler';
 import type { CMSCourseView } from '@/utils/parsers/cmsCourseViewParser';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, ScrollView, StyleSheet, Text, ToastAndroid, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function CMSCourseViewScreen() {
   const { id, sid } = useLocalSearchParams<{ id: string; sid: string }>();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -265,47 +265,37 @@ export default function CMSCourseViewScreen() {
     });
   }, []);
 
+  const courseTitle = (() => {
+    const courseName = courseData?.header.courseName || 'Course';
+    const courseCodeMatch = courseName.match(/\(([^)]+)\)/);
+    const courseCode = courseCodeMatch ? courseCodeMatch[1].replace(/\|/g, '') : '';
+    const cleanCourseName = courseName.replace(/\s*\([^)]+\)\s*/g, '').trim();
+    return courseCode ? `${cleanCourseName} - ${courseCode}` : cleanCourseName;
+  })();
+
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.background }] }>
-        <ActivityIndicator />
-        <Text style={[styles.loadingText, { color: colors.secondaryFont }]}>Loading course…</Text>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppBar title="Course" />
+        <View style={[styles.center, { backgroundColor: colors.background }] }>
+          <ActivityIndicator />
+          <Text style={[styles.loadingText, { color: colors.secondaryFont }]}>Loading course…</Text>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background } ]}>
-      <View style={[styles.header, { paddingTop: Math.max(60, insets.top + 20) }]}>
-        <View style={styles.headerContent}>
-          <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
-            {(() => {
-              const courseName = courseData?.header.courseName || 'Course';
-              const courseCodeMatch = courseName.match(/\(([^)]+)\)/);
-              const courseCode = courseCodeMatch ? courseCodeMatch[1].replace(/\|/g, '') : '';
-              const cleanCourseName = courseName.replace(/\s*\([^)]+\)\s*/g, '').trim();
-              return courseCode ? `${cleanCourseName} - ${courseCode}` : cleanCourseName;
-            })()}
-          </Text>
-          <TouchableOpacity 
-            style={[styles.backButton, { backgroundColor: colors.tint }]}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="arrow-back" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
-        {!!courseData?.header.seasonName && (
-          <Text style={[styles.subtitle, { color: colors.secondaryFont }]}>
-            {courseData.header.seasonName}
-          </Text>
-        )}
-        {courseData?.header.totalWeeks && (
-          <Text style={[styles.meta, { color: colors.secondaryFont }]}>
-            {courseData.header.totalWeeks} weeks • {courseData.header.contentCount || 0} content items
-          </Text>
-        )}
-      </View>
+      <AppBar
+        title={courseTitle}
+        subtitle={courseData?.header.seasonName}
+      />
+      {courseData?.header.totalWeeks && (
+        <Text style={[styles.meta, { color: colors.secondaryFont, marginHorizontal: 20 }]}>
+          {courseData.header.totalWeeks} weeks • {courseData.header.contentCount || 0} content items
+        </Text>
+      )}
 
       {!!error && (
         <Text style={[styles.error, { color: colors.error }]}>{error}</Text>
@@ -537,17 +527,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { marginTop: 8 },
-  header: { padding: 20, paddingBottom: 10 },
-  headerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  title: { fontSize: 24, fontWeight: '700', flex: 1, marginRight: 12 },
-  backButton: { 
-    width: 40, 
-    height: 40, 
-    borderRadius: 20, 
-    alignItems: 'center', 
-    justifyContent: 'center' 
-  },
-  subtitle: { marginTop: 6, fontSize: 14 },
   meta: { marginTop: 4, fontSize: 12 },
   error: { marginHorizontal: 20, marginBottom: 8 },
   content: { flex: 1, paddingHorizontal: 20 },

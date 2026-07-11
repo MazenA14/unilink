@@ -156,7 +156,7 @@ const ResetPasswordModal = ({ visible, onClose, onSuccess }: ResetPasswordModalP
           <View style={[
             styles.modalContainer,
             {
-              backgroundColor: colorScheme === 'dark' ? '#232323' : '#ffffff',
+              backgroundColor: colors.surfaceElevated,
               borderColor: colors.border,
             }
           ]}>

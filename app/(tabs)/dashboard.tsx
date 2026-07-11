@@ -1,10 +1,10 @@
-import { EvaluateMenu, EvaluateMenuAnchor } from '@/components/EvaluateMenu';
-import QuickMediaModal from '@/components/QuickMediaModal';
+import { AppBar } from '@/components/navigation/AppBar';
 import { MultipleLecturesModal } from '@/components/schedule/MultipleLecturesModal';
 import UpdateModal from '@/components/UpdateModal';
 import WhatsNewModal from '@/components/WhatsNewModal';
 import { Colors, ScheduleTypeColors } from '@/constants/Colors';
- 
+import { Radius, Shadow, Spacing, withAlpha } from '@/constants/Theme';
+
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -15,7 +15,6 @@ import { AuthManager } from '@/utils/auth';
 import { isCurrentTimeSlot } from '@/utils/currentSlotUtils';
 import { GradeCache } from '@/utils/gradeCache';
 import { GUCAPIProxy } from '@/utils/gucApiProxy';
-import { Feather } from '@expo/vector-icons';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -42,14 +41,6 @@ export default function DashboardScreen() {
   const [selectedLectures, setSelectedLectures] = useState<any[]>([]);
   const [selectedPeriodName, setSelectedPeriodName] = useState('');
   const [selectedDayName, setSelectedDayName] = useState('');
-  
-  // Quick Media modal state
-  const [quickMediaModalVisible, setQuickMediaModalVisible] = useState(false);
-
-  // Evaluate dropdown state
-  const [evaluateMenuVisible, setEvaluateMenuVisible] = useState(false);
-  const [evaluateMenuAnchor, setEvaluateMenuAnchor] = useState<EvaluateMenuAnchor | null>(null);
-  const evaluateButtonRef = useRef<View>(null);
   
   // Version check hook
   const {
@@ -275,6 +266,56 @@ export default function DashboardScreen() {
     return colors[slotType as keyof typeof colors] || '#6B7280';
   };
 
+  // Resolve a displayable course title (same mapping used by the schedule rows)
+  const resolveClassName = (classData: any): string => {
+    const mapped = getCourseNameByMatching(classData.courseName);
+    if (mapped) {
+      const t = extractCourseTitle(mapped);
+      return t !== mapped ? t : mapped;
+    }
+    const orig = extractCourseTitle(classData.courseName);
+    return orig !== classData.courseName ? orig : classData.courseName;
+  };
+
+  // Start time (in minutes since midnight) for each period, for "next class" logic
+  const getPeriodStartMinutes = (periodKey: string): number => {
+    const base: Record<string, number> = {
+      first: 8 * 60 + 15,
+      second: 10 * 60,
+      third: isShiftedScheduleEnabled ? 12 * 60 : 11 * 60 + 45,
+      fourth: isShiftedScheduleEnabled ? 14 * 60 : 13 * 60 + 45,
+      fifth: isShiftedScheduleEnabled ? 16 * 60 : 15 * 60 + 45,
+      sixth: 17 * 60 + 30,
+      seventh: 19 * 60 + 15,
+      eighth: 21 * 60,
+    };
+    return base[periodKey] ?? 0;
+  };
+
+  const PERIOD_ORDER = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth'] as const;
+  const PERIOD_LABELS = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
+
+  // The current in-progress class, else the next upcoming one today
+  const getHeroClass = () => {
+    if (!periods) return null;
+    const nowMin = currentTime.getHours() * 60 + currentTime.getMinutes();
+    let next: any = null;
+    for (let i = 0; i < PERIOD_ORDER.length; i++) {
+      const key = PERIOD_ORDER[i];
+      const arr = periods[key as keyof typeof periods];
+      const cd = Array.isArray(arr) ? arr[0] : arr;
+      if (!cd) continue;
+      const periodNumber = PERIOD_LABELS[i];
+      if (isCurrentTimeSlot(key, isShiftedScheduleEnabled, currentTime)) {
+        return { state: 'Now' as const, classData: cd, periodNumber, timing: getPeriodTiming(key) };
+      }
+      if (!next && getPeriodStartMinutes(key) >= nowMin) {
+        next = { state: 'Next' as const, classData: cd, periodNumber, timing: getPeriodTiming(key) };
+      }
+    }
+    return next;
+  };
+
   // Handle refresh schedule
   const handleRefreshSchedule = async () => {
     try {
@@ -298,19 +339,6 @@ export default function DashboardScreen() {
       refreshRotation.stopAnimation();
       refreshRotation.setValue(0);
     }
-  };
-
-  // Evaluate dropdown handlers
-  const handleEvaluatePress = () => {
-    evaluateButtonRef.current?.measureInWindow((x, y, width, height) => {
-      setEvaluateMenuAnchor({ top: y + height + 38, left: x, width });
-      setEvaluateMenuVisible(true);
-    });
-  };
-
-  const handleEvaluateOptionSelect = (option: 'course' | 'staff') => {
-    setEvaluateMenuVisible(false);
-    router.push(option === 'course' ? '/evaluation/course' : '/evaluation/staff');
   };
 
   // Multiple lectures modal handlers
@@ -404,6 +432,8 @@ export default function DashboardScreen() {
     }, [loadNickname])
   );
 
+  const hero = getHeroClass();
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Version Check Modal */}
@@ -422,111 +452,146 @@ export default function DashboardScreen() {
         version={whatsNewVersion}
       />
       
-      {/* Main Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.headerTitle, { color: colors.mainFont }]}>Dashboard</Text>
-          <TouchableOpacity 
-            style={[styles.notificationButton, { backgroundColor: `${colors.tint}15` }]}
-            onPress={() => router.push('/notifications')}
-          >
-            <Ionicons name="notifications-outline" size={24} color={colors.tint} />
-            {unreadCount > 0 && (
-              <View style={[styles.notificationBadge, { backgroundColor: colors.gradeFailing }]}>
-                <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount.toString()}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
+      {/* Top app bar */}
+      <AppBar title="Dashboard" large />
 
-        {/* Welcome Message */}
-        <View style={styles.welcomeContainer}>
-          <Text style={[styles.welcomeText, { color: colors.secondaryFont }]}>
-            Welcome Back, {nickname}
-          </Text>
-        </View>
-        {/* Quick Actions Grid */}
+      {/* Main Content */}
+      <ScrollView style={styles.content} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 36 }} showsVerticalScrollIndicator={false}>
+        {/* Greeting */}
+        <Text style={[styles.greeting, { color: colors.textSecondary }]}>
+          Welcome back, <Text style={{ color: colors.textPrimary, fontWeight: '800' }}>{nickname}</Text>
+        </Text>
+
+        {/* Next / current class hero */}
+        {hero && hero.classData ? (
+          <TouchableOpacity
+            activeOpacity={0.92}
+            onPress={() => router.replace('/(tabs)/schedule')}
+            style={[styles.hero, { backgroundColor: colors.primary }, Shadow.glow(colors.primary)]}
+          >
+            <View style={styles.heroTopRow}>
+              <View style={[styles.heroBadge, { backgroundColor: withAlpha(colors.onPrimary, 0.18) }]}>
+                <View style={[styles.heroBadgeDot, { backgroundColor: colors.onPrimary }]} />
+                <Text style={[styles.heroBadgeText, { color: colors.onPrimary }]}>
+                  {hero.state === 'Now' ? 'IN PROGRESS' : 'NEXT CLASS'}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={withAlpha(colors.onPrimary, 0.8)} />
+            </View>
+            <Text style={[styles.heroCourse, { color: colors.onPrimary }]} numberOfLines={2}>
+              {resolveClassName(hero.classData)}
+            </Text>
+            <View style={styles.heroMetaRow}>
+              <View style={styles.heroMeta}>
+                <Ionicons name="time-outline" size={15} color={withAlpha(colors.onPrimary, 0.9)} />
+                <Text style={[styles.heroMetaText, { color: withAlpha(colors.onPrimary, 0.9) }]}>
+                  {hero.timing.replace('\n', ' – ')}
+                </Text>
+              </View>
+              {hero.classData.room ? (
+                <View style={styles.heroMeta}>
+                  <Ionicons name="location-outline" size={15} color={withAlpha(colors.onPrimary, 0.9)} />
+                  <Text style={[styles.heroMetaText, { color: withAlpha(colors.onPrimary, 0.9) }]}>
+                    {hero.classData.room}
+                  </Text>
+                </View>
+              ) : null}
+              {hero.classData.slotType ? (
+                <View style={[styles.heroTypePill, { backgroundColor: withAlpha(colors.onPrimary, 0.2) }]}>
+                  <Text style={[styles.heroTypeText, { color: colors.onPrimary }]}>{hero.classData.slotType}</Text>
+                </View>
+              ) : null}
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <View style={[styles.hero, styles.heroEmpty, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}>
+            <Ionicons name="cafe-outline" size={26} color={colors.textTertiary} />
+            <Text style={[styles.heroEmptyText, { color: colors.textSecondary }]}>
+              {scheduleLoading ? 'Loading your day…' : 'No more classes today'}
+            </Text>
+          </View>
+        )}
+
+        {/* Overview tiles */}
         <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.mainFont }]}>Overview</Text>
           <View style={styles.gridContainer}>
-            <TouchableOpacity 
-              style={[styles.gridItem, { backgroundColor: ScheduleTypeColors.instructor, borderColor: ScheduleTypeColors.instructor, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}
-              onPress={() => router.push('/instructors')}
-            >
-              <Ionicons name="people" size={20} color="white" />
-              <Text style={[styles.gridText, { color: 'white', marginLeft: 8 }]}>Instructors</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.gridItem, { backgroundColor: colors.tint, borderColor: colors.tint, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}
-              onPress={() => router.push('/exam-seats')}
-            >
-              <Ionicons name="document-text" size={20} color="white" />
-              <Text style={[styles.gridText, { color: 'white', marginLeft: 8 }]}>Exam Seats</Text>
-            </TouchableOpacity>
-            
             <TouchableOpacity
-              style={[styles.gridItem, { backgroundColor: colors.gradeGood, borderColor: colors.gradeGood, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}
+              activeOpacity={0.85}
+              style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, borderLeftColor: colors.warning }, Shadow.card(colors)]}
+              onPress={() => router.push('/notifications')}
+            >
+              <View style={styles.statTop}>
+                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.warning, 0.16) }]}>
+                  <Ionicons name="notifications" size={18} color={colors.warning} />
+                </View>
+                <Text style={[styles.statValue, { color: unreadCount > 0 ? colors.warning : colors.textPrimary }]}>{unreadCount}</Text>
+              </View>
+              <Text style={[styles.statLabel, { color: colors.textPrimary }]}>Notifications</Text>
+              <Text style={[styles.statCaption, { color: colors.textSecondary }]}>
+                {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, borderLeftColor: colors.success }, Shadow.card(colors)]}
               onPress={() => router.push('/attendance')}
             >
-              <Feather name="check-circle" size={20} color="white" />
-              <Text style={[styles.gridText, { color: 'white', marginLeft: 8 }]}>Attendance</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.gridItem, { backgroundColor: '#4A90E2', borderColor: '#4A90E2', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}
-              onPress={() => router.push('/cms/home')}
-            >
-              <Ionicons name="document-attach" size={20} color="white" />
-              <Text style={[styles.gridText, { color: 'white', marginLeft: 8 }]}>CMS</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              ref={evaluateButtonRef}
-              style={[styles.gridItem, { backgroundColor: '#F59E0B', borderColor: '#F59E0B', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}
-              onPress={handleEvaluatePress}
-            >
-              <Ionicons name="star-outline" size={20} color="white" />
-              <Text style={[styles.gridText, { color: 'white', marginLeft: 8 }]}>Evaluate</Text>
-            </TouchableOpacity>
-
-            <View style={[styles.gridItem, { padding: 0, borderWidth: 0, elevation: 0, shadowOpacity: 0, alignItems: 'stretch' }]}>
-              <View style={styles.comboRow}>
-                <TouchableOpacity
-                  style={[styles.comboButton, { backgroundColor: '#8B5CF6', borderColor: '#8B5CF6' }]}
-                  onPress={() => setQuickMediaModalVisible(true)}
-                >
-                  <Ionicons name="folder-open" size={16} color="white" />
-                  <Text style={[styles.comboText, { color: 'white' }]}>Quick Access</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.comboButton, { backgroundColor: '#FF6B6B', borderColor: '#FF6B6B' }]}
-                  onPress={() => router.push('/dates')}
-                >
-                  <Ionicons name="calendar" size={16} color="white" />
-                  <Text style={[styles.comboText, { color: 'white' }]}>Dates</Text>
-                </TouchableOpacity>
+              <View style={styles.statTop}>
+                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.success, 0.16) }]}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
               </View>
-            </View>
+              <Text style={[styles.statLabel, { color: colors.textPrimary }]}>Attendance</Text>
+              <Text style={[styles.statCaption, { color: colors.textSecondary }]}>Warnings & log</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, borderLeftColor: colors.secondary }, Shadow.card(colors)]}
+              onPress={() => router.replace('/(tabs)/grades')}
+            >
+              <View style={styles.statTop}>
+                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.secondary, 0.16) }]}>
+                  <Ionicons name="school" size={18} color={colors.secondary} />
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+              </View>
+              <Text style={[styles.statLabel, { color: colors.textPrimary }]}>Grades</Text>
+              <Text style={[styles.statCaption, { color: colors.textSecondary }]}>Current & previous</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, borderLeftColor: colors.info }, Shadow.card(colors)]}
+              onPress={() => router.replace('/(tabs)/transcript')}
+            >
+              <View style={styles.statTop}>
+                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.info, 0.16) }]}>
+                  <Ionicons name="document-text" size={18} color={colors.info} />
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+              </View>
+              <Text style={[styles.statLabel, { color: colors.textPrimary }]}>Transcript</Text>
+              <Text style={[styles.statCaption, { color: colors.textSecondary }]}>GPA & history</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        <EvaluateMenu
-          visible={evaluateMenuVisible}
-          anchor={evaluateMenuAnchor}
-          onClose={() => setEvaluateMenuVisible(false)}
-          onSelect={handleEvaluateOptionSelect}
-        />
-
         {/* Today's Schedule */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.mainFont }]}>Today&apos;s Schedule</Text>
-          {dayName && (
-            <View style={styles.dayNameRow}>
-              <Text style={[styles.dayName, { color: colors.secondaryFont }]}>{dayName}</Text>
-              <TouchableOpacity 
-                style={styles.refreshIconButton}
+          <View style={styles.scheduleHeaderRow}>
+            <Text style={[styles.sectionTitle, { color: colors.mainFont, marginBottom: 0 }]}>Today&apos;s Schedule</Text>
+            <View style={styles.scheduleHeaderRight}>
+              {dayName ? (
+                <View style={[styles.dayChip, { backgroundColor: withAlpha(colors.primary, 0.12) }]}>
+                  <Text style={[styles.dayChipText, { color: colors.primary }]}>{dayName}</Text>
+                </View>
+              ) : null}
+              <TouchableOpacity
+                style={[styles.refreshIconButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 onPress={handleRefreshSchedule}
                 disabled={scheduleLoading}
               >
@@ -540,26 +605,22 @@ export default function DashboardScreen() {
                     }]
                   }}
                 >
-                  <Ionicons 
-                    name="refresh" 
-                    size={20} 
-                    color={colors.tint} 
+                  <Ionicons
+                    name="refresh"
+                    size={17}
+                    color={colors.primary}
                   />
                 </Animated.View>
               </TouchableOpacity>
             </View>
-          )}
+          </View>
           <View style={styles.periodsContainer}>
             {scheduleLoading ? (
-              <View style={[styles.periodRow, { 
+              <View style={[styles.placeholderRow, {
                 backgroundColor: colorScheme === 'dark' ? '#2A1F1F' : '#FFF5F5',
                 borderColor: colorScheme === 'dark' ? '#3D2A2A' : '#FFE0E0',
-                borderRadius: 16,
-                justifyContent: 'center',
-                alignItems: 'center',
-                paddingVertical: 20,
               }]}>
-                <Text style={[styles.courseName, { color: colors.secondaryFont, fontStyle: 'italic' }]}>
+                <Text style={[styles.courseName, { color: colors.secondaryFont, fontStyle: 'italic', marginBottom: 0 }]}>
                   Loading schedule...
                 </Text>
               </View>
@@ -582,15 +643,15 @@ export default function DashboardScreen() {
                 const isCurrentSlot = isCurrentTimeSlot(periodKey, isShiftedScheduleEnabled, currentTime);
 
                 return (
-                  <PeriodRowComponent 
-                    key={periodKey} 
-                    style={[styles.periodRow, { 
+                  <PeriodRowComponent
+                    key={periodKey}
+                    style={[styles.periodRow, {
                       backgroundColor: colorScheme === 'dark' ? '#2A1F1F' : '#FFF5F5',
-                      borderColor: isCurrentSlot 
-                        ? colors.tint 
+                      borderColor: isCurrentSlot
+                        ? colors.tint
                         : (colorScheme === 'dark' ? '#3D2A2A' : '#FFE0E0'),
                       borderWidth: isCurrentSlot ? 2 : 1,
-                      borderRadius: 16,
+                      borderRadius: Radius.lg,
                       shadowColor: isCurrentSlot ? colors.tint : ScheduleTypeColors.personal,
                       shadowOffset: { width: 0, height: 2 },
                       shadowOpacity: isCurrentSlot ? 0.3 : 0.1,
@@ -599,31 +660,34 @@ export default function DashboardScreen() {
                     }]}
                     {...periodRowProps}
                   >
-                    <View style={[styles.periodLabel, { 
-                      backgroundColor: isCurrentSlot 
-                        ? colors.tint + '20' 
-                        : ScheduleTypeColors.personal + '15', 
-                      borderColor: isCurrentSlot 
-                        ? colors.tint + '40' 
+                    <View style={[styles.periodLabel, {
+                      backgroundColor: isCurrentSlot
+                        ? colors.tint + '20'
+                        : ScheduleTypeColors.personal + '15',
+                      borderColor: isCurrentSlot
+                        ? colors.tint + '40'
                         : ScheduleTypeColors.personal + '30',
-                      borderTopLeftRadius: 16,
-                      borderBottomLeftRadius: 16,
+                      borderTopLeftRadius: Radius.lg - 1,
+                      borderBottomLeftRadius: Radius.lg - 1,
                     }]}>
-                      <Text style={[styles.periodLabelText, { 
+                      {isCurrentSlot && (
+                        <View style={[styles.nowDot, { backgroundColor: colors.tint }]} />
+                      )}
+                      <Text style={[styles.periodLabelText, {
                         color: isCurrentSlot ? colors.tint : ScheduleTypeColors.personal,
-                        fontWeight: isCurrentSlot ? '700' : 'bold'
+                        fontWeight: isCurrentSlot ? '800' : '700'
                       }]}>{periodNumber}</Text>
-                      <Text style={[styles.periodTimingText, { 
-                        color: isCurrentSlot ? colors.tint : ScheduleTypeColors.personal, 
+                      <Text style={[styles.periodTimingText, {
+                        color: isCurrentSlot ? colors.tint : ScheduleTypeColors.personal,
                         fontSize: 10,
-                        fontWeight: isCurrentSlot ? '600' : '500'
+                        fontWeight: isCurrentSlot ? '700' : '500'
                       }]}>{timing}</Text>
                     </View>
-                    <View style={[styles.periodContent, { 
+                    <View style={[styles.periodContent, {
                       backgroundColor: colors.cardBackground,
                       borderColor: ScheduleTypeColors.personal + '40',
-                      borderTopRightRadius: 16,
-                      borderBottomRightRadius: 16,
+                      borderTopRightRadius: Radius.lg - 1,
+                      borderBottomRightRadius: Radius.lg - 1,
                       borderLeftWidth: 3,
                       borderLeftColor: ScheduleTypeColors.personal,
                     }]}>
@@ -705,15 +769,11 @@ export default function DashboardScreen() {
                 );
               })
             ) : (
-              <View style={[styles.periodRow, { 
+              <View style={[styles.placeholderRow, {
                 backgroundColor: colorScheme === 'dark' ? '#2A1F1F' : '#FFF5F5',
                 borderColor: colorScheme === 'dark' ? '#3D2A2A' : '#FFE0E0',
-                borderRadius: 16,
-                justifyContent: 'center',
-                alignItems: 'center',
-                paddingVertical: 20,
               }]}>
-                <Text style={[styles.courseName, { color: colors.secondaryFont, fontStyle: 'italic' }]}>
+                <Text style={[styles.courseName, { color: colors.secondaryFont, fontStyle: 'italic', marginBottom: 0 }]}>
                   No schedule data available
                 </Text>
               </View>
@@ -731,12 +791,6 @@ export default function DashboardScreen() {
         periodName={selectedPeriodName}
         dayName={selectedDayName}
       />
-
-      {/* Quick Media Modal */}
-      <QuickMediaModal
-        visible={quickMediaModalVisible}
-        onClose={() => setQuickMediaModalVisible(false)}
-      />
     </View>
   );
 }
@@ -744,46 +798,46 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 20,
-    paddingTop: 60,
-    paddingBottom: 8,
+    paddingTop: 62,
+    paddingBottom: 24,
+  },
+  headerTextGroup: {
+    flex: 1,
+    marginRight: 12,
+  },
+  headerEyebrow: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 4,
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: '700',
-    letterSpacing: -0.5,
-  },
-  welcomeContainer: {
-    paddingHorizontal: 0,
-    paddingBottom: 24,
-  },
-  welcomeText: {
-    fontSize: 16,
-    fontWeight: '500',
-    opacity: 0.8,
+    fontWeight: '800',
+    letterSpacing: -0.6,
   },
   notificationButton: {
-    position: 'relative',
-    right: 3,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   notificationBadge: {
     position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    top: -4,
+    right: -4,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 5,
+    borderRadius: 10,
+    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -794,6 +848,118 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  greeting: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginTop: 6,
+    marginBottom: 16,
+  },
+  hero: {
+    borderRadius: Radius.xl,
+    padding: 20,
+    marginBottom: 28,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Radius.pill,
+  },
+  heroBadgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  heroBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  heroCourse: {
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+    lineHeight: 27,
+    marginBottom: 14,
+  },
+  heroMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  heroMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  heroMetaText: {
+    fontSize: 13.5,
+    fontWeight: '600',
+  },
+  heroTypePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Radius.pill,
+  },
+  heroTypeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  heroEmpty: {
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  heroEmptyText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  statCard: {
+    width: '48%',
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderLeftWidth: 3,
+    padding: 16,
+  },
+  statTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  statIconChip: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  statLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  statCaption: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
   },
   section: {
     marginBottom: 32,
@@ -841,57 +1007,58 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  gridItem: {
+  actionCard: {
     width: '48%',
-    padding: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginBottom: 0,
+    height: 118,
+    padding: Spacing.lg,
+    borderRadius: Radius.lg,
     borderWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    justifyContent: 'flex-start',
   },
-  gridIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  actionIconChip: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
+    marginBottom: 12,
   },
-  gridText: {
+  actionLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  actionCaption: {
     fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  utilCard: {
+    justifyContent: 'center',
+    paddingVertical: Spacing.sm,
+  },
+  utilRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  utilIconChip: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  utilLabel: {
+    flex: 1,
+    fontSize: 13.5,
     fontWeight: '600',
-    textAlign: 'center',
     letterSpacing: -0.1,
   },
-  comboRow: {
-    flex: 1,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  comboButton: {
-    flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-  },
-  comboText: {
-    fontSize: 10,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 4,
+  utilDivider: {
+    height: 1,
+    marginVertical: 2,
   },
   cmsText: {
     fontSize: 24,
@@ -919,10 +1086,16 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   periodLabel: {
-    width: 50,
+    width: 58,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
+    borderRightWidth: 1,
+  },
+  nowDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginBottom: 4,
   },
   periodLabelText: {
     fontSize: 12,
@@ -935,25 +1108,41 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 2,
   },
-  dayNameRow: {
+  scheduleHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  dayName: {
-    fontSize: 16,
-    fontWeight: '600',
-    left: 10,
-    textAlign: 'left',
+  scheduleHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dayChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: Radius.pill,
+  },
+  dayChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   refreshIconButton: {
-    padding: 8,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  refreshingIcon: {
-    opacity: 0.6,
+  placeholderRow: {
+    borderWidth: 1,
+    borderRadius: Radius.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 22,
   },
   periodContent: {
     flex: 1,

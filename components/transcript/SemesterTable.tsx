@@ -40,7 +40,7 @@ export default function SemesterTable({ semester, index }: SemesterTableProps) {
   );
 
   return (
-    <View style={[styles.semesterTable, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3', borderColor: colors.border }]}>
+    <View style={[styles.semesterTable, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={[styles.semesterHeader, { backgroundColor: colors.tabColor }]}>
         <View style={styles.semesterHeaderContent}>
           <Text style={[styles.semesterTitle, { color: '#FFFFFF' }]}>{semester.name}</Text>
@@ -54,7 +54,7 @@ export default function SemesterTable({ semester, index }: SemesterTableProps) {
       </View>
       
       {/* Table Header */}
-      <View style={[styles.tableHeader, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3' }]}>
+      <View style={[styles.tableHeader, { backgroundColor: colors.surface }]}>
         <View style={styles.courseSemester}>
           <Text style={[styles.headerText, { color: colors.secondaryFont }]}>Semester</Text>
         </View>
@@ -76,7 +76,7 @@ export default function SemesterTable({ semester, index }: SemesterTableProps) {
       {semester.courses.map((course, courseIndex) => renderCourseRow(course, courseIndex))}
       
       {/* Semester Summary */}
-      <View style={[styles.semesterSummary, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3' }]}>
+      <View style={[styles.semesterSummary, { backgroundColor: colors.surface }]}>
         <View style={styles.summaryContent}>
           <Text style={[styles.summaryText, { color: colors.mainFont }]}>Total Credit Hours</Text>
           <Text style={[styles.summaryText, styles.boldText, { color: colors.mainFont }]}>{semester.totalHours}h</Text>

@@ -107,7 +107,7 @@ export default function FeedbackModal({ visible, onClose, onSuccess, onError }: 
           <View style={[
             styles.modalContainer,
             {
-              backgroundColor: colorScheme === 'dark' ? '#232323' : '#ffffff',
+              backgroundColor: colors.surfaceElevated,
               borderColor: colors.border,
             }
           ]}>

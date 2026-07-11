@@ -1,3 +1,4 @@
+import { AppBar } from '@/components/navigation/AppBar';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -119,26 +120,23 @@ export default function CMSHomeScreen() {
 
   if (loading && !courses) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator />
-        <Text style={[styles.loadingText, { color: colors.secondaryFont }]}>Loading CMS courses…</Text>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppBar title="CMS" large />
+        <View style={[styles.center, { backgroundColor: colors.background }]}>
+          <ActivityIndicator />
+          <Text style={[styles.loadingText, { color: colors.secondaryFont }]}>Loading CMS courses…</Text>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background } ]}>
-      {/* Header matching Grades/Dashboard spacing */}
-      <View style={[styles.header, { paddingTop: Math.max(60, insets.top + 20) }]}>
-        <View style={styles.headerContent}>
-          <Text style={[styles.title, { color: colors.text }]}>CMS</Text>
-          {groupedCourses.length > 0 && (
-            <Text style={[styles.seasonsCounter, { color: colors.secondaryFont }]}>
-              {groupedCourses.length} season{groupedCourses.length !== 1 ? 's' : ''}
-            </Text>
-          )}
-        </View>
-      </View>
+      <AppBar
+        title="CMS"
+        large
+        subtitle={groupedCourses.length > 0 ? `${groupedCourses.length} season${groupedCourses.length !== 1 ? 's' : ''}` : undefined}
+      />
       {/* Content */}
       {!!error && <Text style={[styles.error, { color: colors.error }]}>{error}</Text>}
       <FlatList
@@ -214,10 +212,6 @@ export default function CMSHomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: { padding: 20, paddingBottom: 10 },
-  headerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  title: { fontSize: 28, fontWeight: 'bold' },
-  seasonsCounter: { fontSize: 14, fontWeight: '500' },
   listContent: { paddingBottom: 24 },
   seasonSection: { marginBottom: 16, borderRadius: 12, borderWidth: 1, overflow: 'hidden' },
   seasonHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },

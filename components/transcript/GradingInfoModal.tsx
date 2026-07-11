@@ -190,7 +190,7 @@ export default function GradingInfoModal({ visible, onClose }: GradingInfoModalP
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.mainFont }]}>Grading Scheme</Text>
             <View style={[styles.gradingSchemeTable, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-              <View style={[styles.gradingSchemeHeader, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3' }]}>
+              <View style={[styles.gradingSchemeHeader, { backgroundColor: colors.surface }]}>
                 <Text style={[styles.gradingSchemeHeaderText, { color: colors.secondaryFont }]}>Score Range</Text>
                 <Text style={[styles.gradingSchemeHeaderText, { color: colors.secondaryFont }]}>Letter Grade</Text>
                 <Text style={[styles.gradingSchemeHeaderText, { color: colors.secondaryFont }]}>GPA Range</Text>
@@ -219,7 +219,7 @@ export default function GradingInfoModal({ visible, onClose }: GradingInfoModalP
               Cumulative Grading System
             </Text>
             <View style={[styles.table, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-              <View style={[styles.tableHeader, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3' }]}>
+              <View style={[styles.tableHeader, { backgroundColor: colors.surface }]}>
                 <Text style={[styles.headerText, { color: colors.secondaryFont }]}>GPA Range</Text>
                 <Text style={[styles.headerText, { color: colors.secondaryFont }]}>Grade</Text>
               </View>
@@ -244,7 +244,7 @@ export default function GradingInfoModal({ visible, onClose }: GradingInfoModalP
               Honors System
             </Text>
             <View style={[styles.table, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-              <View style={[styles.tableHeader, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3' }]}>
+              <View style={[styles.tableHeader, { backgroundColor: colors.surface }]}>
                 <Text style={[styles.headerText, { color: colors.secondaryFont }]}>GPA Range</Text>
                 <Text style={[styles.headerText, { color: colors.secondaryFont }]}>Honors Level</Text>
               </View>
@@ -269,7 +269,7 @@ export default function GradingInfoModal({ visible, onClose }: GradingInfoModalP
               Semester & Course GPA Grading Scheme
             </Text>
             <View style={[styles.table, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-              <View style={[styles.tableHeader, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3' }]}>
+              <View style={[styles.tableHeader, { backgroundColor: colors.surface }]}>
                 <Text style={[styles.headerText, { color: colors.secondaryFont }]}>GPA Range</Text>
                 <Text style={[styles.headerText, { color: colors.secondaryFont }]}>Grade</Text>
               </View>

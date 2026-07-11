@@ -217,7 +217,7 @@ export function ScheduleSelector({
         style={[
           styles.selectorButton,
           {
-            backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3',
+            backgroundColor: colors.surface,
             borderColor: colors.border,
           },
         ]}

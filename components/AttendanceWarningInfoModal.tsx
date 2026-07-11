@@ -215,7 +215,7 @@ export default function AttendanceWarningInfoModal({ visible, onClose }: Attenda
             {/* <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.mainFont }]}>Badge Colors</Text>
               <View style={[styles.colorGuideTable, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                <View style={[styles.tableHeader, { backgroundColor: colorScheme === 'dark' ? '#232323' : '#f3f3f3' }]}>
+                <View style={[styles.tableHeader, { backgroundColor: colors.surface }]}>
                   <Text style={[styles.headerText, { color: colors.secondaryFont }]}>Level</Text>
                   <Text style={[styles.headerText, { color: colors.secondaryFont }]}>Color</Text>
                   <Text style={[styles.headerText, { color: colors.secondaryFont }]}>Meaning</Text>

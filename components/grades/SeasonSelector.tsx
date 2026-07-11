@@ -19,7 +19,7 @@ export default function SeasonSelector({ yearGroups, selectedSeason, onSeasonSel
       style={[
         styles.seasonCard,
         {
-          backgroundColor: selectedSeason?.value === item.value ? colors.tint : (colorScheme === 'dark' ? '#232323' : '#f3f3f3'),
+          backgroundColor: selectedSeason?.value === item.value ? colors.tint : (colors.surface),
           borderColor: selectedSeason?.value === item.value ? colors.tabColor : colors.border,
         },
       ]}

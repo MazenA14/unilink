@@ -1,10 +1,11 @@
 import { InstructorProfileModal } from '@/components/InstructorProfileModal';
+import { AppBar } from '@/components/navigation/AppBar';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
+import { Radius, Shadow, withAlpha } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { GUCAPIProxy, Instructor } from '@/utils/gucApiProxy';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -134,12 +135,12 @@ export default function InstructorsScreen() {
 
   const renderInstructor = ({ item }: { item: Instructor }) => (
     <TouchableOpacity
-      style={[styles.instructorCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+      style={[styles.instructorCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }, Shadow.card(colors)]}
       onPress={() => handleInstructorPress(item)}
       activeOpacity={0.7}
     >
-      <View style={[styles.instructorAvatar, { backgroundColor: colors.tint }]}>
-        <Ionicons name="person" size={24} color="white" />
+      <View style={[styles.instructorAvatar, { backgroundColor: withAlpha(colors.secondary, 0.16) }]}>
+        <Ionicons name="person" size={22} color={colors.secondary} />
       </View>
       <View style={styles.instructorInfo}>
         <Text style={[styles.instructorName, { color: colors.mainFont }]} numberOfLines={2}>
@@ -161,15 +162,16 @@ export default function InstructorsScreen() {
     return (
       <View style={[
         styles.courseCard,
-        { backgroundColor: colors.cardBackground, borderColor: colors.border }
+        { backgroundColor: colors.cardBackground, borderColor: colors.border },
+        Shadow.card(colors),
       ]}>
         <TouchableOpacity
           style={styles.courseHeader}
           onPress={() => handleCoursePress(item)}
           activeOpacity={0.7}
         >
-          <View style={[styles.courseIcon, { backgroundColor: colors.gradeGood }]}>
-            <Ionicons name="book" size={24} color="white" />
+          <View style={[styles.courseIcon, { backgroundColor: withAlpha(colors.success, 0.16) }]}>
+            <Ionicons name="book" size={22} color={colors.success} />
           </View>
           <View style={styles.courseInfo}>
             <Text style={[styles.courseName, { color: colors.mainFont }]} numberOfLines={2}>
@@ -188,7 +190,7 @@ export default function InstructorsScreen() {
         
         {/* Instructor Dropdown */}
         {isExpanded && (
-          <View style={styles.instructorDropdown}>
+          <View style={[styles.instructorDropdown, { borderTopColor: colors.border }]}>
             {isLoading ? (
               <View style={styles.dropdownLoadingContainer}>
                 <ActivityIndicator size="small" color={colors.tint} />
@@ -207,8 +209,8 @@ export default function InstructorsScreen() {
                   onPress={() => handleInstructorPress(instructor, item.value)}
                   activeOpacity={0.7}
                 >
-                  <View style={[styles.dropdownInstructorAvatar, { backgroundColor: colors.tint }]}>
-                    <Ionicons name="person" size={16} color="white" />
+                  <View style={[styles.dropdownInstructorAvatar, { backgroundColor: withAlpha(colors.secondary, 0.16) }]}>
+                    <Ionicons name="person" size={14} color={colors.secondary} />
                   </View>
                   <Text style={[styles.dropdownInstructorName, { color: colors.mainFont }]} numberOfLines={2}>
                     {instructor.name}
@@ -232,7 +234,7 @@ export default function InstructorsScreen() {
 
 
   const renderTabHeader = () => (
-    <View style={[styles.tabContainer, { backgroundColor: colors.background }]}>
+    <View style={[styles.tabContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
       <TouchableOpacity
         style={[
           styles.tab,
@@ -317,18 +319,7 @@ export default function InstructorsScreen() {
   if (loading && !refreshing) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.mainFont} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.mainFont }]}>
-            Instructors
-          </Text>
-          <View style={styles.placeholder} />
-        </View>
+        <AppBar title="Instructors" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.tint} />
           <Text style={[styles.loadingText, { color: colors.secondaryFont }]}>
@@ -341,18 +332,7 @@ export default function InstructorsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.mainFont} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.mainFont }]}>
-          Instructors
-        </Text>
-        <View style={styles.placeholder} />
-      </View>
+      <AppBar title="Instructors" />
 
       {error ? (
         renderErrorState()
@@ -411,30 +391,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
-  },
-  backButton: {
-    padding: 8,
-    marginLeft: -8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: 16,
-  },
-  placeholder: {
-    width: 40,
-  },
   content: {
     flex: 1,
   },
@@ -442,10 +398,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginHorizontal: 16,
     marginBottom: 16,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     padding: 4,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
   },
   tab: {
     flex: 1,
@@ -454,7 +409,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    borderRadius: Radius.sm,
     marginHorizontal: 2,
   },
   tabText: {
@@ -473,14 +428,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     marginBottom: 12,
     borderWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   instructorAvatar: {
     width: 48,
@@ -504,14 +454,9 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   courseCard: {
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     marginBottom: 12,
     borderWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   courseHeader: {
     flexDirection: 'row',
@@ -541,7 +486,6 @@ const styles = StyleSheet.create({
   },
   instructorDropdown: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.1)',
   },
   dropdownLoadingContainer: {
     flexDirection: 'row',

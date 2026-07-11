@@ -1,4 +1,5 @@
 import { useCustomAlert } from '@/components/CustomAlert';
+import { AppBar } from '@/components/navigation/AppBar';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -6,7 +7,7 @@ import { GUCAPIProxy } from '@/utils/gucApiProxy';
 import { ExamSeat, formatExamDate, getExamTypeColor, parseExamDate } from '@/utils/parsers/examSeatsParser';
 import { MaterialIcons } from '@expo/vector-icons';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -81,16 +82,7 @@ export default function ExamSeatsScreen() {
           }} 
         />
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <Ionicons name="arrow-back" size={24} color={colors.mainFont} />
-            </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: colors.mainFont }]}>Exam Seats</Text>
-            <View style={styles.placeholder} />
-          </View>
+          <AppBar title="Exam Seats" />
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.tint} />
             <Text style={[styles.loadingText, { color: colors.secondaryFont }]}>
@@ -110,19 +102,9 @@ export default function ExamSeatsScreen() {
         }} 
       />
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.mainFont} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.mainFont }]}>Exam Seats</Text>
-          <View style={styles.placeholder} />
-        </View>
+        <AppBar title="Exam Seats" />
 
-       <ScrollView 
+       <ScrollView
          style={styles.content} 
          showsVerticalScrollIndicator={false}
          refreshControl={
@@ -215,29 +197,6 @@ export default function ExamSeatsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 16,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-  },
-  placeholder: {
-    width: 40,
   },
   content: {
     flex: 1,

@@ -1,10 +1,10 @@
 import { useCustomAlert } from '@/components/CustomAlert';
+import { AppBar } from '@/components/navigation/AppBar';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Course, CourseWeight, CourseWeightsStorage } from '@/utils/courseWeightsStorage';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   FlatList,
@@ -417,39 +417,31 @@ export default function CourseWeightsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <AppBar
+        title="Course Weights"
+        rightActions={
+          <>
+            {courses.length > 0 && (
+              <TouchableOpacity
+                style={[styles.deleteAllButton, { backgroundColor: colors.error }]}
+                onPress={handleDeleteAllCourses}
+              >
+                <Ionicons name="trash" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[styles.addButton, { backgroundColor: colors.tint }]}
+              onPress={handleAddCourse}
+            >
+              <Ionicons name="add" size={22} color={colorScheme === 'dark' ? '#000000' : '#FFFFFF'} />
+            </TouchableOpacity>
+          </>
+        }
+      />
       <ScrollView
         style={styles.scrollView}
         refreshControl={<AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <Text style={[styles.title, { color: colors.text }]}>Course Weights</Text>
-            <View style={styles.headerButtons}>
-              {courses.length > 0 && (
-                <TouchableOpacity
-                  style={[styles.deleteAllButton, { backgroundColor: colors.error }]}
-                  onPress={handleDeleteAllCourses}
-                >
-                  <Ionicons name="trash" size={20} color="#FFFFFF" />
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                style={[styles.addButton, { backgroundColor: colors.tint }]}
-                onPress={handleAddCourse}
-              >
-                <Ionicons name="add" size={24} color={colorScheme === 'dark' ? '#000000' : '#FFFFFF'} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
         {/* Courses List */}
         {courses.length > 0 ? (
           <FlatList
@@ -680,31 +672,6 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-  },
-  header: {
-    padding: 20,
-    paddingBottom: 10,
-    paddingTop: 60,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    padding: 4,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    flex: 1,
-    marginRight: -6,
-    marginLeft: 8,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
   },
   addButton: {
     width: 40,
