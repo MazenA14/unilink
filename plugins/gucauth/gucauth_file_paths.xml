@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- expo-file-system cacheDirectory / documentDirectory live under the app's
+         internal cache and files dirs. Expose both so downloaded CMS content can
+         be shared to the system viewer via a content:// URI. -->
+    <cache-path name="internal_cache" path="." />
+    <files-path name="internal_files" path="." />
+</paths>
