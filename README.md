@@ -175,5 +175,3 @@
 - npx expo install --check
 - npx expo install --fix
 - npx expo install eslint-config-expo@~10.0.0
-
-- eas build --platform android
