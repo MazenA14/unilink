@@ -49,6 +49,7 @@ export default function TranscriptScreen() {
     selectedYear,
     parsedTranscript,
     maintenanceMessage,
+    evaluationRequiredMessage,
     loadingYears,
     loadingTranscript,
     refreshing,
@@ -92,6 +93,24 @@ export default function TranscriptScreen() {
           </View>
         )}
 
+        {/* Evaluation-required banner (shown when a pending evaluation blocks the transcript) */}
+        {evaluationRequiredMessage && (
+          <View
+            style={[
+              styles.maintenanceBanner,
+              {
+                backgroundColor: colorScheme === 'dark' ? '#12253a' : '#E5F0FF',
+                borderColor: '#2F80ED',
+              },
+            ]}
+          >
+            <Ionicons name="clipboard-outline" size={20} color="#2F80ED" style={styles.maintenanceIcon} />
+            <Text style={[styles.maintenanceText, { color: colors.mainFont }]}>
+              {evaluationRequiredMessage}
+            </Text>
+          </View>
+        )}
+
         {/* Study Years Section Title */}
         <View style={styles.headerSection}>
           <Text style={[styles.sectionTitle, { color: colors.mainFont }]}>Select Study Year</Text>
@@ -108,7 +127,7 @@ export default function TranscriptScreen() {
             selectedYear={selectedYear}
             onYearSelect={handleYearSelect}
           />
-        ) : maintenanceMessage ? null : (
+        ) : maintenanceMessage || evaluationRequiredMessage ? null : (
           <EmptyState
             title="No Study Years Available"
             message="No study years were found in your transcript."

@@ -2,6 +2,7 @@ import { APP_VERSION, VERSION_CHECK_ENDPOINT } from '@/constants/Version';
 
 export interface VersionCheckResponse {
   isLatest: boolean;
+  forceUpdate: boolean;
   currentVersion?: string;
   latestVersion?: string;
 }
@@ -53,13 +54,15 @@ export async function checkAppVersion(): Promise<VersionCheckResponse | VersionC
     if (typeof data === 'boolean') {
       return {
         isLatest: data,
+        forceUpdate: false,
         currentVersion: APP_VERSION,
       };
     }
-    
+
     // If the API returns an object with more details
     return {
       isLatest: data.isLatest || data.isUpToDate || false,
+      forceUpdate: data.forceUpdate || false,
       currentVersion: APP_VERSION,
       latestVersion: data.latestVersion || data.version,
     };

@@ -103,6 +103,7 @@ export default function SettingsScreen() {
   // Version check functionality
   const {
     showUpdateModal,
+    forceUpdate,
     isChecking,
     checkForUpdates,
     handleUpdateModalClose,
@@ -750,6 +751,7 @@ export default function SettingsScreen() {
         visible={showUpdateModal}
         onClose={handleUpdateModalClose}
         onUpdate={handleUpdateModalUpdate}
+        forceUpdate={forceUpdate}
       />
 
       {/* Reset Password Modal */}

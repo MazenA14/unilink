@@ -8,9 +8,11 @@ export const WHATS_NEW_CONFIG = {
   version: APP_VERSION,
   features: [
     "Preview/Download for CMS",
+    "Evaluate Courses & Staff",
     "Faster Loading",
     "Transcript Fix",
-    "Notifications Fix"
+    "Notifications Fix",
+    "Bug Fixes"
   ]
 };
 

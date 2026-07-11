@@ -1,8 +1,9 @@
-import { isUpdateNeeded } from '@/utils/services/versionCheckService';
+import { checkAppVersion } from '@/utils/services/versionCheckService';
 import { useCallback, useState } from 'react';
 
 export function useVersionCheck() {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [lastCheckTime, setLastCheckTime] = useState<number | null>(null);
 
@@ -18,8 +19,12 @@ export function useVersionCheck() {
     setLastCheckTime(now);
 
     try {
-      const updateNeeded = await isUpdateNeeded();
-      if (updateNeeded) {
+      const result = await checkAppVersion();
+      if ('error' in result) {
+        return false;
+      }
+      if (!result.isLatest) {
+        setForceUpdate(result.forceUpdate);
         setShowUpdateModal(true);
         return true; // Update is available
       }
@@ -33,8 +38,10 @@ export function useVersionCheck() {
   }, [lastCheckTime]);
 
   const handleUpdateModalClose = useCallback(() => {
+    // Forced updates cannot be dismissed
+    if (forceUpdate) return;
     setShowUpdateModal(false);
-  }, []);
+  }, [forceUpdate]);
 
   const handleUpdateModalUpdate = useCallback(() => {
     setShowUpdateModal(false);
@@ -46,6 +53,7 @@ export function useVersionCheck() {
 
   return {
     showUpdateModal,
+    forceUpdate,
     isChecking,
     checkForUpdates,
     handleUpdateModalClose,

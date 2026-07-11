@@ -4,6 +4,7 @@ import UpdateModal from './UpdateModal';
 export default function VersionChecker() {
   const {
     showUpdateModal,
+    forceUpdate,
     handleUpdateModalClose,
     handleUpdateModalUpdate,
   } = useVersionCheck();
@@ -13,6 +14,7 @@ export default function VersionChecker() {
       visible={showUpdateModal}
       onClose={handleUpdateModalClose}
       onUpdate={handleUpdateModalUpdate}
+      forceUpdate={forceUpdate}
     />
   );
 }

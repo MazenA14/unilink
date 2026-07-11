@@ -125,16 +125,30 @@ class UserTrackingService {
         // User already exists in database, update their tracking info
         const currentTimesOpened = existingUser.times_opened || 0;
         const currentVersion = parseFloat(APP_VERSION);
-        
+
+        const updateData: Record<string, any> = {
+          last_open_time: now,
+          times_opened: currentTimesOpened + 1,
+          current_version: currentVersion
+        };
+
+        // First-years are stored with major "N/A" until GUC assigns a faculty.
+        // Re-check on each login so it fills in automatically once decided.
+        if (!existingUser.major || existingUser.major === 'N/A') {
+          const academicData = await this.fetchUserAcademicData(userId);
+          if (academicData.major && academicData.major !== 'N/A') {
+            updateData.major = academicData.major;
+          }
+          if (!existingUser.joined_season && academicData.joined_season) {
+            updateData.joined_season = academicData.joined_season;
+          }
+        }
+
         await supabase
           .from(SUPABASE_CONFIG.TABLES.USERDATA)
-          .update({
-            last_open_time: now,
-            times_opened: currentTimesOpened + 1,
-            current_version: currentVersion
-          })
+          .update(updateData)
           .eq('guc_id', existingUser.guc_id);
-        
+
         // Return their joined season for caching
         return existingUser.joined_season || null;
       } else {

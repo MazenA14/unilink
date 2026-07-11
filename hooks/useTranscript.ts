@@ -2,6 +2,7 @@ import { useCustomAlert } from '@/components/CustomAlert';
 import { StudyYear, TranscriptData } from '@/components/transcript/types';
 import { GradeCache } from '@/utils/gradeCache';
 import { GUCAPIProxy as GUCAPI } from '@/utils/gucApiProxy';
+import { isEvaluationRequiredError } from '@/utils/evaluationRequired';
 import { isMaintenanceError } from '@/utils/maintenance';
 import { parseTranscriptHTML } from '@/utils/parsers/transcriptParser';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -16,6 +17,8 @@ export function useTranscript() {
   const [parsedTranscript, setParsedTranscript] = useState<TranscriptData | null>(null);
   // Non-null when GUC redirected us to the maintenance page; drives the banner.
   const [maintenanceMessage, setMaintenanceMessage] = useState<string | null>(null);
+  // Non-null when a pending evaluation is blocking the transcript; drives its banner.
+  const [evaluationRequiredMessage, setEvaluationRequiredMessage] = useState<string | null>(null);
 
   // Loading states
   const [loadingYears, setLoadingYears] = useState(false);
@@ -36,10 +39,18 @@ export function useTranscript() {
       await GradeCache.setCachedStudyYears(fetchedYears);
       setStudyYears(fetchedYears);
       setMaintenanceMessage(null);
+      setEvaluationRequiredMessage(null);
     } catch (error: any) {
-      if (isMaintenanceError(error)) {
+      if (isEvaluationRequiredError(error)) {
+        // A pending evaluation blocks the transcript entirely; show the banner
+        // and clear any stale years so no (now-inaccessible) list is offered.
+        setEvaluationRequiredMessage(error.userMessage);
+        setMaintenanceMessage(null);
+        setStudyYears([]);
+      } else if (isMaintenanceError(error)) {
         // Under maintenance: fall back to cached years (if any) and show the banner.
         setMaintenanceMessage(error.userMessage);
+        setEvaluationRequiredMessage(null);
         const cachedYears = await GradeCache.getCachedStudyYears();
         setStudyYears(cachedYears && cachedYears.length > 0 ? cachedYears : []);
       } else {
@@ -123,6 +134,7 @@ export function useTranscript() {
     selectedYear,
     parsedTranscript,
     maintenanceMessage,
+    evaluationRequiredMessage,
     loadingYears,
     loadingTranscript,
     refreshing,

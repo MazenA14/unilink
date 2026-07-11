@@ -57,3 +57,38 @@ export interface Instructor {
   name: string;
   value: string;
 }
+
+export interface EvaluationItem {
+  value: string;
+  text: string;
+}
+
+export interface EvaluationRadioOption {
+  value: string;
+  label: string;
+}
+
+export interface EvaluationAgreeQuestion {
+  id: string;
+  label: string;
+  radioName: string;
+  options: EvaluationRadioOption[];
+}
+
+export interface EvaluationScaleQuestion {
+  label: string;
+  radioName: string;
+  leftCaption: string;
+  rightCaption: string;
+  options: EvaluationRadioOption[];
+}
+
+export interface EvaluationForm {
+  hidden: Record<string, string>;
+  selectFieldName: string;
+  agreeQuestions: EvaluationAgreeQuestion[];
+  scaleQuestions: EvaluationScaleQuestion[];
+  remarkFieldName: string | null;
+  submitFieldName: string;
+  submitFieldValue: string;
+}

@@ -392,19 +392,14 @@ export class AuthManager {
    */
   static async sessionResetLogout(): Promise<void> {
     try {
-      // Only clear authentication data, keep cache intact
+      // Only clear the session/auth state; credentials are re-stored immediately
+      // by the login() call that follows. Everything else (nickname, userId,
+      // preferences, etc.) is user data unrelated to the session and must survive.
       await Promise.all([
         this.clearSessionCookie(),
         this.clearCredentials(),
-        this.clearNickname(),
-        this.clearUserId(),
-        this.clearJoinedSeason(),
-        this.clearShiftedSchedulePreference(),
-        this.clearDefaultScreen(),
-        this.clearDashboardSlots(),
-        this.clearLastUserInfoRefresh()
       ]);
-      
+
     } catch (error) {
       throw error;
     }

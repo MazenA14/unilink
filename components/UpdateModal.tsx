@@ -15,9 +15,10 @@ interface UpdateModalProps {
   visible: boolean;
   onClose: () => void;
   onUpdate: () => void;
+  forceUpdate?: boolean;
 }
 
-export default function UpdateModal({ visible, onClose, onUpdate }: UpdateModalProps) {
+export default function UpdateModal({ visible, onClose, onUpdate, forceUpdate = false }: UpdateModalProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { showAlert, AlertComponent } = useCustomAlert();
@@ -64,7 +65,7 @@ export default function UpdateModal({ visible, onClose, onUpdate }: UpdateModalP
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={onClose}
+      onRequestClose={forceUpdate ? undefined : onClose}
     >
       <View style={styles.overlay}>
         <View style={[
@@ -78,25 +79,29 @@ export default function UpdateModal({ visible, onClose, onUpdate }: UpdateModalP
             <View style={styles.titleContainer}>
               <View style={styles.titleTextContainer}>
                 <Text style={[styles.title, { color: colors.mainFont }]}>
-                  Update Available
+                  {forceUpdate ? 'Update Required' : 'Update Available'}
                 </Text>
                 <Text style={[styles.version, { color: colors.secondaryFont }]}>
                   Current Version {APP_VERSION}
                 </Text>
               </View>
             </View>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={onClose}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              {/* Close button can be added here if needed */}
-            </TouchableOpacity>
+            {!forceUpdate && (
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={onClose}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                {/* Close button can be added here if needed */}
+              </TouchableOpacity>
+            )}
           </View>
           
           <View style={styles.content}>
             <Text style={[styles.description, { color: colors.mainFont }]}>
-              A new version of UniLink is available. Please update to the latest version to continue using the app with the best experience.
+              {forceUpdate
+                ? 'This version of UniLink is no longer supported. Please update to the latest version to continue using the app.'
+                : 'A new version of UniLink is available. Please update to the latest version to continue using the app with the best experience.'}
             </Text>
             
           </View>
@@ -111,14 +116,16 @@ export default function UpdateModal({ visible, onClose, onUpdate }: UpdateModalP
               </Text>
             </TouchableOpacity>
             
-            <TouchableOpacity
-              style={[styles.laterButton, { borderColor: colors.border }]}
-              onPress={onClose}
-            >
-              <Text style={[styles.laterButtonText, { color: colors.mainFont }]}>
-                Later
-              </Text>
-            </TouchableOpacity>
+            {!forceUpdate && (
+              <TouchableOpacity
+                style={[styles.laterButton, { borderColor: colors.border }]}
+                onPress={onClose}
+              >
+                <Text style={[styles.laterButtonText, { color: colors.mainFont }]}>
+                  Later
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>

@@ -1,3 +1,4 @@
+import { EvaluateMenu, EvaluateMenuAnchor } from '@/components/EvaluateMenu';
 import QuickMediaModal from '@/components/QuickMediaModal';
 import { MultipleLecturesModal } from '@/components/schedule/MultipleLecturesModal';
 import UpdateModal from '@/components/UpdateModal';
@@ -44,10 +45,16 @@ export default function DashboardScreen() {
   
   // Quick Media modal state
   const [quickMediaModalVisible, setQuickMediaModalVisible] = useState(false);
+
+  // Evaluate dropdown state
+  const [evaluateMenuVisible, setEvaluateMenuVisible] = useState(false);
+  const [evaluateMenuAnchor, setEvaluateMenuAnchor] = useState<EvaluateMenuAnchor | null>(null);
+  const evaluateButtonRef = useRef<View>(null);
   
   // Version check hook
   const {
     showUpdateModal,
+    forceUpdate,
     checkForUpdates,
     handleUpdateModalClose,
     handleUpdateModalUpdate,
@@ -293,6 +300,19 @@ export default function DashboardScreen() {
     }
   };
 
+  // Evaluate dropdown handlers
+  const handleEvaluatePress = () => {
+    evaluateButtonRef.current?.measureInWindow((x, y, width, height) => {
+      setEvaluateMenuAnchor({ top: y + height + 38, left: x, width });
+      setEvaluateMenuVisible(true);
+    });
+  };
+
+  const handleEvaluateOptionSelect = (option: 'course' | 'staff') => {
+    setEvaluateMenuVisible(false);
+    router.push(option === 'course' ? '/evaluation/course' : '/evaluation/staff');
+  };
+
   // Multiple lectures modal handlers
   const handleMultipleLecturesPress = (lectures: any[], periodName: string, dayName: string) => {
     setSelectedLectures(lectures);
@@ -391,6 +411,7 @@ export default function DashboardScreen() {
         visible={showUpdateModal}
         onClose={handleUpdateModalClose}
         onUpdate={handleUpdateModalUpdate}
+        forceUpdate={forceUpdate}
       />
       
       {/* What's New Modal */}
@@ -444,39 +465,59 @@ export default function DashboardScreen() {
               <Text style={[styles.gridText, { color: 'white', marginLeft: 8 }]}>Exam Seats</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.gridItem, { backgroundColor: colors.gradeGood, borderColor: colors.gradeGood, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}
               onPress={() => router.push('/attendance')}
             >
               <Feather name="check-circle" size={20} color="white" />
               <Text style={[styles.gridText, { color: 'white', marginLeft: 8 }]}>Attendance</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.gridItem, { backgroundColor: '#8B5CF6', borderColor: '#8B5CF6', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}
-              onPress={() => setQuickMediaModalVisible(true)}
-            >
-              <Ionicons name="folder-open" size={20} color="white" />
-              <Text style={[styles.gridText, { color: 'white', marginLeft: 8 }]}>Quick Access</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.gridItem, { backgroundColor: '#FF6B6B', borderColor: '#FF6B6B', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]} 
-              onPress={() => router.push('/dates')}
-            > 
-              <Ionicons name="calendar" size={20} color="white" />
-              <Text style={[styles.gridText, { color: 'white', marginLeft: 8 }]}>Dates</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.gridItem, { backgroundColor: '#4A90E2', borderColor: '#4A90E2', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]} 
+
+            <TouchableOpacity
+              style={[styles.gridItem, { backgroundColor: '#4A90E2', borderColor: '#4A90E2', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}
               onPress={() => router.push('/cms/home')}
-            > 
+            >
               <Ionicons name="document-attach" size={20} color="white" />
               <Text style={[styles.gridText, { color: 'white', marginLeft: 8 }]}>CMS</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              ref={evaluateButtonRef}
+              style={[styles.gridItem, { backgroundColor: '#F59E0B', borderColor: '#F59E0B', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}
+              onPress={handleEvaluatePress}
+            >
+              <Ionicons name="star-outline" size={20} color="white" />
+              <Text style={[styles.gridText, { color: 'white', marginLeft: 8 }]}>Evaluate</Text>
+            </TouchableOpacity>
+
+            <View style={[styles.gridItem, { padding: 0, borderWidth: 0, elevation: 0, shadowOpacity: 0, alignItems: 'stretch' }]}>
+              <View style={styles.comboRow}>
+                <TouchableOpacity
+                  style={[styles.comboButton, { backgroundColor: '#8B5CF6', borderColor: '#8B5CF6' }]}
+                  onPress={() => setQuickMediaModalVisible(true)}
+                >
+                  <Ionicons name="folder-open" size={16} color="white" />
+                  <Text style={[styles.comboText, { color: 'white' }]}>Quick Access</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.comboButton, { backgroundColor: '#FF6B6B', borderColor: '#FF6B6B' }]}
+                  onPress={() => router.push('/dates')}
+                >
+                  <Ionicons name="calendar" size={16} color="white" />
+                  <Text style={[styles.comboText, { color: 'white' }]}>Dates</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         </View>
+
+        <EvaluateMenu
+          visible={evaluateMenuVisible}
+          anchor={evaluateMenuAnchor}
+          onClose={() => setEvaluateMenuVisible(false)}
+          onSelect={handleEvaluateOptionSelect}
+        />
 
         {/* Today's Schedule */}
         <View style={styles.section}>
@@ -831,6 +872,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     letterSpacing: -0.1,
+  },
+  comboRow: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  comboButton: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+  },
+  comboText: {
+    fontSize: 10,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 4,
   },
   cmsText: {
     fontSize: 24,

@@ -36,6 +36,7 @@ function AppContent() {
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="cms" options={{ headerShown: false }} />
+        <Stack.Screen name="evaluation" options={{ headerShown: false }} />
         <Stack.Screen name="instructors" options={{ headerShown: false }} />
         <Stack.Screen name="notifications" options={{ headerShown: false }} />
         <Stack.Screen name="exam-seats" options={{ headerShown: false }} />

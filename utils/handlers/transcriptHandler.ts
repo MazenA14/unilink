@@ -8,6 +8,11 @@ import {
   isMaintenanceHtml,
   isMaintenanceUrl,
 } from '../maintenance';
+import {
+  EvaluationRequiredError,
+  isEvaluationRequiredError,
+  isEvaluationRequiredHtml,
+} from '../evaluationRequired';
 
 const GUC_ORIGIN = 'https://apps.guc.edu.eg';
 const TRANSCRIPT_URL = `${GUC_ORIGIN}/student_ext/Grade/Transcript_001.aspx`;
@@ -128,6 +133,13 @@ export async function getAvailableStudyYears(): Promise<{value: string, text: st
     try {
       const { html } = await fetchTranscriptPage();
 
+      // A pending evaluation blocks the transcript: GUC disables the year
+      // dropdown and shows the "You have not evaluated..." message. Surface it
+      // so the caller can show a banner instead of a spurious year list.
+      if (isEvaluationRequiredHtml(html)) {
+        throw new EvaluationRequiredError();
+      }
+
       // Extract study years
       const yearPattern = /<option[^>]*value="([^"]*)"[^>]*>([^<]+)<\/option>/gi;
       const years: {value: string, text: string}[] = [];
@@ -146,8 +158,10 @@ export async function getAvailableStudyYears(): Promise<{value: string, text: st
 
     } catch (error: any) {
       // Maintenance is not an auth problem — re-login won't help, so surface it
-      // immediately for the caller to show cached data + a banner.
+      // immediately for the caller to show cached data + a banner. A pending
+      // evaluation is the same: re-login won't clear it.
       if (isMaintenanceError(error)) throw error;
+      if (isEvaluationRequiredError(error)) throw error;
       if (attempt < maxAttempts) {
         await AuthManager.logoutAndLogin();
       } else {
