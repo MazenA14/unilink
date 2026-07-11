@@ -74,29 +74,29 @@ export default function TranscriptScreen() {
           </TouchableOpacity>
         </View>
         
+        {/* Maintenance banner (shown when GUC redirects to the maintenance page) */}
+        {maintenanceMessage && (
+          <View
+            style={[
+              styles.maintenanceBanner,
+              {
+                backgroundColor: colorScheme === 'dark' ? '#3a2e12' : '#FFF4E5',
+                borderColor: '#F5A623',
+              },
+            ]}
+          >
+            <Ionicons name="construct-outline" size={20} color="#F5A623" style={styles.maintenanceIcon} />
+            <Text style={[styles.maintenanceText, { color: colors.mainFont }]}>
+              {maintenanceMessage}
+            </Text>
+          </View>
+        )}
+
         {/* Study Years Section Title */}
         <View style={styles.headerSection}>
           <Text style={[styles.sectionTitle, { color: colors.mainFont }]}>Select Study Year</Text>
         </View>
       </View>
-
-      {/* Maintenance banner (shown when GUC redirects to the maintenance page) */}
-      {maintenanceMessage && (
-        <View
-          style={[
-            styles.maintenanceBanner,
-            {
-              backgroundColor: colorScheme === 'dark' ? '#3a2e12' : '#FFF4E5',
-              borderColor: '#F5A623',
-            },
-          ]}
-        >
-          <Ionicons name="construct-outline" size={20} color="#F5A623" style={styles.maintenanceIcon} />
-          <Text style={[styles.maintenanceText, { color: colors.mainFont }]}>
-            {maintenanceMessage}
-          </Text>
-        </View>
-      )}
 
       {/* Study Years Section */}
       <View style={styles.section}>
@@ -215,8 +215,7 @@ const styles = StyleSheet.create({
   maintenanceBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 20,
-    marginBottom: 12,
+    marginTop: 12,
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: 12,
