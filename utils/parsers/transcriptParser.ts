@@ -13,7 +13,7 @@ export function parseTranscriptHTML(html: string): TranscriptData | null {
     const appNoMatch = html.match(/<span id="[^"]*appNoLbl[^"]*"[^>]*>([^<]+)<\/span>/);
     const yearMatch = html.match(/<span id="[^"]*stdYrLbl[^"]*"[^>]*>([^<]+)<\/span>/);
     const studyGroupMatch = html.match(/<span id="[^"]*sgTopLbl[^"]*"[^>]*>([^<]+)<\/span>/);
-    
+
     // Extract cumulative GPA
     const cumulativeGPAMatch = html.match(/<span id="[^"]*cmGpaLbl[^"]*"[^>]*>([^<]+)<\/span>/);
     const dateMatch = html.match(/<span id="[^"]*dtLbl[^"]*"[^>]*>([^<]+)<\/span>/);
@@ -30,28 +30,28 @@ export function parseTranscriptHTML(html: string): TranscriptData | null {
     // Extract semesters
     const semesters: Semester[] = [];
     const semesterTables = html.match(/<table[^>]*>[\s\S]*?<\/table>/g) || [];
-    
+
     for (const table of semesterTables) {
       // Extract semester name
       const semesterNameMatch = table.match(/<font size="3"><strong>([^<]+)<\/strong><\/font>/);
       if (!semesterNameMatch) continue;
-      
+
       const semesterName = semesterNameMatch[1].trim();
-      
+
       // Extract courses
       const courses: Course[] = [];
       const courseRows = table.match(/<tr>[\s\S]*?<\/tr>/g) || [];
-      
+
       for (const row of courseRows) {
         // Check if this row contains course data (has semester code like CSE05)
         const semesterCodeMatch = row.match(/<span id="[^"]*smLbl[^"]*"[^>]*>([^<]+)<\/span>/);
         if (!semesterCodeMatch) continue;
-        
+
         const courseNameMatch = row.match(/<span id="[^"]*crsNmLbl[^"]*"[^>]*>([^<]+)<\/span>/);
         const numericGradeMatch = row.match(/<span id="[^"]*deLbl[^"]*"[^>]*>([^<]+)<\/span>/);
         const letterGradeMatch = row.match(/<span id="[^"]*usLbl[^"]*"[^>]*>([^<]+)<\/span>/);
         const creditHoursMatch = row.match(/<span id="[^"]*hLbl[^"]*"[^>]*>([^<]+)<\/span>/);
-        
+
         if (courseNameMatch && numericGradeMatch && letterGradeMatch && creditHoursMatch) {
           courses.push({
             semester: semesterCodeMatch[1].trim(),
@@ -62,11 +62,11 @@ export function parseTranscriptHTML(html: string): TranscriptData | null {
           });
         }
       }
-      
+
       // Extract semester GPA and total hours
       const semesterGPAMatch = table.match(/<span id="[^"]*ssnGpLbl[^"]*"[^>]*>([^<]+)<\/span>/);
       const totalHoursMatch = table.match(/<span id="[^"]*ssnThLbl[^"]*"[^>]*>([^<]+)<\/span>/);
-      
+
       if (courses.length > 0) {
         semesters.push({
           name: semesterName,

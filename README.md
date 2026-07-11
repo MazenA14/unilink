@@ -54,6 +54,9 @@
 - eas build -p android --profile preview
 - Use 'npx expo install --check' to review and upgrade your dependencies
 - npm install -g eas-cli (To upgrade eas-cli version)
+- $env:PATH="C:\Users\Mazen\AppData\Local\Android\Sdk\platform-tools;$env:PATH"
+- adb logcat -s ReactNativeJS:V | findstr "[Transcript] [TranscriptParse] [GucRequest]"
+- adb logcat | Select-String -Pattern "ReactNativeJS|console"
 
 ## To-Do (Notes)
 - Clear Course previous grades cache on pull to refresh and not be visibile while refreshing

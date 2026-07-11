@@ -48,6 +48,7 @@ export default function TranscriptScreen() {
     studyYears,
     selectedYear,
     parsedTranscript,
+    maintenanceMessage,
     loadingYears,
     loadingTranscript,
     refreshing,
@@ -79,19 +80,35 @@ export default function TranscriptScreen() {
         </View>
       </View>
 
+      {/* Maintenance banner (shown when GUC redirects to the maintenance page) */}
+      {maintenanceMessage && (
+        <View
+          style={[
+            styles.maintenanceBanner,
+            {
+              backgroundColor: colorScheme === 'dark' ? '#3a2e12' : '#FFF4E5',
+              borderColor: '#F5A623',
+            },
+          ]}
+        >
+          <Ionicons name="construct-outline" size={20} color="#F5A623" style={styles.maintenanceIcon} />
+          <Text style={[styles.maintenanceText, { color: colors.mainFont }]}>
+            {maintenanceMessage}
+          </Text>
+        </View>
+      )}
+
       {/* Study Years Section */}
       <View style={styles.section}>
-        {
-        // loadingYears ? (
-        //   <LoadingIndicator message={refreshing ? 'Refreshing...' : 'Loading study years...'} />
-        // ) : 
-        studyYears.length > 0 ? (
+        {loadingYears ? (
+          <LoadingIndicator message={refreshing ? 'Refreshing...' : 'Loading study years...'} />
+        ) : studyYears.length > 0 ? (
           <YearSelector
             studyYears={studyYears}
             selectedYear={selectedYear}
             onYearSelect={handleYearSelect}
           />
-        ) : (
+        ) : maintenanceMessage ? null : (
           <EmptyState
             title="No Study Years Available"
             message="No study years were found in your transcript."
@@ -194,6 +211,25 @@ const styles = StyleSheet.create({
   section: {
     marginHorizontal: 20,
     // marginBottom: 20,
+  },
+  maintenanceBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  maintenanceIcon: {
+    marginRight: 10,
+  },
+  maintenanceText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 20,
   },
   headerSection: {
     // No horizontal margins since it's inside the header which already has padding
