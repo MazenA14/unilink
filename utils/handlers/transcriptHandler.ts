@@ -1,50 +1,6 @@
 import { AuthManager } from '../auth';
-import { PROXY_SERVER } from '../config/proxyConfig';
+import { makeGucRequest as makeProxyRequest } from '../gucRequest';
 import { extractViewState } from '../extractors/gradeExtractor';
-
-/**
- * Make authenticated request through proxy server
- */
-async function makeProxyRequest(url: string, method: string = 'GET', body?: any): Promise<any> {
-  const sessionCookie = await AuthManager.getSessionCookie();
-  const { username, password } = await AuthManager.getCredentials();
-
-  const payload: any = {
-    url,
-    method,
-    cookies: sessionCookie || '',
-    body,
-  };
-
-  if (username && password) {
-    payload.useNtlm = true;
-    payload.username = username;
-    payload.password = password;
-  }
-
-  const response = await fetch(`${PROXY_SERVER}/proxy`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Proxy request failed: ${response.status}`);
-  }
-
-  const data = await response.json();
-  
-  if (data.status === 401) {
-    await AuthManager.clearSessionCookie();
-    throw new Error('Session expired');
-  }
-
-  if (data.status !== 200) {
-    throw new Error(`Request failed: ${data.status}`);
-  }
-
-  return data;
-}
 
 /**
  * Check if response indicates server overload

@@ -1,57 +1,10 @@
 import { ScheduleData, ScheduleOption } from '@/components/schedule/types';
 import { AuthManager } from '../auth';
-import { PROXY_SERVER } from '../config/proxyConfig';
+import { makeGucRequest as makeProxyRequest } from '../gucRequest';
 import { extractViewState } from '../extractors/gradeExtractor';
+import { parseBulkScheduleHtml } from '../parsers/scheduleHtmlParser';
 import { parseStaffListHtml, StaffListData } from '../parsers/staffListParser';
 import { StaffListCache } from '../staffListCache';
-
-// Vercel endpoint for Cheerio-based parsing
-const VERCEL_PARSER_ENDPOINT = 'https://guc-connect-login.vercel.app/api/bulk-schedule-parser';
-
-/**
- * Make authenticated request through proxy server
- */
-async function makeProxyRequest(url: string, method: string = 'GET', body?: any, options?: any): Promise<any> {
-  const sessionCookie = await AuthManager.getSessionCookie();
-  const { username, password } = await AuthManager.getCredentials();
-
-  const payload: any = {
-    url,
-    method,
-    cookies: sessionCookie || '',
-    body,
-    ...options // Allow passing contentType and other options
-  };
-
-  if (username && password) {
-    payload.useNtlm = true;
-    payload.username = username;
-    payload.password = password;
-  }
-
-  const response = await fetch(`${PROXY_SERVER}/proxy`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Proxy request failed: ${response.status}`);
-  }
-
-  const data = await response.json();
-  
-  if (data.status === 401) {
-    await AuthManager.clearSessionCookie();
-    throw new Error('Session expired');
-  }
-
-  if (data.status !== 200) {
-    throw new Error(`Request failed: ${data.status}`);
-  }
-
-  return data;
-}
 
 /**
  * Check if response indicates server overload
@@ -130,32 +83,6 @@ function extractExistingSelections(html: string): { courses: string[], staff: st
   
   return { courses, staff };
 }
-
-/**
- * Send HTML to API and retrieve JSON response
- */
-async function sendHtmlToApi(html: string): Promise<any> {
-  try {
-    const response = await fetch(VERCEL_PARSER_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ html }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
-    }
-
-    const result = await response.json();
-    
-    return result;
-  } catch (error: any) {
-    throw new Error(`API request failed: ${error.message}`);
-  }
-}
-
 
 /**
  * Debug HTML response to understand what we received
@@ -465,7 +392,7 @@ export async function submitScheduleSelection(
       // Send HTML to API and get JSON response - same as personal schedule
       let scheduleData: ScheduleData;
       try {
-        const jsonResponse = await sendHtmlToApi(finalHtml);
+        const jsonResponse = parseBulkScheduleHtml(finalHtml);
         
         scheduleData = extractScheduleFromJson(jsonResponse, type);
         
@@ -707,7 +634,7 @@ export async function submitMultipleScheduleSelections(
       // Parse the combined schedule
       let scheduleData: ScheduleData;
       try {
-        const jsonResponse = await sendHtmlToApi(finalHtml);
+        const jsonResponse = parseBulkScheduleHtml(finalHtml);
         scheduleData = extractCombinedScheduleFromJson(jsonResponse, staffNames, courseNames);
         
       } catch {

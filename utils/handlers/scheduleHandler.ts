@@ -1,53 +1,7 @@
 import { AuthManager } from '../auth';
-import { PROXY_SERVER } from '../config/proxyConfig';
+import { makeGucRequest as makeProxyRequest } from '../gucRequest';
+import { parsePersonalScheduleHtml } from '../parsers/scheduleHtmlParser';
 import { ScheduleData } from '../types/gucTypes';
-
-// Vercel endpoint for Cheerio-based parsing
-const VERCEL_PARSER_ENDPOINT = 'https://guc-connect-login.vercel.app/api/schedule-parser';
-
-/**
- * Make authenticated request through proxy server
- */
-async function makeProxyRequest(url: string, method: string = 'GET', body?: any): Promise<any> {
-  const sessionCookie = await AuthManager.getSessionCookie();
-  const { username, password } = await AuthManager.getCredentials();
-
-  const payload: any = {
-    url,
-    method,
-    cookies: sessionCookie || '',
-    body,
-  };
-
-  if (username && password) {
-    payload.useNtlm = true;
-    payload.username = username;
-    payload.password = password;
-  }
-
-  const response = await fetch(`${PROXY_SERVER}/proxy`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Proxy request failed: ${response.status}`);
-  }
-
-  const data = await response.json();
-  
-  if (data.status === 401) {
-    await AuthManager.clearSessionCookie();
-    throw new Error('Session expired');
-  }
-
-  if (data.status !== 200) {
-    throw new Error(`Request failed: ${data.status}`);
-  }
-
-  return data;
-}
 
 /**
  * Check if response indicates server overload
@@ -85,32 +39,6 @@ function extractRedirectParam(html: string): string {
   }
   
   throw new Error('Could not extract redirect parameter');
-}
-
-/**
- * Send HTML to API and retrieve JSON response
- */
-async function sendHtmlToApi(html: string): Promise<any> {
-  try {
-    const response = await fetch(VERCEL_PARSER_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ html }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
-    }
-
-    const result = await response.json();
-    
-    
-    return result;
-  } catch (error: any) {
-    throw new Error(`API request failed: ${error.message}`);
-  }
 }
 
 /**
@@ -409,13 +337,13 @@ export async function getScheduleData(): Promise<ScheduleData> {
         }
       }
       
-      // Send HTML to API and get JSON response
+      // Parse schedule HTML on-device and build schedule data
       let scheduleData: ScheduleData;
       try {
-        const jsonResponse = await sendHtmlToApi(html);
+        const jsonResponse = parsePersonalScheduleHtml(html);
         scheduleData = extractScheduleFromJson(jsonResponse);
-        
-        
+
+
       } catch {
         // Fallback to free schedule if API fails
         scheduleData = createFreeSchedule();

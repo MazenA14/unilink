@@ -1,57 +1,6 @@
-import { AuthManager } from '../auth';
+import { makeGucRequest as makeProxyRequest } from '../gucRequest';
 import { extractViewState } from '../extractors/gradeExtractor';
 import { PaymentItem } from '../types/gucTypes';
-
-/**
- * Make authenticated request through proxy server
- */
-async function makeProxyRequest(url: string, method: string = 'GET', body?: any, options?: { allowNon200?: boolean }): Promise<any> {
-  const PROXY_BASE_URL = 'https://guc-connect-login.vercel.app/api';
-  const sessionCookie = await AuthManager.getSessionCookie();
-  const { username, password } = await AuthManager.getCredentials();
-
-  const payload: any = {
-    url,
-    method,
-    cookies: sessionCookie || '',
-    body,
-  };
-
-  // If we have creds, enable NTLM per-request as fallback
-  if (username && password) {
-    payload.useNtlm = true;
-    payload.username = username;
-    payload.password = password;
-  }
-
-  const response = await fetch(`${PROXY_BASE_URL}/proxy`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Proxy request failed: ${response.status}`);
-  }
-
-  const data = await response.json();
-  
-  if (data.status === 401) {
-    await AuthManager.clearSessionCookie();
-    throw new Error('Session expired. Please login again.');
-  }
-
-  if (data.status !== 200) {
-    if (options?.allowNon200 && (data.status === 302 || data.status === 303)) {
-      return data;
-    }
-    throw new Error(`Request failed: ${data.status}`);
-  }
-
-  return data;
-}
 
 /**
  * Extract outstanding payments from the Financials page HTML

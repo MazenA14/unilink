@@ -41,131 +41,60 @@ const LoginScreen = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('https://guc-connect-login.vercel.app/api/ntlm-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: username.trim(),
-          password: password,
-        }),
-      });
-      
-
-      // Safely parse response (may be JSON or text)
-      const contentType = response.headers.get('content-type') || '';
-      let data: any = null;
-      let rawText = '';
-      if (contentType.includes('application/json')) {
-        try {
-          data = await response.json();
-        } catch {
-          // fallback to text if json parsing fails
-          rawText = await response.text();
-        }
-      } else {
-        rawText = await response.text();
-        try {
-          data = JSON.parse(rawText);
-        } catch {
-          // keep data as null
-        }
-      }
-
-      const status = data?.status ?? response.status;
-
-
-      // Check if this is a successful login (either explicit status 200 or HTTP 200 with no errors)
-      const isSuccessful = status === 200 || (response.status === 200 && !data?.error);
+      // Authenticate on-device via the native NTLM client (no proxy).
+      const isSuccessful = await AuthManager.login(username, password);
 
       if (isSuccessful) {
-        // Try to extract cookies from multiple possible shapes
-        let cookieString: string | null = null;
-        const cookiesFromJson = data?.cookies || data?.headers?.['set-cookie'] || data?.headers?.['Set-Cookie'];
+        // Mark that the app has been opened (not first time anymore)
+        await AuthManager.markAppOpened();
 
-        if (Array.isArray(cookiesFromJson) && cookiesFromJson.length > 0) {
-          cookieString = cookiesFromJson[0];
-        } else if (typeof cookiesFromJson === 'string') {
-          cookieString = cookiesFromJson;
-        } else {
-          const hdrSetCookie = response.headers.get('set-cookie');
-          if (hdrSetCookie) cookieString = hdrSetCookie;
-        }
+        // Redirect to dashboard immediately for fast user experience
+        router.replace('/(tabs)/dashboard');
 
-        if (cookieString) {
-          await AuthManager.storeSessionCookie(cookieString);
-          // also store creds for NTLM mode in proxy requests
-          await AuthManager.storeCredentials(username.trim(), password);
-          
-          // Mark that the app has been opened (not first time anymore)
-          await AuthManager.markAppOpened();
-          
-          // Redirect to dashboard immediately for fast user experience
-          router.replace('/(tabs)/dashboard');
-          
-          // Run user tracking and schedule preloading in the background
-          // Background user tracking (don't await - let it run async)
-          (async () => {
-            try {
-              // Get user info (ID and faculty) for tracking (import GUCAPIProxy dynamically to avoid circular dependency)
-              const { GUCAPIProxy } = await import('@/utils/gucApiProxy');
-              const userInfo = await GUCAPIProxy.getUserInfo();
-              
-              // Import and call user tracking service
-              const { userTrackingService } = await import('@/utils/services/userTrackingService');
-              const joinedSeason = await userTrackingService.trackUserLogin(username.trim(), undefined, userInfo.userId || undefined);
-              
-              // Cache the joined season if available
-              if (joinedSeason) {
-                await AuthManager.storeJoinedSeason(String(joinedSeason));
-              }
-            } catch {
-              // Don't fail login if tracking fails
-            }
-          })();
-          
-          // Start preloading schedule data in the background
-          const { SchedulePreloader } = await import('@/utils/schedulePreloader');
-          SchedulePreloader.preloadSchedule().catch(error => {
-            // Don't show error to user - preloading is optional
-          });
-          
-          // Start preloading grades data in the background
-          const { GradesPreloader } = await import('@/utils/gradesPreloader');
-          GradesPreloader.preloadCurrentGrades().catch(error => {
-            // Don't show error to user - preloading is optional
-          });
-          
-          // Clear any existing grade tracking data for fresh start
+        // Run user tracking and schedule preloading in the background
+        // Background user tracking (don't await - let it run async)
+        (async () => {
           try {
-            const { GradeTracking } = await import('@/utils/gradeTracking');
-            await GradeTracking.clearAllTracking();
-          } catch (error) {
-            // Grade tracking clearing is optional
-          }
-        } 
-        // else {
-        //   // Still proceed if we got HTTP 200, assuming login worked
-        //   await AuthManager.storeCredentials(username.trim(), password);
-        // }
-        else {
-          showAlert({
-            title: 'Login Failed',
-            message: 'Invalid username/password or password expired.\n\n Please try again.',
-            type: 'error',
-          });
-        }
+            // Get user info (ID and faculty) for tracking (import GUCAPIProxy dynamically to avoid circular dependency)
+            const { GUCAPIProxy } = await import('@/utils/gucApiProxy');
+            const userInfo = await GUCAPIProxy.getUserInfo();
 
-        
+            // Import and call user tracking service
+            const { userTrackingService } = await import('@/utils/services/userTrackingService');
+            const joinedSeason = await userTrackingService.trackUserLogin(username.trim(), undefined, userInfo.userId || undefined);
+
+            // Cache the joined season if available
+            if (joinedSeason) {
+              await AuthManager.storeJoinedSeason(String(joinedSeason));
+            }
+          } catch {
+            // Don't fail login if tracking fails
+          }
+        })();
+
+        // Start preloading schedule data in the background
+        const { SchedulePreloader } = await import('@/utils/schedulePreloader');
+        SchedulePreloader.preloadSchedule().catch(error => {
+          // Don't show error to user - preloading is optional
+        });
+
+        // Start preloading grades data in the background
+        const { GradesPreloader } = await import('@/utils/gradesPreloader');
+        GradesPreloader.preloadCurrentGrades().catch(error => {
+          // Don't show error to user - preloading is optional
+        });
+
+        // Clear any existing grade tracking data for fresh start
+        try {
+          const { GradeTracking } = await import('@/utils/gradeTracking');
+          await GradeTracking.clearAllTracking();
+        } catch (error) {
+          // Grade tracking clearing is optional
+        }
       } else {
-        const msg =
-          data?.error ||
-          (rawText ? rawText.slice(0, 200) : `HTTP ${response.status}`) ||
-          'Invalid username/password or password expired. Please try again.';
         showAlert({
           title: 'Login Failed',
-          message: msg,
+          message: 'Invalid username/password or password expired.\n\n Please try again.',
           type: 'error',
         });
       }

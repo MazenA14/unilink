@@ -310,12 +310,14 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     loadNickname();
-    // Notifications removed
+    // Fetch notifications so the unread counter is populated before
+    // the user opens the notifications screen
+    refreshNotifications();
     // Check for app updates when dashboard loads
     checkForUpdates();
     // Check if we should show What's New modal
     checkWhatsNew();
-  }, [loadNickname, checkForUpdates, checkWhatsNew]);
+  }, [loadNickname, refreshNotifications, checkForUpdates, checkWhatsNew]);
 
   // Update current time every minute for slot indicator
   useEffect(() => {

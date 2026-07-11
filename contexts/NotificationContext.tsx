@@ -198,7 +198,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     try {
       const response = await fetchNotifications();
-      
+
       if (!response.success) {
         throw new Error(response.error || 'Failed to fetch notifications');
       }

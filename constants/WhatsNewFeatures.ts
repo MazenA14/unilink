@@ -7,7 +7,10 @@ import { APP_VERSION } from './Version';
 export const WHATS_NEW_CONFIG = {
   version: APP_VERSION,
   features: [
-    "Midterm Grades Fix"
+    "Preview/Download for CMS",
+    "Faster Loading",
+    "Transcript Fix",
+    "Notifications Fix"
   ]
 };
 

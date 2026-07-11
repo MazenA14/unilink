@@ -1,12 +1,12 @@
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { getCmsCourseView } from '@/utils/handlers/cmsHandler';
+import { getCmsCourseView, previewCmsContent, saveCmsContent } from '@/utils/handlers/cmsHandler';
 import type { CMSCourseView } from '@/utils/parsers/cmsCourseViewParser';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, ScrollView, StyleSheet, Text, ToastAndroid, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function CMSCourseViewScreen() {
@@ -22,6 +22,8 @@ export default function CMSCourseViewScreen() {
   const [courseData, setCourseData] = useState<CMSCourseView | null>(null);
   const [announcementsExpanded, setAnnouncementsExpanded] = useState(false);
   const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set());
+  // Tracks the in-flight action per content item, e.g. "217866:preview".
+  const [busyItem, setBusyItem] = useState<string | null>(null);
 
   const load = useCallback(async (bypassCache: boolean = false) => {
     try {
@@ -51,15 +53,34 @@ export default function CMSCourseViewScreen() {
     load();
   }, [load]);
 
-  const handleDownload = useCallback(async (url: string) => {
+  const handlePreview = useCallback(async (key: string, url: string, title?: string) => {
+    if (busyItem) return;
     try {
-      const fullUrl = url.startsWith('http') ? url : `https://cms.guc.edu.eg${url}`;
-      console.log('Downloading file:', fullUrl);
-      await Linking.openURL(fullUrl);
+      setError(null);
+      setBusyItem(`${key}:preview`);
+      await previewCmsContent(url, title);
     } catch (e: any) {
-      setError(e?.message || 'Failed to open download link');
+      setError(e?.message || 'Failed to preview file');
+    } finally {
+      setBusyItem(null);
     }
-  }, []);
+  }, [busyItem]);
+
+  const handleSave = useCallback(async (key: string, url: string, title?: string) => {
+    if (busyItem) return;
+    try {
+      setError(null);
+      setBusyItem(`${key}:download`);
+      const saved = await saveCmsContent(url, title);
+      if (Platform.OS === 'android') {
+        ToastAndroid.show(`Saved "${saved.fileName}" to Downloads`, ToastAndroid.LONG);
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Failed to download file');
+    } finally {
+      setBusyItem(null);
+    }
+  }, [busyItem]);
 
   const handleWatchVideo = useCallback(async (url: string) => {
     try {
@@ -439,9 +460,9 @@ export default function CMSCourseViewScreen() {
                                 <Text style={[styles.contentDescription, { color: colors.secondaryFont }]}>{content.description}</Text>
                               )}
                               <View style={styles.buttonContainer}>
-                                {/* Show appropriate button based on content type */}
+                                {/* Show appropriate action(s) based on content type */}
                                 {content.type === 'VoD' && content.watchUrl ? (
-                                  <TouchableOpacity 
+                                  <TouchableOpacity
                                     style={[styles.watchButton, { backgroundColor: colors.tint }]}
                                     onPress={() => handleWatchVideo(content.watchUrl!)}
                                   >
@@ -449,13 +470,40 @@ export default function CMSCourseViewScreen() {
                                     <Text style={styles.downloadButtonText}>Watch Video</Text>
                                   </TouchableOpacity>
                                 ) : content.downloadUrl ? (
-                                  <TouchableOpacity 
-                                    style={[styles.downloadButton, { backgroundColor: colors.tint }]}
-                                    onPress={() => handleDownload(content.downloadUrl!)}
-                                  >
-                                    <Ionicons name="download-outline" size={16} color="#fff" style={styles.downloadIcon} />
-                                    <Text style={styles.downloadButtonText}>Download</Text>
-                                  </TouchableOpacity>
+                                  (() => {
+                                    const itemKey = content.contentId || `${weekIndex}-${contentIndex}`;
+                                    const previewing = busyItem === `${itemKey}:preview`;
+                                    const downloading = busyItem === `${itemKey}:download`;
+                                    const anyBusy = busyItem !== null;
+                                    return (
+                                      <View style={styles.actionButtons}>
+                                        <TouchableOpacity
+                                          style={[styles.previewButton, { borderColor: colors.tint }, anyBusy && styles.buttonDisabled]}
+                                          onPress={() => handlePreview(itemKey, content.downloadUrl!, content.title)}
+                                          disabled={anyBusy}
+                                        >
+                                          {previewing ? (
+                                            <ActivityIndicator size="small" color={colors.tint} style={styles.downloadIcon} />
+                                          ) : (
+                                            <Ionicons name="eye-outline" size={16} color={colors.tint} style={styles.downloadIcon} />
+                                          )}
+                                          <Text style={[styles.previewButtonText, { color: colors.tint }]}>Preview</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                          style={[styles.downloadButton, { backgroundColor: colors.tint }, anyBusy && styles.buttonDisabled]}
+                                          onPress={() => handleSave(itemKey, content.downloadUrl!, content.title)}
+                                          disabled={anyBusy}
+                                        >
+                                          {downloading ? (
+                                            <ActivityIndicator size="small" color="#fff" style={styles.downloadIcon} />
+                                          ) : (
+                                            <Ionicons name="download-outline" size={16} color="#fff" style={styles.downloadIcon} />
+                                          )}
+                                          <Text style={styles.downloadButtonText}>Download</Text>
+                                        </TouchableOpacity>
+                                      </View>
+                                    );
+                                  })()
                                 ) : null}
                               </View>
                             </View>
@@ -539,7 +587,11 @@ const styles = StyleSheet.create({
   contentType: { fontSize: 12, marginBottom: 4 },
   contentDescription: { fontSize: 12, marginBottom: 8 },
   buttonContainer: { marginTop: 8 },
+  actionButtons: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   downloadButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, alignSelf: 'flex-start' },
+  previewButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, alignSelf: 'flex-start', borderWidth: 1 },
+  previewButtonText: { fontSize: 12, fontWeight: '600' },
+  buttonDisabled: { opacity: 0.5 },
   watchButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, alignSelf: 'flex-start' },
   downloadIcon: { marginRight: 4 },
   downloadButtonText: { color: '#fff', fontSize: 12, fontWeight: '600' },

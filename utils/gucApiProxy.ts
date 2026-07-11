@@ -1,6 +1,6 @@
-import { AuthManager } from './auth';
 import { extractCourseGradeData, extractCourses, extractGradeData, extractViewState } from './extractors/gradeExtractor';
 import { GradeCache } from './gradeCache';
+import { makeGucRequest } from './gucRequest';
 import { getOutstandingPayments, payOutstanding } from './handlers/paymentHandler';
 import { getScheduleData } from './handlers/scheduleHandler';
 import { getAvailableStudyYears, getTranscriptData, resetSession } from './handlers/transcriptHandler';
@@ -10,61 +10,11 @@ import { GradeData, Instructor, ScheduleData } from './types/gucTypes';
 export { GradeData, Instructor, PaymentItem, ScheduleClass, ScheduleData, ScheduleDay, ViewStateData } from './types/gucTypes';
 
 export class GUCAPIProxy {
-  private static PROXY_BASE_URL = 'https://guc-connect-login.vercel.app/api';
-
   /**
-   * Make authenticated request through proxy server
+   * Make an authenticated request to GUC through the native NTLM client.
    */
   private static async makeProxyRequest(url: string, method: string = 'GET', body?: any, options?: { allowNon200?: boolean, headers?: Record<string, string> }): Promise<any> {
-    const sessionCookie = await AuthManager.getSessionCookie();
-    const { username, password } = await AuthManager.getCredentials();
-
-    const payload: any = {
-      url,
-      method,
-      cookies: sessionCookie || '',
-      body,
-    };
-
-    // Add custom headers if provided
-    if (options?.headers) {
-      payload.headers = options.headers;
-    }
-
-    // If we have creds, enable NTLM per-request as fallback
-    if (username && password) {
-      payload.useNtlm = true;
-      payload.username = username;
-      payload.password = password;
-    }
-
-    const response = await fetch(`${this.PROXY_BASE_URL}/proxy`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Proxy request failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    if (data.status === 401) {
-      await AuthManager.clearSessionCookie();
-      throw new Error('Session expired. Please login again.');
-    }
-
-    if (data.status !== 200) {
-      if (options?.allowNon200 && (data.status === 302 || data.status === 303)) {
-        return data;
-      }
-      throw new Error(`Request failed: ${data.status}`);
-    }
-
-    return data;
+    return makeGucRequest(url, method, body, options);
   }
 
   /**

@@ -1,9 +1,10 @@
-import { AuthManager } from '@/utils/auth';
-import { PROXY_SERVER } from '@/utils/config/proxyConfig';
+import { makeGucRequest as makeProxyRequest } from '@/utils/gucRequest';
+import { gucDownloadFile, gucOpenFile, gucSaveToDownloads } from '@/utils/gucNativeClient';
 import { extractViewState } from '@/utils/extractors/gradeExtractor';
 import { CMSCourseRow, parseCmsCourses } from '@/utils/parsers/cmsCoursesParser';
 import { CMSCourseView, parseCmsCourseView } from '@/utils/parsers/cmsCourseViewParser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { cacheDirectory, documentDirectory, deleteAsync, getInfoAsync, moveAsync } from 'expo-file-system/legacy';
 
 const CMS_HOME_ENDPOINT = 'https://cms.guc.edu.eg/apps/student/ViewAllCourseStn';
 const CMS_COURSES_CACHE_KEY = 'cms_courses_cache_v1';
@@ -21,36 +22,6 @@ interface CmsCourseViewCacheEntry {
   data: CMSCourseView;
   cachedAt: number;
   expiry: number;
-}
-
-async function makeProxyRequest(url: string, method: string = 'GET', body?: any, options?: { allowNon200?: boolean, headers?: Record<string, string> }): Promise<any> {
-  const sessionCookie = await AuthManager.getSessionCookie();
-  const { username, password } = await AuthManager.getCredentials();
-
-  const payload: any = { url, method, cookies: sessionCookie || '', body };
-  if (options?.headers) payload.headers = options.headers;
-  if (username && password) {
-    payload.useNtlm = true;
-    payload.username = username;
-    payload.password = password;
-  }
-
-  const response = await fetch(`${PROXY_SERVER}/proxy`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) throw new Error(`Proxy request failed: ${response.status}`);
-  const data = await response.json();
-  if (data.status === 401) {
-    await AuthManager.clearSessionCookie();
-    throw new Error('Session expired. Please login again.');
-  }
-  if (data.status !== 200) {
-    if (options?.allowNon200 && (data.status === 302 || data.status === 303)) return data;
-    throw new Error(`Request failed: ${data.status}`);
-  }
-  return data;
 }
 
 export async function getCmsCourses(bypassCache: boolean = false): Promise<CMSCourseRow[]> {
@@ -131,6 +102,144 @@ export async function getCmsCourseView(courseId: string, seasonId: string, bypas
   } catch {}
 
   return data;
+}
+
+// ---------------------------------------------------------------------------
+// CMS content download / preview (NTLM-authenticated, binary-safe)
+// ---------------------------------------------------------------------------
+
+const CMS_ORIGIN = 'https://cms.guc.edu.eg';
+
+export interface CmsFile {
+  /** `file://` URI of the downloaded file on disk. */
+  uri: string;
+  /** Display / save filename. */
+  fileName: string;
+  /** MIME type used to open the file. */
+  mimeType: string;
+}
+
+/** Turn a possibly-relative CMS href into an absolute URL. */
+function toAbsoluteCmsUrl(url: string): string {
+  if (/^https?:\/\//i.test(url)) return url;
+  return `${CMS_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
+const EXT_MIME: Record<string, string> = {
+  pdf: 'application/pdf',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  ppt: 'application/vnd.ms-powerpoint',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  zip: 'application/zip',
+  rar: 'application/vnd.rar',
+  txt: 'text/plain',
+  csv: 'text/csv',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  mp4: 'video/mp4',
+  mp3: 'audio/mpeg',
+};
+
+function extensionOf(name: string): string {
+  const m = name.match(/\.([a-z0-9]{1,5})(?:\?|#|$)/i);
+  return m ? m[1].toLowerCase() : '';
+}
+
+function mimeFor(fileName: string, serverContentType?: string): string {
+  const ext = extensionOf(fileName);
+  if (ext && EXT_MIME[ext]) return EXT_MIME[ext];
+  if (serverContentType) return serverContentType.split(';')[0].trim();
+  return 'application/octet-stream';
+}
+
+/** Strip characters that are illegal in filenames. */
+function sanitizeFileName(name: string): string {
+  return name.replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Download a CMS content item using the authenticated native NTLM session.
+ *
+ * @param url        The content href (absolute or CMS-relative).
+ * @param options.toCache  When true, saves into the cache dir (for a transient
+ *                         preview); otherwise saves into the documents dir.
+ * @param options.fallbackName  Name to use if the server doesn't provide one.
+ */
+export async function downloadCmsContent(
+  url: string,
+  options?: { toCache?: boolean; fallbackName?: string }
+): Promise<CmsFile> {
+  const fullUrl = toAbsoluteCmsUrl(url);
+  const dir = options?.toCache ? cacheDirectory : documentDirectory;
+  if (!dir) throw new Error('No writable directory available');
+
+  // Download to a provisional path first; the real name comes from the response.
+  const tmpPath = `${dir}cms_dl_${Date.now()}`;
+  const res = await gucDownloadFile(fullUrl, tmpPath);
+
+  if (res.status === 401) {
+    throw new Error('Session expired. Please login again.');
+  }
+  if (res.status < 200 || res.status >= 300 || !res.filePath) {
+    throw new Error(`Download failed (${res.status})`);
+  }
+
+  // Resolve a clean, extension-bearing filename.
+  let fileName = sanitizeFileName(res.fileName || options?.fallbackName || 'download');
+  if (!extensionOf(fileName)) {
+    const urlExt = extensionOf(fullUrl);
+    if (urlExt) fileName = `${fileName}.${urlExt}`;
+  }
+
+  const finalPath = `${dir}${fileName}`;
+  try {
+    if (finalPath !== res.filePath) {
+      const info = await getInfoAsync(finalPath);
+      if (info.exists) await deleteAsync(finalPath, { idempotent: true });
+      await moveAsync({ from: res.filePath, to: finalPath });
+    }
+  } catch {
+    // If the move fails for any reason, fall back to the provisional path.
+    return { uri: res.filePath, fileName, mimeType: mimeFor(fileName, res.contentType) };
+  }
+
+  return { uri: finalPath, fileName, mimeType: mimeFor(fileName, res.contentType) };
+}
+
+/**
+ * Download a CMS content item to the cache and open it in the device's default
+ * viewer (in-app preview, no external browser round-trip).
+ */
+export async function previewCmsContent(url: string, fallbackName?: string): Promise<void> {
+  const file = await downloadCmsContent(url, { toCache: true, fallbackName });
+  await gucOpenFile(file.uri, file.mimeType);
+}
+
+/**
+ * Download a CMS content item and save it straight into the device's public
+ * Downloads folder (no share sheet). Returns the saved file info.
+ */
+export async function saveCmsContent(
+  url: string,
+  fallbackName?: string,
+  openAfter: boolean = true
+): Promise<CmsFile> {
+  // Download to the cache first, then hand off to MediaStore / Downloads.
+  const file = await downloadCmsContent(url, { toCache: true, fallbackName });
+  const saved = await gucSaveToDownloads(file.uri, file.fileName, file.mimeType);
+  // Open the file for the user. We open the cache copy (served via FileProvider)
+  // since that works uniformly across Android versions; leaving it in the cache
+  // is fine as the OS reclaims it later. If no viewer app exists, the save still
+  // succeeded, so swallow the open error.
+  if (openAfter) {
+    try { await gucOpenFile(file.uri, file.mimeType); } catch {}
+  }
+  return { uri: saved.uri, fileName: saved.fileName, mimeType: file.mimeType };
 }
 
 

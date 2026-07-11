@@ -1,5 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { userTrackingService } from './services/userTrackingService';
+import {
+  gucClearCredentials,
+  gucClearSession,
+  gucRequest,
+  gucSetCredentials,
+} from './gucNativeClient';
+
+// GUC page used to establish an NTLM-authenticated session (same target the old
+// proxy used for login). A 200 here means credentials are valid and the native
+// client now holds a live session cookie.
+const GUC_LOGIN_URL = 'https://apps.guc.edu.eg/student_ext/Default.aspx';
 
 export class AuthManager {
   private static SESSION_COOKIE_KEY = 'sessionCookie';
@@ -37,13 +47,15 @@ export class AuthManager {
   }
 
   /**
-   * Clear stored session cookie (for logout)
+   * Clear stored session marker + the native NTLM session cookie jar (for logout
+   * or session expiry).
    */
   static async clearSessionCookie(): Promise<void> {
     try {
       await AsyncStorage.removeItem(this.SESSION_COOKIE_KEY);
     } catch (error) {
     }
+    await gucClearSession();
   }
 
   /**
@@ -54,6 +66,11 @@ export class AuthManager {
       await AsyncStorage.setItem(this.USERNAME_KEY, username);
       await AsyncStorage.setItem(this.PASSWORD_KEY, password);
     } catch (error) {
+    }
+    // Provision the native NTLM client with the same credentials.
+    try {
+      await gucSetCredentials(username, password);
+    } catch {
     }
   }
 
@@ -81,6 +98,7 @@ export class AuthManager {
       await AsyncStorage.removeItem(this.PASSWORD_KEY);
     } catch (error) {
     }
+    await gucClearCredentials();
   }
 
   /**
@@ -531,95 +549,33 @@ export class AuthManager {
   }
 
   /**
-   * Perform login with username and password
+   * Perform login with username and password using the native NTLM client.
+   *
+   * Establishes an NTLM-authenticated session on-device (no proxy). On success
+   * the native client holds a persistent session cookie for subsequent calls.
+   * This method only handles authentication; callers (e.g. the login screen)
+   * are responsible for post-login tracking/preloading.
    */
   static async login(username: string, password: string): Promise<boolean> {
     try {
-      
-      const response = await fetch('https://guc-connect-login.vercel.app/api/ntlm-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: username.trim(),
-          password: password,
-        }),
-      });
+      const user = username.trim();
 
-      // Safely parse response (may be JSON or text)
-      const contentType = response.headers.get('content-type') || '';
-      let data: any = null;
-      let rawText = '';
-      
-      if (contentType.includes('application/json')) {
-        try {
-          data = await response.json();
-        } catch {
-          rawText = await response.text();
-        }
-      } else {
-        rawText = await response.text();
-        try {
-          data = JSON.parse(rawText);
-        } catch {
-          // keep data as null
-        }
+      // Provision native credentials, then hit a GUC page to trigger NTLM.
+      await gucSetCredentials(user, password);
+      const res = await gucRequest(GUC_LOGIN_URL, 'GET');
+
+      if (res.status === 200) {
+        // Mark session active (kept as a lightweight AsyncStorage flag so the
+        // existing isAuthenticated()/AuthGuard checks keep working) and persist
+        // credentials for NTLM re-auth.
+        await this.storeSessionCookie('active');
+        await this.storeCredentials(user, password);
+        return true;
       }
 
-      const status = data?.status ?? response.status;
-
-      // Check if this is a successful login
-      const isSuccessful = status === 200 || (response.status === 200 && !data?.error);
-
-      if (isSuccessful) {
-        // Try to extract cookies from multiple possible shapes
-        let cookieString: string | null = null;
-        const cookiesFromJson = data?.cookies || data?.headers?.['set-cookie'] || data?.headers?.['Set-Cookie'];
-
-        if (Array.isArray(cookiesFromJson) && cookiesFromJson.length > 0) {
-          cookieString = cookiesFromJson[0];
-        } else if (typeof cookiesFromJson === 'string') {
-          cookieString = cookiesFromJson;
-        } else {
-          const hdrSetCookie = response.headers.get('set-cookie');
-          if (hdrSetCookie) cookieString = hdrSetCookie;
-        }
-
-        if (cookieString) {
-          await this.storeSessionCookie(cookieString);
-          await this.storeCredentials(username.trim(), password);
-          
-          // Track user login in Supabase database
-          try {
-            // Get user ID for tracking (import GUCAPIProxy dynamically to avoid circular dependency)
-            const { GUCAPIProxy } = await import('./gucApiProxy');
-            const userId = await GUCAPIProxy.getUserId();
-            
-            const joinedSeason = await userTrackingService.trackUserLogin(username.trim(), undefined, userId || undefined);
-            
-            // Cache the joined season if available
-            if (joinedSeason) {
-              await this.storeJoinedSeason(String(joinedSeason));
-            }
-          } catch (error) {
-            // Don't fail login if tracking fails
-          }
-          
-          // Start preloading schedule data in the background
-          const { SchedulePreloader } = await import('./schedulePreloader');
-          SchedulePreloader.preloadSchedule().catch(error => {
-            // Don't show error to user - preloading is optional
-          });
-          
-          return true;
-        } else {
-          return false;
-        }
-      } else {
-        const msg = data?.error || rawText || `HTTP ${response.status}`;
-        return false;
-      }
+      // Invalid credentials (401) or unexpected status: not authenticated.
+      await gucClearSession();
+      return false;
     } catch (error) {
       return false;
     }
