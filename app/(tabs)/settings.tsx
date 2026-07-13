@@ -563,7 +563,7 @@ export default function SettingsScreen() {
         </View>
 
         {/* Statistics Section - Only for mazen.abdelazeem */}
-        {username === 'mazen.abdelazeem' && <StatisticsSection />}
+        {username.toLowerCase() === 'mazen.abdelazeem' && <StatisticsSection />}
 
         {/* App Version */}
         <View style={styles.versionContainer}>
