@@ -1,4 +1,5 @@
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import React from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -29,7 +30,7 @@ export default function SeasonSelector({ yearGroups, selectedSeason, onSeasonSel
         style={[
           styles.seasonText,
           {
-            color: selectedSeason?.value === item.value ? (colorScheme === 'dark' ? '#000000' : '#FFFFFF') : colors.mainFont,
+            color: selectedSeason?.value === item.value ? colors.onPrimary : colors.mainFont,
           },
         ]}
       >
@@ -83,7 +84,7 @@ const styles = StyleSheet.create({
   seasonCard: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     borderWidth: 2,
     marginRight: 12,
     minWidth: 120,

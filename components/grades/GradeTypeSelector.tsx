@@ -1,4 +1,5 @@
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -29,7 +30,7 @@ export default function GradeTypeSelector({ gradeType, onGradeTypeChange }: Grad
           style={[
             styles.gradeTypeButtonText,
             {
-              color: gradeType === 'current' ? (colorScheme === 'dark' ? '#000000' : '#FFFFFF') : colors.mainFont,
+              color: gradeType === 'current' ? colors.onPrimary : colors.mainFont,
             },
           ]}
         >
@@ -51,7 +52,7 @@ export default function GradeTypeSelector({ gradeType, onGradeTypeChange }: Grad
           style={[
             styles.gradeTypeButtonText,
             {
-              color: gradeType === 'previous' ? (colorScheme === 'dark' ? '#000000' : '#FFFFFF') : colors.mainFont,
+              color: gradeType === 'previous' ? colors.onPrimary : colors.mainFont,
             },
           ]}
         >
@@ -72,7 +73,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    borderRadius: Radius.md,
     borderWidth: 2,
     marginHorizontal: 4,
   },

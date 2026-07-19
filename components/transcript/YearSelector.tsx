@@ -1,4 +1,5 @@
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import React from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity } from 'react-native';
@@ -29,7 +30,7 @@ export default function YearSelector({ studyYears, selectedYear, onYearSelect }:
         style={[
           styles.yearText,
           {
-            color: selectedYear?.value === item.value ? (colorScheme === 'dark' ? '#000000' : '#FFFFFF') : colors.mainFont,
+            color: selectedYear?.value === item.value ? colors.onPrimary : colors.mainFont,
           },
         ]}
       >
@@ -61,7 +62,7 @@ const styles = StyleSheet.create({
   yearCard: {
     paddingHorizontal: 20,
     paddingVertical: 14,
-    borderRadius: 16,
+    borderRadius: Radius.md,
     borderWidth: 2,
     marginRight: 12,
     minWidth: 140,

@@ -2,9 +2,9 @@
   "expo": {
     "name": "UniLink",
     "slug": "unilink",
-    "version": "3.1",
+    "version": "3.2",
     "orientation": "default",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/app-icons/icon-original.png",
     "scheme": "unilink",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -12,14 +12,14 @@
     "ios": {
       "supportsTablet": true,
       "icon": {
-        "light": "./assets/images/icon.png",
-        "dark": "./assets/images/icon.png"
+        "light": "./assets/images/app-icons/icon-original.png",
+        "dark": "./assets/images/app-icons/icon-original.png"
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/app-icons/adaptive-icon-original.png",
+        "backgroundColor": "#1a1a1a"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.anonymous.unilink"
@@ -30,7 +30,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "notification": {
-      "icon": "./assets/images/icon.png",
+      "icon": "./assets/images/app-icons/icon-original.png",
       "color": "#007AFF",
       "androidMode": "default",
       "androidCollapsedTitle": "#{unread_notifications} new notifications"
@@ -57,7 +57,28 @@
           }
         }
       ],
-      "./plugins/withGucAuth"
+      "./plugins/withGucAuth",
+      [
+        "expo-dynamic-app-icon",
+        {
+          "blue": {
+            "image": "./assets/images/app-icons/icon-blue.png",
+            "prerendered": true
+          },
+          "gold": {
+            "image": "./assets/images/app-icons/icon-gold.png",
+            "prerendered": true
+          },
+          "black": {
+            "image": "./assets/images/app-icons/icon-black.png",
+            "prerendered": true
+          },
+          "white": {
+            "image": "./assets/images/app-icons/icon-white.png",
+            "prerendered": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -35,7 +35,7 @@ interface NavEntry {
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const PANEL_WIDTH = Math.min(320, SCREEN_WIDTH * 0.84);
-const EDGE_ZONE_WIDTH = 24;
+const EDGE_ZONE_WIDTH = 50;
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
@@ -209,7 +209,7 @@ export function Sidebar() {
 
   const services: NavEntry[] = [
     { key: 'instructors', label: 'Instructors', icon: 'people-outline', route: '/instructors', mode: 'push', accent: colors.secondary },
-    { key: 'cms', label: 'CMS · Materials', icon: 'document-attach-outline', route: '/cms/home', mode: 'push', accent: colors.info },
+    { key: 'cms', label: 'CMS', icon: 'document-attach-outline', route: '/cms/home', mode: 'push', accent: colors.info },
     { key: 'attendance', label: 'Attendance', icon: 'checkmark-circle-outline', route: '/attendance', mode: 'push', accent: colors.success },
     { key: 'exam-seats', label: 'Exam Seats', icon: 'grid-outline', route: '/exam-seats', mode: 'push', accent: colors.primary },
     { key: 'eval-course', label: 'Evaluate Courses', icon: 'star-outline', route: '/evaluation/course', mode: 'push', accent: colors.warning },
@@ -271,8 +271,8 @@ export function Sidebar() {
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      {/* Edge zone: swipe right from the left screen edge to open */}
-      <View style={styles.edgeZone} {...edgeResponder.panHandlers} />
+      {/* Edge zone: swipe right from the left screen edge to open (starts below the header so the menu button stays pressable) */}
+      <View style={[styles.edgeZone, { top: insets.top + 60 }]} {...edgeResponder.panHandlers} />
 
       {mounted && (
         <>
@@ -311,9 +311,6 @@ export function Sidebar() {
               </Text>
             ) : null}
           </View>
-          <TouchableOpacity onPress={closeSidebar} style={styles.closeBtn} activeOpacity={0.7} accessibilityLabel="Close menu">
-            <Ionicons name="close" size={22} color={colors.textSecondary} />
-          </TouchableOpacity>
         </View>
 
         <View style={[styles.headerDivider, { backgroundColor: colors.divider }]} />
@@ -394,9 +391,6 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontWeight: '500',
     marginTop: 2,
-  },
-  closeBtn: {
-    padding: 4,
   },
   headerDivider: {
     height: 1,

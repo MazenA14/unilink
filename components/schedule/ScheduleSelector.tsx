@@ -1,4 +1,6 @@
 import { Colors, ScheduleTypeColors } from '@/constants/Colors';
+import { Radius, Shadow, Spacing, withAlpha } from '@/constants/Theme';
+import { DropdownTrigger } from '@/components/ui/Dropdown';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -29,8 +31,8 @@ const OptionItem = memo(({
     style={[
       styles.optionItem,
       {
-        backgroundColor: isSelected ? typeColor + '20' : 'transparent',
-        borderBottomColor: colors.border,
+        backgroundColor: isSelected ? withAlpha(typeColor, 0.14) : 'transparent',
+        borderBottomColor: colors.divider,
       }
     ]}
     onPress={onPress}
@@ -212,41 +214,16 @@ export function ScheduleSelector({
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        ref={buttonRef}
-        style={[
-          styles.selectorButton,
-          {
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
-          },
-        ]}
-        onPress={handleButtonPress}
-        disabled={loading}
-      >
-        <View style={styles.selectorContent}>
-          {/* <Text style={[styles.selectorIcon, { color: typeColor }]}>
-            {type === 'staff' ? '👨‍🏫' : type === 'course' ? '📚' : '👥'}
-          </Text> */}
-          <View style={styles.selectorTextContainer}>
-            {/* <Text style={[styles.selectorLabel, { color: colors.secondaryFont }]}>
-              {type === 'staff' ? 'Select Staff Member' : 
-               type === 'course' ? 'Select Course' : 'Select Group'}
-            </Text> */}
-            <Text 
-              style={[styles.selectorValue, { color: colors.mainFont }]}
-              numberOfLines={1}
-            >
-              {loading ? 'Loading...' : selectedOption?.name || placeholder}
-            </Text>
-          </View>
-          <Ionicons
-            name={modalVisible ? "chevron-up" : "chevron-down"}
-            size={20}
-            color={colors.secondaryFont}
-          />
-        </View>
-      </TouchableOpacity>
+      <View ref={buttonRef} collapsable={false}>
+        <DropdownTrigger
+          colors={colors}
+          label={loading ? 'Loading...' : selectedOption?.name || placeholder}
+          placeholder={!selectedOption && !loading}
+          open={modalVisible}
+          onPress={handleButtonPress}
+          disabled={loading}
+        />
+      </View>
 
       <Modal
         visible={modalVisible}
@@ -261,12 +238,13 @@ export function ScheduleSelector({
         >
           <View style={[
             styles.dropdownContent,
-            { 
+            {
               backgroundColor: colors.cardBackground,
-              top: buttonLayout.y + buttonLayout.height + 8,
+              borderColor: colors.border,
+              top: buttonLayout.y + buttonLayout.height + Spacing.xs,
               left: buttonLayout.x,
               width: buttonLayout.width || screenWidth - 32,
-              shadowColor: colorScheme === 'dark' ? '#000' : '#000',
+              ...Shadow.lg(colors),
             }
           ]}>
             {/* Search Input */}
@@ -381,31 +359,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 16,
   },
-  selectorButton: {
-    borderRadius: 12,
-    borderWidth: 2,
-    padding: 16,
-  },
-  selectorContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  selectorIcon: {
-    fontSize: 20,
-    marginRight: 12,
-  },
-  selectorTextContainer: {
-    flex: 1,
-  },
-  selectorLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  selectorValue: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
@@ -413,16 +366,8 @@ const styles = StyleSheet.create({
   dropdownContent: {
     position: 'absolute',
     maxHeight: 400,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
     zIndex: 1000,
   },
   searchContainer: {

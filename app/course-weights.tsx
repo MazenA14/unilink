@@ -2,6 +2,7 @@ import { useCustomAlert } from '@/components/CustomAlert';
 import { AppBar } from '@/components/navigation/AppBar';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
+import { Radius, Shadow, Spacing, withAlpha } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Course, CourseWeight, CourseWeightsStorage } from '@/utils/courseWeightsStorage';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -537,9 +538,9 @@ export default function CourseWeightsScreen() {
                   autoFocus
                 />
                 <TouchableOpacity
-                  style={[styles.presetButton, { 
-                    backgroundColor: colors.tint + '20',
-                    borderColor: colors.border 
+                  style={[styles.presetButton, {
+                    backgroundColor: withAlpha(colors.tint, 0.12),
+                    borderColor: colors.border
                   }]}
                   onPress={() => setPresetDropdownVisible(!presetDropdownVisible)}
                   activeOpacity={0.7}
@@ -553,9 +554,10 @@ export default function CourseWeightsScreen() {
               </View>
               
               {presetDropdownVisible && (
-                <View style={[styles.presetDropdown, { 
-                  backgroundColor: colors.cardBackground, 
-                  borderColor: colors.border 
+                <View style={[styles.presetDropdown, {
+                  backgroundColor: colors.cardBackground,
+                  borderColor: colors.border,
+                  ...Shadow.md(colors),
                 }]}>
                   <ScrollView 
                     style={styles.presetScrollView}
@@ -596,9 +598,9 @@ export default function CourseWeightsScreen() {
                   keyboardType="numeric"
                 />
                 <TouchableOpacity
-                  style={[styles.presetButton, { 
-                    backgroundColor: colors.tint + '20',
-                    borderColor: colors.border 
+                  style={[styles.presetButton, {
+                    backgroundColor: withAlpha(colors.tint, 0.12),
+                    borderColor: colors.border
                   }]}
                   onPress={() => setPercentageDropdownVisible(!percentageDropdownVisible)}
                   activeOpacity={0.7}
@@ -612,9 +614,10 @@ export default function CourseWeightsScreen() {
               </View>
               
               {percentageDropdownVisible && (
-                <View style={[styles.presetDropdown, { 
-                  backgroundColor: colors.cardBackground, 
-                  borderColor: colors.border 
+                <View style={[styles.presetDropdown, {
+                  backgroundColor: colors.cardBackground,
+                  borderColor: colors.border,
+                  ...Shadow.md(colors),
                 }]}>
                   <ScrollView 
                     style={styles.presetScrollView}
@@ -841,7 +844,7 @@ const styles = StyleSheet.create({
   presetButton: {
     width: 40,
     height: 40,
-    borderRadius: 8,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -851,24 +854,17 @@ const styles = StyleSheet.create({
     top: 52,
     left: 0,
     right: 48,
-    borderRadius: 8,
+    borderRadius: Radius.md,
     borderWidth: 1,
     zIndex: 1000,
     maxHeight: 200,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    overflow: 'hidden',
   },
   presetScrollView: {
     maxHeight: 200,
   },
   presetItem: {
-    padding: 12,
+    padding: Spacing.md,
     borderBottomWidth: 1,
   },
   presetText: {

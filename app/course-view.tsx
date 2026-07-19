@@ -1,12 +1,13 @@
 import { AppBar } from '@/components/navigation/AppBar';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
+import { Radius, Shadow, Spacing, Type, withAlpha } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { getCmsCourseView, previewCmsContent, saveCmsContent } from '@/utils/handlers/cmsHandler';
 import type { CMSCourseView } from '@/utils/parsers/cmsCourseViewParser';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, ScrollView, StyleSheet, Text, ToastAndroid, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -105,7 +106,7 @@ export default function CMSCourseViewScreen() {
     }
   }, []);
 
-  const parseAnnouncementText = useCallback((html: string) => {
+  const parseAnnouncementText = (html: string) => {
     // First, extract tables and replace them with placeholders
     const tableMatches: { placeholder: string; tableHtml: string }[] = [];
     let processedHtml = html;
@@ -153,13 +154,13 @@ export default function CMSCourseViewScreen() {
       // Check if this is a heading tag
       const isHeading = /<h[1-6][^>]*>/i.test(element);
       const isParagraph = /<p[^>]*>/i.test(element);
-      
+
       if (isHeading || isParagraph) {
         // Find the corresponding closing tag
         const tagName = element.match(/<(\w+)/i)?.[1] || '';
         const nextElement = elements[elementIndex + 1];
         if (!nextElement) return;
-        
+
         // Remove closing tag and clean up
         const cleanElement = nextElement.replace(new RegExp(`</${tagName}>`, 'gi'), '').trim();
         if (!cleanElement) return;
@@ -174,11 +175,11 @@ export default function CMSCourseViewScreen() {
           // Add text before the link, handling <strong> tags
           if (match.index > lastIndex) {
             const textBefore = cleanElement.substring(lastIndex, match.index);
-            
+
             // Split by <strong> tags to handle bold text
             const strongParts = textBefore.split(/(<strong[^>]*>|<\/strong>)/i);
             let isBold = false;
-            
+
             strongParts.forEach((part) => {
               if (/<strong[^>]*>/i.test(part)) {
                 isBold = true;
@@ -191,34 +192,34 @@ export default function CMSCourseViewScreen() {
                   .replace(/\s+/g, ' ') // Normalize whitespace
                   .trim();
                 if (cleanText) {
-                  parts.push({ 
-                    type: 'text', 
+                  parts.push({
+                    type: 'text',
                     content: cleanText,
-                    bold: isBold 
+                    bold: isBold
                   });
                 }
               }
             });
           }
-          
+
           // Add the link
-          parts.push({ 
-            type: 'link', 
-            content: match[2].trim(), 
-            url: match[1] 
+          parts.push({
+            type: 'link',
+            content: match[2].trim(),
+            url: match[1]
           });
-          
+
           lastIndex = match.index + match[0].length;
         }
 
         // Add remaining text in this element, handling <strong> tags
         if (lastIndex < cleanElement.length) {
           const remainingText = cleanElement.substring(lastIndex);
-          
+
           // Split by <strong> tags to handle bold text
           const strongParts = remainingText.split(/(<strong[^>]*>|<\/strong>)/i);
           let isBold = false;
-          
+
           strongParts.forEach((part) => {
             if (/<strong[^>]*>/i.test(part)) {
               isBold = true;
@@ -231,10 +232,10 @@ export default function CMSCourseViewScreen() {
                 .replace(/\s+/g, ' ') // Normalize whitespace
                 .trim();
               if (cleanText) {
-                parts.push({ 
-                  type: 'text', 
+                parts.push({
+                  type: 'text',
                   content: cleanText,
-                  bold: isBold 
+                  bold: isBold
                 });
               }
             }
@@ -251,7 +252,12 @@ export default function CMSCourseViewScreen() {
     });
 
     return allParts;
-  }, []);
+  };
+
+  const announcementParts = useMemo(() => {
+    if (!announcementsExpanded || !courseData?.announcementsHtml) return [];
+    return parseAnnouncementText(courseData.announcementsHtml);
+  }, [announcementsExpanded, courseData?.announcementsHtml]);
 
   const toggleWeek = useCallback((weekIndex: number) => {
     setExpandedWeeks(prev => {
@@ -276,63 +282,76 @@ export default function CMSCourseViewScreen() {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <AppBar title="Course" />
-        <View style={[styles.center, { backgroundColor: colors.background }] }>
-          <ActivityIndicator />
-          <Text style={[styles.loadingText, { color: colors.secondaryFont }]}>Loading course…</Text>
+        <AppBar title="Course" variant="back" />
+        <View style={[styles.center, { backgroundColor: colors.background }]}>
+          <ActivityIndicator color={colors.cms} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading course…</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background } ]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppBar
         title={courseTitle}
         subtitle={courseData?.header.seasonName}
+        variant="back"
       />
-      {courseData?.header.totalWeeks && (
-        <Text style={[styles.meta, { color: colors.secondaryFont, marginHorizontal: 20 }]}>
-          {courseData.header.totalWeeks} weeks • {courseData.header.contentCount || 0} content items
-        </Text>
+
+      {(courseData?.header.totalWeeks || !!error) && (
+        <View style={styles.metaRow}>
+          {!!courseData?.header.totalWeeks && (
+            <View style={[styles.metaPill, { backgroundColor: withAlpha(colors.cms, 0.12) }]}>
+              <Ionicons name="calendar-outline" size={13} color={colors.cms} />
+              <Text style={[styles.metaPillText, { color: colors.cms }]}>{courseData.header.totalWeeks} weeks</Text>
+            </View>
+          )}
+          {!!courseData?.header.contentCount && (
+            <View style={[styles.metaPill, { backgroundColor: colors.surfaceAlt, borderColor: colors.divider, borderWidth: 1 }]}>
+              <Ionicons name="documents-outline" size={13} color={colors.textSecondary} />
+              <Text style={[styles.metaPillText, { color: colors.textSecondary }]}>{courseData.header.contentCount} items</Text>
+            </View>
+          )}
+        </View>
       )}
 
       {!!error && (
-        <Text style={[styles.error, { color: colors.error }]}>{error}</Text>
+        <View style={[styles.errorBanner, { backgroundColor: colors.dangerSoft, borderColor: withAlpha(colors.danger, 0.3) }]}>
+          <Ionicons name="alert-circle" size={16} color={colors.danger} />
+          <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
+        </View>
       )}
 
-      <ScrollView 
-        style={styles.content} 
+      <ScrollView
+        style={styles.content}
         contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
         refreshControl={<AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {/* Announcements Section */}
         {courseData?.announcementsHtml && (
-          <View style={[styles.section, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-            <TouchableOpacity 
-              style={styles.announcementHeader}
+          <View style={[styles.section, { backgroundColor: colors.surfaceElevated, borderColor: colors.divider }, Shadow.card(colors)]}>
+            <TouchableOpacity
+              style={styles.sectionHeader}
               onPress={() => setAnnouncementsExpanded(!announcementsExpanded)}
               activeOpacity={0.7}
             >
-              <View style={styles.announcementHeaderContent}>
-                <Ionicons 
-                  name="megaphone-outline" 
-                  size={20} 
-                  color={colors.tint} 
-                  style={styles.announcementIcon}
-                />
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Announcements</Text>
+              <View style={[styles.sectionIconChip, { backgroundColor: withAlpha(colors.cms, 0.14) }]}>
+                <Ionicons name="megaphone-outline" size={18} color={colors.cms} />
               </View>
-              <Ionicons 
-                name={announcementsExpanded ? "chevron-up" : "chevron-down"} 
-                size={20} 
-                color={colors.secondaryFont}
-              />
+              <Text style={[Type.h3, { color: colors.textPrimary, flex: 1 }]}>Announcements</Text>
+              <View style={[styles.chevronChip, { backgroundColor: colors.surfaceAlt }]}>
+                <Ionicons
+                  name={announcementsExpanded ? 'chevron-up' : 'chevron-down'}
+                  size={16}
+                  color={colors.textSecondary}
+                />
+              </View>
             </TouchableOpacity>
-            
+
             {announcementsExpanded && (
               <View style={styles.announcementContent}>
-                {parseAnnouncementText(courseData.announcementsHtml).map((part, index) => {
+                {announcementParts.map((part, index) => {
                   if (part.type === 'link') {
                     return (
                       <TouchableOpacity
@@ -340,7 +359,7 @@ export default function CMSCourseViewScreen() {
                         onPress={() => handleLinkPress(part.url!)}
                         style={styles.linkContainer}
                       >
-                        <Text style={[styles.linkText, { color: colors.tint }]}>{part.content}</Text>
+                        <Text style={[styles.linkText, { color: colors.cms }]}>{part.content}</Text>
                       </TouchableOpacity>
                     );
                   } else if (part.type === 'table') {
@@ -354,11 +373,11 @@ export default function CMSCourseViewScreen() {
                     );
                   } else {
                     return (
-                      <Text 
-                        key={index} 
+                      <Text
+                        key={index}
                         style={[
-                          styles.announcementText, 
-                          { color: colors.text },
+                          styles.announcementText,
+                          { color: colors.textPrimary },
                           part.content === '\n' && styles.paragraphBreak,
                           part.bold && styles.boldText
                         ]}
@@ -376,88 +395,89 @@ export default function CMSCourseViewScreen() {
         {/* Weeks Section */}
         {courseData?.weeks && courseData.weeks.length > 0 && (
           <View style={styles.weeksContainer}>
-            <Text style={[styles.sectionTitle, styles.courseContentTitle, { color: colors.text }]}>Course Content</Text>
+            <Text style={[Type.overline, styles.courseContentTitle, { color: colors.textSecondary }]}>Course Content</Text>
             {courseData.weeks.map((week, weekIndex) => {
               const isExpanded = expandedWeeks.has(weekIndex);
               const hasContent = week.contents && week.contents.length > 0;
               const hasAnnouncement = week.announcement && week.announcement.trim() !== '';
               const hasDescription = week.description && week.description.trim() !== '';
-              
+
               return (
-                <View key={weekIndex} style={[styles.weekCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                  <TouchableOpacity 
-                    style={styles.weekHeader}
+                <View
+                  key={weekIndex}
+                  style={[styles.weekCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.divider }, Shadow.card(colors)]}
+                >
+                  <TouchableOpacity
+                    style={styles.sectionHeader}
                     onPress={() => toggleWeek(weekIndex)}
                     activeOpacity={0.7}
                   >
-                    <View style={styles.weekHeaderContent}>
-                      <Ionicons 
-                        name="calendar-outline" 
-                        size={18} 
-                        color={colors.tint} 
-                        style={styles.weekIcon}
-                      />
-                      <Text style={[styles.weekTitle, { color: colors.text }]}>{week.weekLabel}</Text>
+                    <View style={[styles.sectionIconChip, { backgroundColor: withAlpha(colors.cms, 0.14) }]}>
+                      <Ionicons name="calendar-outline" size={16} color={colors.cms} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[Type.h3, { color: colors.textPrimary }]} numberOfLines={1}>{week.weekLabel}</Text>
                       {hasContent && (
-                        <Text style={[styles.weekContentCount, { color: colors.secondaryFont }]}>
+                        <Text style={[styles.weekContentCount, { color: colors.textSecondary }]}>
                           {week.contents!.length} item{week.contents!.length !== 1 ? 's' : ''}
                         </Text>
                       )}
                     </View>
-                    <Ionicons 
-                      name={isExpanded ? "chevron-up" : "chevron-down"} 
-                      size={18} 
-                      color={colors.secondaryFont}
-                    />
+                    <View style={[styles.chevronChip, { backgroundColor: colors.surfaceAlt }]}>
+                      <Ionicons
+                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                        size={16}
+                        color={colors.textSecondary}
+                      />
+                    </View>
                   </TouchableOpacity>
-                  
+
                   {isExpanded && (
                     <View style={styles.weekContent}>
-                      {/* Debug info - remove this later */}
-                      {/* <Text style={[styles.debugText, { color: colors.secondaryFont }]}>
-                        Debug: hasAnnouncement={String(hasAnnouncement)}, hasDescription={String(hasDescription)}, hasContent={String(hasContent)}
-                      </Text> */}
-                      
                       {hasAnnouncement && (
                         <View style={styles.weekAnnouncement}>
-                          <Text style={[styles.weekAnnouncementLabel, { color: colors.text }]}>Announcement:</Text>
-                          <Text style={[styles.weekAnnouncementText, { color: colors.secondaryFont }]}>{week.announcement}</Text>
+                          <Text style={[styles.weekAnnouncementLabel, { color: colors.textPrimary }]}>Announcement</Text>
+                          <Text style={[styles.weekAnnouncementText, { color: colors.textSecondary }]}>{week.announcement}</Text>
                         </View>
                       )}
-                      
+
                       {hasDescription && (
                         <View style={styles.weekDescription}>
-                          <Text style={[styles.weekDescriptionLabel, { color: colors.text }]}>Description:</Text>
-                          <Text style={[styles.weekDescriptionText, { color: colors.secondaryFont }]}>{week.description}</Text>
+                          <Text style={[styles.weekAnnouncementLabel, { color: colors.textPrimary }]}>Description</Text>
+                          <Text style={[styles.weekAnnouncementText, { color: colors.textSecondary }]}>{week.description}</Text>
                         </View>
                       )}
 
                       {hasContent && (
                         <View style={styles.contentsContainer}>
-                          <Text style={[styles.contentsTitle, { color: colors.text }]}>Content:</Text>
                           {week.contents!.map((content, contentIndex) => (
-                            <View key={contentIndex} style={[styles.contentItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                            <View
+                              key={contentIndex}
+                              style={[styles.contentItem, { backgroundColor: colors.surfaceAlt, borderColor: colors.divider }]}
+                            >
                               <View style={styles.contentItemHeader}>
-                                <Text style={[styles.contentTitle, { color: colors.text }]}>{content.title}</Text>
+                                <Text style={[Type.bodyStrong, { color: colors.textPrimary, flex: 1 }]}>{content.title}</Text>
                                 {content.seen && (
-                                  <Ionicons name="eye" size={16} color={colors.secondaryFont} style={styles.seenIcon} />
+                                  <Ionicons name="eye" size={15} color={colors.textTertiary} style={styles.seenIcon} />
                                 )}
                               </View>
                               {content.type && (
-                                <Text style={[styles.contentType, { color: colors.secondaryFont }]}>({content.type})</Text>
+                                <View style={[styles.typeBadge, { backgroundColor: colors.infoSoft }]}>
+                                  <Text style={[styles.typeBadgeText, { color: colors.info }]}>{content.type}</Text>
+                                </View>
                               )}
                               {content.description && (
-                                <Text style={[styles.contentDescription, { color: colors.secondaryFont }]}>{content.description}</Text>
+                                <Text style={[styles.contentDescription, { color: colors.textSecondary }]}>{content.description}</Text>
                               )}
                               <View style={styles.buttonContainer}>
-                                {/* Show appropriate action(s) based on content type */}
                                 {content.type === 'VoD' && content.watchUrl ? (
                                   <TouchableOpacity
-                                    style={[styles.watchButton, { backgroundColor: colors.tint }]}
+                                    style={[styles.watchButton, { backgroundColor: colors.cms }, Shadow.glow(colors.cms)]}
                                     onPress={() => handleWatchVideo(content.watchUrl!)}
+                                    activeOpacity={0.85}
                                   >
-                                    <Ionicons name="play-outline" size={16} color="#fff" style={styles.downloadIcon} />
-                                    <Text style={styles.downloadButtonText}>Watch Video</Text>
+                                    <Ionicons name="play" size={14} color="#fff" style={styles.actionIcon} />
+                                    <Text style={styles.actionButtonText}>Watch Video</Text>
                                   </TouchableOpacity>
                                 ) : content.downloadUrl ? (
                                   (() => {
@@ -468,28 +488,30 @@ export default function CMSCourseViewScreen() {
                                     return (
                                       <View style={styles.actionButtons}>
                                         <TouchableOpacity
-                                          style={[styles.previewButton, { borderColor: colors.tint }, anyBusy && styles.buttonDisabled]}
+                                          style={[styles.previewButton, { borderColor: colors.cms }, anyBusy && styles.buttonDisabled]}
                                           onPress={() => handlePreview(itemKey, content.downloadUrl!, content.title)}
                                           disabled={anyBusy}
+                                          activeOpacity={0.75}
                                         >
                                           {previewing ? (
-                                            <ActivityIndicator size="small" color={colors.tint} style={styles.downloadIcon} />
+                                            <ActivityIndicator size="small" color={colors.cms} style={styles.actionIcon} />
                                           ) : (
-                                            <Ionicons name="eye-outline" size={16} color={colors.tint} style={styles.downloadIcon} />
+                                            <Ionicons name="eye-outline" size={14} color={colors.cms} style={styles.actionIcon} />
                                           )}
-                                          <Text style={[styles.previewButtonText, { color: colors.tint }]}>Preview</Text>
+                                          <Text style={[styles.previewButtonText, { color: colors.cms }]}>Preview</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity
-                                          style={[styles.downloadButton, { backgroundColor: colors.tint }, anyBusy && styles.buttonDisabled]}
+                                          style={[styles.downloadButton, { backgroundColor: colors.cms }, Shadow.glow(colors.cms), anyBusy && styles.buttonDisabled]}
                                           onPress={() => handleSave(itemKey, content.downloadUrl!, content.title)}
                                           disabled={anyBusy}
+                                          activeOpacity={0.85}
                                         >
                                           {downloading ? (
-                                            <ActivityIndicator size="small" color="#fff" style={styles.downloadIcon} />
+                                            <ActivityIndicator size="small" color="#fff" style={styles.actionIcon} />
                                           ) : (
-                                            <Ionicons name="download-outline" size={16} color="#fff" style={styles.downloadIcon} />
+                                            <Ionicons name="download-outline" size={14} color="#fff" style={styles.actionIcon} />
                                           )}
-                                          <Text style={styles.downloadButtonText}>Download</Text>
+                                          <Text style={styles.actionButtonText}>Download</Text>
                                         </TouchableOpacity>
                                       </View>
                                     );
@@ -500,12 +522,14 @@ export default function CMSCourseViewScreen() {
                           ))}
                         </View>
                       )}
-                      
-                      {/* Fallback content if nothing else shows */}
+
                       {!hasAnnouncement && !hasDescription && !hasContent && (
-                        <Text style={[styles.emptyContent, { color: colors.secondaryFont }]}>
-                          No content available for this week.
-                        </Text>
+                        <View style={styles.emptyWeek}>
+                          <Ionicons name="file-tray-outline" size={22} color={colors.textTertiary} />
+                          <Text style={[styles.emptyContent, { color: colors.textSecondary }]}>
+                            No content available for this week.
+                          </Text>
+                        </View>
                       )}
                     </View>
                   )}
@@ -515,9 +539,16 @@ export default function CMSCourseViewScreen() {
           </View>
         )}
 
-        {/* <TouchableOpacity style={[styles.button, { backgroundColor: colors.tint }]} onPress={() => router.back()}>
-          <Text style={styles.buttonText}>Back</Text>
-        </TouchableOpacity> */}
+        {courseData && !courseData.announcementsHtml && courseData.weeks.length === 0 && (
+          <View style={styles.emptyWrap}>
+            <View style={[styles.emptyIconChip, { backgroundColor: withAlpha(colors.cms, 0.12) }]}>
+              <Ionicons name="folder-open-outline" size={28} color={colors.cms} />
+            </View>
+            <Text style={[Type.body, { color: colors.textSecondary, textAlign: 'center' }]}>
+              No content available for this course yet.
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -526,58 +557,60 @@ export default function CMSCourseViewScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { marginTop: 8 },
-  meta: { marginTop: 4, fontSize: 12 },
-  error: { marginHorizontal: 20, marginBottom: 8 },
-  content: { flex: 1, paddingHorizontal: 20 },
-  section: { padding: 16, borderRadius: 12, borderWidth: 1, marginBottom: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '600' },
-  courseContentTitle: { marginBottom: 8 },
-  announcementHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0 },
-  announcementHeaderContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  announcementIcon: { marginRight: 8 },
-  announcementContent: { marginTop: 12 },
-  announcementText: { fontSize: 14, lineHeight: 20, marginBottom: 8 },
+  loadingText: { marginTop: Spacing.sm, fontSize: 14, fontWeight: '500' },
+  metaRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs, marginHorizontal: Spacing.xl },
+  metaPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: Spacing.sm, paddingVertical: 5, borderRadius: Radius.pill },
+  metaPillText: { fontSize: 12, fontWeight: '700' },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+  },
+  errorText: { fontSize: 13, fontWeight: '600', flex: 1 },
+  content: { flex: 1, paddingHorizontal: Spacing.xl, marginTop: Spacing.md },
+  section: { padding: Spacing.lg, borderRadius: Radius.xl, borderWidth: 1, marginBottom: Spacing.lg },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  sectionIconChip: { width: 36, height: 36, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  chevronChip: { width: 28, height: 28, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
+  announcementContent: { marginTop: Spacing.md },
+  announcementText: { fontSize: 14, lineHeight: 21, marginBottom: Spacing.sm },
   boldText: { fontWeight: 'bold' },
   paragraphBreak: { marginBottom: 12, height: 0 },
-  linkContainer: { marginBottom: 8 },
-  linkText: { fontSize: 14, textDecorationLine: 'underline' },
-  announcementTable: { marginVertical: 8 },
-  weeksContainer: { marginBottom: 16 },
-  weekCard: { borderRadius: 12, borderWidth: 1, marginBottom: 12, overflow: 'hidden' },
-  weekHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingBottom: 12 },
-  weekHeaderContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  weekIcon: { marginRight: 8 },
-  weekTitle: { fontSize: 16, fontWeight: '600', flex: 1 },
-  weekContentCount: { fontSize: 12, marginLeft: 8 },
-  weekContent: { paddingHorizontal: 16, paddingBottom: 16 },
-  weekAnnouncement: { marginBottom: 8 },
-  weekAnnouncementLabel: { fontSize: 12, fontWeight: '600', marginBottom: 4 },
-  weekAnnouncementText: { fontSize: 14 },
-  weekDescription: { marginBottom: 8 },
-  weekDescriptionLabel: { fontSize: 12, fontWeight: '600', marginBottom: 4 },
-  weekDescriptionText: { fontSize: 14 },
-  contentsContainer: { marginTop: 8 },
-  contentsTitle: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
-  contentItem: { padding: 12, borderRadius: 8, borderWidth: 1, marginBottom: 8 },
-  contentItemHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  contentTitle: { fontSize: 14, fontWeight: '600', flex: 1 },
-  seenIcon: { marginLeft: 8 },
-  contentType: { fontSize: 12, marginBottom: 4 },
-  contentDescription: { fontSize: 12, marginBottom: 8 },
-  buttonContainer: { marginTop: 8 },
-  actionButtons: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  downloadButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, alignSelf: 'flex-start' },
-  previewButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, alignSelf: 'flex-start', borderWidth: 1 },
-  previewButtonText: { fontSize: 12, fontWeight: '600' },
+  linkContainer: { marginBottom: Spacing.sm },
+  linkText: { fontSize: 14, fontWeight: '600', textDecorationLine: 'underline' },
+  announcementTable: { marginVertical: Spacing.sm },
+  weeksContainer: { marginBottom: Spacing.lg },
+  courseContentTitle: { marginBottom: Spacing.sm, marginLeft: 2 },
+  weekCard: { borderRadius: Radius.xl, borderWidth: 1, marginBottom: Spacing.md, padding: Spacing.lg },
+  weekContentCount: { fontSize: 12, fontWeight: '500', marginTop: 1 },
+  weekContent: { marginTop: Spacing.lg, gap: Spacing.md },
+  weekAnnouncement: { gap: 2 },
+  weekDescription: { gap: 2 },
+  weekAnnouncementLabel: { fontSize: 12, fontWeight: '700' },
+  weekAnnouncementText: { fontSize: 14, lineHeight: 20 },
+  contentsContainer: { gap: Spacing.sm },
+  contentItem: { padding: Spacing.md, borderRadius: Radius.lg, borderWidth: 1 },
+  contentItemHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.xs },
+  seenIcon: { marginLeft: Spacing.sm },
+  typeBadge: { alignSelf: 'flex-start', paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: Radius.pill, marginBottom: Spacing.xs },
+  typeBadgeText: { fontSize: 11, fontWeight: '700' },
+  contentDescription: { fontSize: 12, marginBottom: Spacing.sm, lineHeight: 17 },
+  buttonContainer: { marginTop: Spacing.xs },
+  actionButtons: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, flexWrap: 'wrap' },
+  downloadButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: Spacing.md, borderRadius: Radius.pill, alignSelf: 'flex-start' },
+  previewButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: Spacing.md, borderRadius: Radius.pill, alignSelf: 'flex-start', borderWidth: 1.5 },
+  previewButtonText: { fontSize: 12, fontWeight: '700' },
   buttonDisabled: { opacity: 0.5 },
-  watchButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, alignSelf: 'flex-start' },
-  downloadIcon: { marginRight: 4 },
-  downloadButtonText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  debugText: { fontSize: 10, marginBottom: 8, fontStyle: 'italic' },
-  emptyContent: { fontSize: 14, textAlign: 'center', marginTop: 16 },
-  button: { alignSelf: 'flex-start', marginTop: 16, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 },
-  buttonText: { color: '#fff', fontWeight: '600' },
+  watchButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: Spacing.md, borderRadius: Radius.pill, alignSelf: 'flex-start' },
+  actionIcon: { marginRight: 5 },
+  actionButtonText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  emptyWeek: { alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.lg },
+  emptyContent: { fontSize: 14, textAlign: 'center' },
+  emptyWrap: { alignItems: 'center', paddingTop: Spacing.huge, gap: Spacing.md },
+  emptyIconChip: { width: 64, height: 64, borderRadius: Radius.xxl, alignItems: 'center', justifyContent: 'center' },
 });
-
-

@@ -31,6 +31,7 @@ export default function DashboardScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [nickname, setNickname] = useState<string>('Student');
+  const [username, setUsername] = useState<string>('');
   const { scheduleData, loading: scheduleLoading, refetch: refetchSchedule } = useSchedule();
   const { isShiftedScheduleEnabled } = useShiftedSchedule();
   const { unreadCount, refreshNotifications } = useNotifications();
@@ -114,18 +115,21 @@ export default function DashboardScreen() {
   }, []);
 
   const loadNickname = useCallback(async () => {
+    // Load username for gated features (e.g. statistics access)
+    const { username: storedUsername } = await AuthManager.getCredentials();
+    if (storedUsername) setUsername(storedUsername);
+
     // First try to get stored nickname
     const storedNickname = await AuthManager.getNickname();
     if (storedNickname) {
       setNickname(storedNickname);
       return;
     }
-    
+
     // If no stored nickname, extract first name from username
-    const { username } = await AuthManager.getCredentials();
-    if (username) {
+    if (storedUsername) {
       // Extract first name from username (assuming format: user.name or user_name)
-      const firstName = username.split(/[._]/)[0];
+      const firstName = storedUsername.split(/[._]/)[0];
       if (firstName) {
         // Capitalize first letter
         const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
@@ -453,7 +457,23 @@ export default function DashboardScreen() {
       />
       
       {/* Top app bar */}
-      <AppBar title="Dashboard" large />
+      <AppBar
+        title="Dashboard"
+        large
+        rightActions={
+          username.toLowerCase() === 'mazen.abdelazeem' ? (
+            <TouchableOpacity
+              onPress={() => router.push('/statistics')}
+              style={[styles.notificationButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Statistics"
+            >
+              <Ionicons name="stats-chart" size={20} color={colors.mainFont} />
+            </TouchableOpacity>
+          ) : undefined
+        }
+      />
 
       {/* Main Content */}
       <ScrollView style={styles.content} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 36 }} showsVerticalScrollIndicator={false}>

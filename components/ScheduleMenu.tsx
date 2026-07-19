@@ -1,4 +1,5 @@
 import { Colors } from '@/constants/Colors';
+import { Shadow, withAlpha } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useRef } from 'react';
@@ -68,7 +69,7 @@ export function ScheduleMenu({ visible, onClose, onOptionPress }: ScheduleMenuPr
           onPress={onClose}
         />
         <Animated.View style={[styles.menuWrapper, { transform: [{ translateY: slideAnim }] }]}>
-          <View style={[styles.menu, { backgroundColor: colors.cardBackground }]}>
+          <View style={[styles.menu, { backgroundColor: colors.cardBackground }, Shadow.lg(colors)]}>
             {/* Menu Header */}
             {/* <View style={[styles.menuHeader, { borderBottomColor: colors.border }]}>
               <Text style={[styles.menuTitle, { color: colors.text }]}>
@@ -95,7 +96,7 @@ export function ScheduleMenu({ visible, onClose, onOptionPress }: ScheduleMenuPr
                 onPress={() => onOptionPress(option.id)}
                 activeOpacity={0.6}
               >
-                <View style={[styles.iconContainer, { backgroundColor: colors.tint + '15' }]}>
+                <View style={[styles.iconContainer, { backgroundColor: withAlpha(colors.tint, 0.14) }]}>
                   <Ionicons 
                     name={option.icon as any} 
                     size={22} 
@@ -156,14 +157,6 @@ const styles = StyleSheet.create({
   },
   menu: {
     borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 12,
     marginBottom: 8,
     overflow: 'hidden',
   },

@@ -1,3 +1,6 @@
+import { Colors } from '@/constants/Colors';
+import { Radius, Shadow, withAlpha } from '@/constants/Theme';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useRef } from 'react';
 import { Animated, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -23,6 +26,8 @@ const menuOptions: { id: 'course' | 'staff'; title: string; icon: string }[] = [
 ];
 
 export function EvaluateMenu({ visible, anchor, onClose, onSelect, color = '#F59E0B' }: EvaluateMenuProps) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(-8)).current;
 
@@ -57,20 +62,28 @@ export function EvaluateMenu({ visible, anchor, onClose, onSelect, color = '#F59
           },
         ]}
       >
-        <View style={[styles.menu, { backgroundColor: color }]}>
+        <View
+          style={[
+            styles.menu,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+            Shadow.lg(colors),
+          ]}
+        >
           {menuOptions.map((option, index) => (
             <TouchableOpacity
               key={option.id}
               style={[
                 styles.menuItem,
-                { borderBottomColor: 'rgba(255,255,255,0.25)' },
+                { borderBottomColor: colors.divider },
                 index === menuOptions.length - 1 && styles.lastMenuItem,
               ]}
               onPress={() => onSelect(option.id)}
               activeOpacity={0.7}
             >
-              <Ionicons name={option.icon as any} size={18} color="white" />
-              <Text style={[styles.menuText, { color: 'white' }]}>{option.title}</Text>
+              <View style={[styles.iconChip, { backgroundColor: withAlpha(color, 0.16) }]}>
+                <Ionicons name={option.icon as any} size={16} color={color} />
+              </View>
+              <Text style={[styles.menuText, { color: colors.textPrimary }]}>{option.title}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -91,24 +104,27 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   menu: {
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    borderRadius: Radius.md,
+    borderWidth: 1,
     overflow: 'hidden',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderBottomWidth: 1,
     gap: 10,
   },
   lastMenuItem: {
     borderBottomWidth: 0,
+  },
+  iconChip: {
+    width: 28,
+    height: 28,
+    borderRadius: Radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   menuText: {
     fontSize: 14,

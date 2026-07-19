@@ -56,6 +56,7 @@ function AppContent() {
           <Stack.Screen name="dates" options={{ headerShown: false }} />
           <Stack.Screen name="feedback-table" options={{ headerShown: false }} />
           <Stack.Screen name="users-table" options={{ headerShown: false }} />
+          <Stack.Screen name="statistics" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />
         </Stack>
         {/* App-wide navigation chrome, overlaid above every screen */}

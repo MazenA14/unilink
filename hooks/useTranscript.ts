@@ -121,9 +121,9 @@ export function useTranscript() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
 
-    // Clear transcript cache on refresh to ensure fresh data
-    await GradeCache.clearAllTranscriptCache();
-
+    // Don't clear the cache up front: a successful fetch already overwrites it
+    // (setCachedStudyYears/setCachedTranscriptData), and clearing first would
+    // wipe the fallback data needed if GUC turns out to be under maintenance.
     await loadStudyYears();
     setRefreshing(false);
   }, [loadStudyYears]);

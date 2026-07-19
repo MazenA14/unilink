@@ -1,12 +1,18 @@
 import { AppBar } from '@/components/navigation/AppBar';
 import { Colors } from '@/constants/Colors';
+import { Radius, Shadow } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { supabase } from '@/utils/supabase';
+import { exportRowsToCSV } from '@/utils/csvExporter';
+import { formatRelativeTime } from '@/utils/formatRelativeTime';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
+    FlatList,
     Modal,
+    RefreshControl,
     ScrollView,
     StyleSheet,
     Text,
@@ -28,39 +34,41 @@ interface Feedback {
 type SortField = keyof Feedback;
 type SortDirection = 'asc' | 'desc';
 
-interface FilterState {
-  username: string;
-  guc_id: string;
-  notes: string;
-  version: string;
-}
+const SORT_OPTIONS: { field: SortField; label: string }[] = [
+  { field: 'date', label: 'Date' },
+  { field: 'username', label: 'Username' },
+  { field: 'version', label: 'Version' },
+  { field: 'joined_season', label: 'Season' },
+];
 
 export default function FeedbackTableScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [feedbackList, setFeedbackList] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const [search, setSearch] = useState('');
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [filters, setFilters] = useState<FilterState>({
-    username: '',
-    guc_id: '',
-    notes: '',
-    version: '',
-  });
-  const [columnWidths, setColumnWidths] = useState<{[key: string]: number}>({});
-  const [showFilters, setShowFilters] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [selectedCell, setSelectedCell] = useState<{content: string, title: string} | null>(null);
+  const [versionFilter, setVersionFilter] = useState<string | null>(null);
+
+  const [sortModalVisible, setSortModalVisible] = useState(false);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [detailFeedback, setDetailFeedback] = useState<Feedback | null>(null);
 
   useEffect(() => {
     fetchFeedback();
   }, []);
 
-  const fetchFeedback = async () => {
+  const fetchFeedback = async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
       setError(null);
 
       const { data, error: fetchError } = await supabase
@@ -72,43 +80,34 @@ export default function FeedbackTableScreen() {
       }
 
       setFeedbackList(data || []);
-      // Calculate column widths after data is loaded
-      setTimeout(() => {
-        calculateColumnWidths();
-      }, 100);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch feedback');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  const versions = useMemo(
+    () => Array.from(new Set(feedbackList.map(f => f.version).filter(Boolean))).sort() as string[],
+    [feedbackList]
+  );
 
   const filteredAndSortedFeedback = useMemo(() => {
     let result = [...feedbackList];
 
-    // Apply filters
-    if (filters.username) {
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
       result = result.filter(item =>
-        item.username?.toLowerCase().includes(filters.username.toLowerCase())
+        item.username?.toLowerCase().includes(q) ||
+        item.guc_id?.toLowerCase().includes(q) ||
+        item.notes?.toLowerCase().includes(q)
       );
     }
-    if (filters.guc_id) {
-      result = result.filter(item =>
-        item.guc_id?.toLowerCase().includes(filters.guc_id.toLowerCase())
-      );
-    }
-    if (filters.version) {
-      result = result.filter(item =>
-        item.version?.toLowerCase().includes(filters.version.toLowerCase())
-      );
-    }
-    if (filters.notes) {
-      result = result.filter(item =>
-        item.notes?.toLowerCase().includes(filters.notes.toLowerCase())
-      );
+    if (versionFilter) {
+      result = result.filter(item => item.version === versionFilter);
     }
 
-    // Apply sorting
     result.sort((a, b) => {
       const aValue = a[sortField];
       const bValue = b[sortField];
@@ -127,99 +126,17 @@ export default function FeedbackTableScreen() {
     });
 
     return result;
-  }, [feedbackList, filters, sortField, sortDirection]);
+  }, [feedbackList, search, versionFilter, sortField, sortDirection]);
 
-  const handleSort = (field: SortField) => {
+  const activeFilterCount = versionFilter ? 1 : 0;
+
+  const handleSelectSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortField(field);
       setSortDirection('asc');
     }
-  };
-
-  const clearFilters = () => {
-    setFilters({
-      username: '',
-      guc_id: '',
-      notes: '',
-      version: '',
-    });
-  };
-
-  const renderSortIcon = (field: SortField) => {
-    if (sortField !== field) {
-      return <Ionicons name="swap-vertical" size={16} color={colors.secondaryFont} />;
-    }
-    return (
-      <Ionicons
-        name={sortDirection === 'asc' ? 'chevron-up' : 'chevron-down'}
-        size={16}
-        color={colors.tint}
-      />
-    );
-  };
-
-  const calculateColumnWidths = () => {
-    const widths: {[key: string]: number} = {};
-    
-    // Define column headers and their text
-    const headers = {
-      id: 'ID',
-      username: 'Username',
-      joined_season: 'Season',
-      guc_id: 'GUC ID',
-      date: 'Date',
-      version: 'Version',
-      notes: 'Notes'
-    };
-
-    // Calculate width for each column
-    Object.keys(headers).forEach(key => {
-      let maxWidth = 0;
-      
-      // Measure content width for each feedback item (prioritize cell content over header)
-      feedbackList.forEach(feedback => {
-        let content = '';
-        switch (key) {
-          case 'id':
-            content = feedback.id || '';
-            break;
-          case 'username':
-            content = feedback.username || 'N/A';
-            break;
-          case 'joined_season':
-            content = feedback.joined_season?.toString() || 'N/A';
-            break;
-          case 'guc_id':
-            content = feedback.guc_id || '';
-            break;
-          case 'date':
-            content = formatDate(feedback.date);
-            break;
-          case 'version':
-            content = feedback.version || 'N/A';
-            break;
-          case 'notes':
-            content = feedback.notes || 'N/A';
-            break;
-        }
-        
-        // More accurate width calculation - use 10px per character for better accuracy
-        const contentWidth = content.length * 10 + 32; // Increased padding for better fit
-        maxWidth = Math.max(maxWidth, contentWidth);
-      });
-      
-      // Only use header width if no data or header is wider than all content
-      const headerText = headers[key as keyof typeof headers];
-      const headerWidth = headerText.length * 10 + 32;
-      maxWidth = Math.max(maxWidth, headerWidth);
-      
-      // Set minimum width and apply calculated width with extra buffer
-      widths[key] = Math.max(maxWidth + 20, 100); // Extra 20px buffer + higher minimum
-    });
-    
-    setColumnWidths(widths);
   };
 
   const formatDate = (dateString: string | null) => {
@@ -228,27 +145,150 @@ export default function FeedbackTableScreen() {
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
-  const handleCellPress = (content: string, title: string) => {
-    setSelectedCell({ content, title });
+  const toggleExpanded = (id: string) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleDeleteFeedback = (item: Feedback) => {
+    Alert.alert(
+      'Delete Feedback',
+      `Remove this feedback entry from ${item.username || 'Anonymous'}? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setDeletingId(item.id);
+              const { error: deleteError } = await supabase
+                .from('Feedback')
+                .delete()
+                .eq('id', item.id);
+              if (deleteError) throw new Error(deleteError.message);
+              setFeedbackList(prev => prev.filter(f => f.id !== item.id));
+              setDetailFeedback(null);
+            } catch (err) {
+              Alert.alert('Delete failed', err instanceof Error ? err.message : 'Please try again.');
+            } finally {
+              setDeletingId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      setExporting(true);
+      await exportRowsToCSV(
+        'unilink_feedback',
+        [
+          { key: 'username', label: 'Username' },
+          { key: 'guc_id', label: 'GUC ID' },
+          { key: 'joined_season', label: 'Season' },
+          { key: 'version', label: 'Version' },
+          { key: 'date', label: 'Date' },
+          { key: 'notes', label: 'Notes' },
+        ],
+        filteredAndSortedFeedback
+      );
+    } catch (err) {
+      Alert.alert('Export failed', err instanceof Error ? err.message : 'Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const renderFeedbackCard = ({ item }: { item: Feedback }) => {
+    const isExpanded = expandedIds.has(item.id);
+    const notes = item.notes || 'No notes provided';
+    const isLong = notes.length > 140;
+
+    return (
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}>
+        <View style={styles.cardTopRow}>
+          <View style={styles.cardHeaderText}>
+            <Text style={[styles.cardTitle, { color: colors.mainFont }]} numberOfLines={1}>
+              {item.username || 'Anonymous'}
+            </Text>
+            <Text style={[styles.cardSubtitle, { color: colors.secondaryFont }]}>
+              {formatRelativeTime(item.date)}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => handleDeleteFeedback(item)}
+            style={styles.deleteButton}
+            disabled={deletingId === item.id}
+          >
+            {deletingId === item.id ? (
+              <ActivityIndicator size="small" color={colors.gradeFailing} />
+            ) : (
+              <Ionicons name="trash-outline" size={18} color={colors.gradeFailing} />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.chipRow}>
+          {item.version && (
+            <View style={[styles.chip, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <Text style={[styles.chipText, { color: colors.mainFont }]}>v{item.version}</Text>
+            </View>
+          )}
+          {item.joined_season !== null && (
+            <View style={[styles.chip, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <Text style={[styles.chipText, { color: colors.mainFont }]}>Season {item.joined_season}</Text>
+            </View>
+          )}
+        </View>
+
+        <Text
+          style={[styles.notesText, { color: colors.mainFont }]}
+          numberOfLines={isExpanded ? undefined : 3}
+        >
+          {notes}
+        </Text>
+
+        <View style={styles.cardFooterRow}>
+          {isLong && (
+            <TouchableOpacity onPress={() => toggleExpanded(item.id)} style={styles.footerLinkButton}>
+              <Text style={[styles.footerLinkText, { color: colors.tint }]}>
+                {isExpanded ? 'Show less' : 'Read more'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          <View style={{ flex: 1 }} />
+          <TouchableOpacity onPress={() => setDetailFeedback(item)} style={styles.footerLinkButton}>
+            <Text style={[styles.footerLinkText, { color: colors.secondaryFont }]}>Details</Text>
+            <Ionicons name="chevron-forward" size={13} color={colors.secondaryFont} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
   };
 
   const renderTopBar = () => (
     <View style={[styles.topBar, { backgroundColor: colors.background, borderColor: colors.border }]}>
       <AppBar
-        title="Feedback Table"
+        title="Feedback"
+        variant="back"
+        showNotifications={false}
         rightActions={
           <>
-            <TouchableOpacity
-              onPress={() => setShowFilters(!showFilters)}
-              style={[styles.iconButton, { backgroundColor: showFilters ? colors.tint : 'transparent' }]}
-            >
-              <Ionicons name="filter" size={20} color={showFilters ? 'white' : colors.mainFont} />
+            <TouchableOpacity onPress={handleExportCSV} style={styles.iconButton} disabled={exporting}>
+              {exporting ? (
+                <ActivityIndicator size="small" color={colors.tint} />
+              ) : (
+                <Ionicons name="share-outline" size={20} color={colors.mainFont} />
+              )}
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={fetchFeedback}
-              style={styles.iconButton}
-              disabled={loading}
-            >
+            <TouchableOpacity onPress={() => fetchFeedback()} style={styles.iconButton} disabled={loading}>
               {loading ? (
                 <ActivityIndicator size="small" color={colors.tint} />
               ) : (
@@ -259,202 +299,55 @@ export default function FeedbackTableScreen() {
         }
       />
 
-      <View style={styles.statsRow}>
-        <Text style={[styles.statsText, { color: colors.secondaryFont }]}>
-          Showing {filteredAndSortedFeedback.length} of {feedbackList.length} feedback entries
-        </Text>
+      <View style={styles.searchRow}>
+        <View style={[styles.searchBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Ionicons name="search" size={16} color={colors.secondaryFont} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.mainFont }]}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search username, GUC ID, notes..."
+            placeholderTextColor={colors.secondaryFont}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')}>
+              <Ionicons name="close-circle" size={16} color={colors.secondaryFont} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
-      {showFilters && (
-        <View style={[styles.filtersContainer, { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#f9f9f9', borderColor: colors.border }]}>
-          <Text style={[styles.filtersTitle, { color: colors.mainFont }]}>Filters</Text>
-          
-          <View style={styles.filterRow}>
-            <Text style={[styles.filterLabel, { color: colors.secondaryFont }]}>Username:</Text>
-            <TextInput
-              style={[styles.filterInput, { color: colors.mainFont, backgroundColor: colors.background, borderColor: colors.border }]}
-              value={filters.username}
-              onChangeText={(text) => setFilters(prev => ({ ...prev, username: text }))}
-              placeholder="Search username..."
-              placeholderTextColor={colors.secondaryFont}
-            />
-          </View>
+      <View style={styles.toolbarRow}>
+        <TouchableOpacity
+          style={[styles.toolbarButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          onPress={() => setSortModalVisible(true)}
+        >
+          <Ionicons name="swap-vertical" size={15} color={colors.mainFont} />
+          <Text style={[styles.toolbarButtonText, { color: colors.mainFont }]}>
+            {SORT_OPTIONS.find(o => o.field === sortField)?.label}
+          </Text>
+          <Ionicons name={sortDirection === 'asc' ? 'arrow-up' : 'arrow-down'} size={13} color={colors.secondaryFont} />
+        </TouchableOpacity>
 
-          <View style={styles.filterRow}>
-            <Text style={[styles.filterLabel, { color: colors.secondaryFont }]}>GUC ID:</Text>
-            <TextInput
-              style={[styles.filterInput, { color: colors.mainFont, backgroundColor: colors.background, borderColor: colors.border }]}
-              value={filters.guc_id}
-              onChangeText={(text) => setFilters(prev => ({ ...prev, guc_id: text }))}
-              placeholder="Search GUC ID..."
-              placeholderTextColor={colors.secondaryFont}
-            />
-          </View>
+        <TouchableOpacity
+          style={[
+            styles.toolbarButton,
+            { backgroundColor: activeFilterCount > 0 ? colors.tint : colors.surface, borderColor: colors.border },
+          ]}
+          onPress={() => setFilterModalVisible(true)}
+        >
+          <Ionicons name="options-outline" size={15} color={activeFilterCount > 0 ? 'white' : colors.mainFont} />
+          <Text style={[styles.toolbarButtonText, { color: activeFilterCount > 0 ? 'white' : colors.mainFont }]}>
+            Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-          <View style={styles.filterRow}>
-            <Text style={[styles.filterLabel, { color: colors.secondaryFont }]}>Version:</Text>
-            <TextInput
-              style={[styles.filterInput, { color: colors.mainFont, backgroundColor: colors.background, borderColor: colors.border }]}
-              value={filters.version}
-              onChangeText={(text) => setFilters(prev => ({ ...prev, version: text }))}
-              placeholder="Search version..."
-              placeholderTextColor={colors.secondaryFont}
-            />
-          </View>
-
-          <View style={styles.filterRow}>
-            <Text style={[styles.filterLabel, { color: colors.secondaryFont }]}>Notes:</Text>
-            <TextInput
-              style={[styles.filterInput, { color: colors.mainFont, backgroundColor: colors.background, borderColor: colors.border }]}
-              value={filters.notes}
-              onChangeText={(text) => setFilters(prev => ({ ...prev, notes: text }))}
-              placeholder="Search notes..."
-              placeholderTextColor={colors.secondaryFont}
-            />
-          </View>
-
-          <TouchableOpacity
-            onPress={clearFilters}
-            style={[styles.clearButton, { backgroundColor: colors.tint }]}
-          >
-            <Text style={styles.clearButtonText}>Clear Filters</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <Text style={[styles.statsText, { color: colors.secondaryFont }]}>
+        {filteredAndSortedFeedback.length} of {feedbackList.length} entries
+      </Text>
     </View>
   );
-
-  const renderTableHeader = () => (
-    <View style={[styles.tableHeader, { backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#f0f0f0', borderColor: colors.border }]}>
-      <TouchableOpacity
-        style={[styles.headerCell, { width: columnWidths.id || 100 }]}
-        onPress={() => handleSort('id')}
-      >
-        <Text style={[styles.headerText, { color: colors.mainFont }]}>ID</Text>
-        {renderSortIcon('id')}
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.headerCell, { width: columnWidths.username || 120 }]}
-        onPress={() => handleSort('username')}
-      >
-        <Text style={[styles.headerText, { color: colors.mainFont }]}>Username</Text>
-        {renderSortIcon('username')}
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.headerCell, { width: columnWidths.guc_id || 100 }]}
-        onPress={() => handleSort('guc_id')}
-      >
-        <Text style={[styles.headerText, { color: colors.mainFont }]}>GUC ID</Text>
-        {renderSortIcon('guc_id')}
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.headerCell, { width: columnWidths.joined_season || 80 }]}
-        onPress={() => handleSort('joined_season')}
-      >
-        <Text style={[styles.headerText, { color: colors.mainFont }]}>Season</Text>
-        {renderSortIcon('joined_season')}
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.headerCell, { width: columnWidths.version || 120 }]}
-        onPress={() => handleSort('version')}
-      >
-        <Text style={[styles.headerText, { color: colors.mainFont }]}>Version</Text>
-        {renderSortIcon('version')}
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.headerCell, { width: columnWidths.notes || 200 }]}
-        onPress={() => handleSort('notes')}
-      >
-        <Text style={[styles.headerText, { color: colors.mainFont }]}>Notes</Text>
-        {renderSortIcon('notes')}
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.headerCell, { width: columnWidths.date || 120 }]}
-        onPress={() => handleSort('date')}
-      >
-        <Text style={[styles.headerText, { color: colors.mainFont }]}>Date</Text>
-        {renderSortIcon('date')}
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderFeedbackRow = ({ item, index }: { item: Feedback; index: number }) => {
-    const isExpanded = expandedId === item.id;
-    
-    return (
-      <TouchableOpacity
-        style={[
-          styles.tableRow,
-          { backgroundColor: index % 2 === 0 ? colors.background : (colorScheme === 'dark' ? '#2a2a2a' : '#f9f9f9'), borderColor: colors.border }
-        ]}
-        onPress={() => setExpandedId(isExpanded ? null : item.id)}
-      >
-        <TouchableOpacity 
-          style={[styles.cell, { width: columnWidths.id || 100 }]}
-          onPress={() => handleCellPress(item.id, 'ID')}
-        >
-          <Text style={[styles.cellText, styles.idText, { color: colors.secondaryFont }]} numberOfLines={1}>
-            {item.id.substring(0, 8)}...
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.cell, { width: columnWidths.username || 120 }]}
-          onPress={() => handleCellPress(item.username || 'Anonymous', 'Username')}
-        >
-          <Text style={[styles.cellText, { color: colors.mainFont }]} numberOfLines={2}>
-            {item.username || 'Anonymous'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.cell, { width: columnWidths.guc_id || 100 }]}
-          onPress={() => handleCellPress(item.guc_id || 'N/A', 'GUC ID')}
-        >
-          <Text style={[styles.cellText, { color: colors.mainFont }]} numberOfLines={1}>
-            {item.guc_id || 'N/A'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.cell, { width: columnWidths.joined_season || 80 }]}
-          onPress={() => handleCellPress(item.joined_season?.toString() || 'N/A', 'Season')}
-        >
-          <Text style={[styles.cellText, { color: colors.mainFont }]}>
-            {item.joined_season || 'N/A'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.cell, { width: columnWidths.version || 120 }]}
-          onPress={() => handleCellPress(item.version || 'N/A', 'Version')}
-        >
-          <Text style={[styles.cellText, { color: colors.mainFont }]}>
-            {item.version || 'N/A'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.cell, { width: columnWidths.notes || 200 }]}
-          onPress={() => handleCellPress(item.notes || 'No notes', 'Notes')}
-        >
-          <Text style={[styles.cellText, { color: colors.mainFont }]} numberOfLines={isExpanded ? undefined : 3}>
-            {item.notes || 'No notes'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.cell, { width: columnWidths.date || 120 }]}
-          onPress={() => handleCellPress(formatDate(item.date), 'Date')}
-        >
-          <Text style={[styles.cellText, styles.dateText, { color: colors.secondaryFont }]} numberOfLines={2}>
-            {formatDate(item.date)}
-          </Text>
-        </TouchableOpacity>
-        <View style={styles.expandIndicator}>
-          <Ionicons
-            name={isExpanded ? 'chevron-up' : 'chevron-down'}
-            size={14}
-            color={colors.secondaryFont}
-          />
-        </View>
-      </TouchableOpacity>
-    );
-  };
 
   if (loading && feedbackList.length === 0) {
     return (
@@ -475,10 +368,7 @@ export default function FeedbackTableScreen() {
         <View style={styles.centerContainer}>
           <Ionicons name="alert-circle" size={48} color={colors.gradeFailing} />
           <Text style={[styles.errorText, { color: colors.gradeFailing }]}>{error}</Text>
-          <TouchableOpacity
-            onPress={fetchFeedback}
-            style={[styles.retryButton, { backgroundColor: colors.tint }]}
-          >
+          <TouchableOpacity onPress={() => fetchFeedback()} style={[styles.retryButton, { backgroundColor: colors.tint }]}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -489,60 +379,121 @@ export default function FeedbackTableScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {renderTopBar()}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={true}
-        contentContainerStyle={styles.scrollContent}
-      >
-        <View style={styles.tableWrapper}>
-          {renderTableHeader()}
-          <ScrollView 
-            style={styles.tableScrollView}
-            showsVerticalScrollIndicator={true}
-          >
-            {filteredAndSortedFeedback.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="chatbubble-outline" size={48} color={colors.secondaryFont} />
-                <Text style={[styles.emptyText, { color: colors.secondaryFont }]}>
-                  No feedback found
-                </Text>
-              </View>
-            ) : (
-              filteredAndSortedFeedback.map((item, index) => (
-                <View key={item.id}>
-                  {renderFeedbackRow({ item, index })}
-                </View>
-              ))
-            )}
-          </ScrollView>
-        </View>
-      </ScrollView>
 
-      {/* Cell Content Modal */}
-      <Modal
-        visible={selectedCell !== null}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setSelectedCell(null)}
-      >
+      <FlatList
+        data={filteredAndSortedFeedback}
+        keyExtractor={item => item.id}
+        renderItem={renderFeedbackCard}
+        contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => fetchFeedback(true)} tintColor={colors.tint} />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Ionicons name="chatbubble-outline" size={48} color={colors.secondaryFont} />
+            <Text style={[styles.emptyText, { color: colors.secondaryFont }]}>No feedback found</Text>
+          </View>
+        }
+      />
+
+      {/* Sort Modal */}
+      <Modal visible={sortModalVisible} transparent animationType="fade" onRequestClose={() => setSortModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSortModalVisible(false)}>
+          <View style={[styles.sheetContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Text style={[styles.sheetTitle, { color: colors.mainFont }]}>Sort By</Text>
+            {SORT_OPTIONS.map(option => (
+              <TouchableOpacity
+                key={option.field}
+                style={styles.sheetRow}
+                onPress={() => handleSelectSort(option.field)}
+              >
+                <Text style={[styles.sheetRowText, { color: colors.mainFont }]}>{option.label}</Text>
+                {sortField === option.field && (
+                  <Ionicons name={sortDirection === 'asc' ? 'arrow-up' : 'arrow-down'} size={16} color={colors.tint} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Filter Modal */}
+      <Modal visible={filterModalVisible} transparent animationType="fade" onRequestClose={() => setFilterModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setFilterModalVisible(false)}>
+          <View style={[styles.sheetContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <View style={styles.sheetHeaderRow}>
+              <Text style={[styles.sheetTitle, { color: colors.mainFont }]}>Filters</Text>
+              <TouchableOpacity onPress={() => setVersionFilter(null)}>
+                <Text style={[styles.clearLink, { color: colors.tint }]}>Clear</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.filterGroupLabel, { color: colors.secondaryFont }]}>Version</Text>
+            <View style={styles.chipsWrap}>
+              {versions.map(version => (
+                <TouchableOpacity
+                  key={version}
+                  onPress={() => setVersionFilter(prev => (prev === version ? null : version))}
+                  style={[
+                    styles.filterChip,
+                    { borderColor: colors.border, backgroundColor: versionFilter === version ? colors.tint : 'transparent' },
+                  ]}
+                >
+                  <Text style={{ color: versionFilter === version ? colors.onPrimary : colors.mainFont, fontSize: 12, fontWeight: '600' }}>
+                    v{version}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={[styles.doneButton, { backgroundColor: colors.tint }]}
+              onPress={() => setFilterModalVisible(false)}
+            >
+              <Text style={[styles.doneButtonText, { color: colors.onPrimary }]}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Detail Modal */}
+      <Modal visible={detailFeedback !== null} transparent animationType="fade" onRequestClose={() => setDetailFeedback(null)}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
+          <View style={[styles.detailContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.mainFont }]}>
-                {selectedCell?.title}
+                {detailFeedback?.username || 'Anonymous'}
               </Text>
-              <TouchableOpacity
-                onPress={() => setSelectedCell(null)}
-                style={styles.closeButton}
-              >
+              <TouchableOpacity onPress={() => setDetailFeedback(null)} style={styles.closeButton}>
                 <Ionicons name="close" size={24} color={colors.mainFont} />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.modalBody}>
-              <Text style={[styles.modalText, { color: colors.mainFont }]}>
-                {selectedCell?.content}
+              {detailFeedback && [
+                ['GUC ID', detailFeedback.guc_id || 'N/A'],
+                ['Season', detailFeedback.joined_season?.toString() || 'N/A'],
+                ['Version', detailFeedback.version ? `v${detailFeedback.version}` : 'N/A'],
+                ['Date', formatDate(detailFeedback.date)],
+              ].map(([label, value]) => (
+                <View key={label} style={[styles.detailRow, { borderBottomColor: colors.border }]}>
+                  <Text style={[styles.detailLabel, { color: colors.secondaryFont }]}>{label}</Text>
+                  <Text style={[styles.detailValue, { color: colors.mainFont }]}>{value}</Text>
+                </View>
+              ))}
+              <Text style={[styles.notesFullLabel, { color: colors.secondaryFont }]}>Notes</Text>
+              <Text style={[styles.notesFullText, { color: colors.mainFont }]}>
+                {detailFeedback?.notes || 'No notes provided'}
               </Text>
             </ScrollView>
+            {detailFeedback && (
+              <TouchableOpacity
+                style={[styles.deleteFullButton, { backgroundColor: colors.gradeFailing }]}
+                onPress={() => handleDeleteFeedback(detailFeedback)}
+              >
+                <Ionicons name="trash-outline" size={16} color="white" />
+                <Text style={styles.deleteFullButtonText}>Delete Feedback</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </Modal>
@@ -565,134 +516,111 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  statsRow: {
-    marginBottom: 12,
+  searchRow: {
     paddingHorizontal: 16,
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: Radius.lg,
+    paddingHorizontal: 12,
+    height: 42,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+  },
+  toolbarRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  toolbarButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: Radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  toolbarButtonText: {
+    fontSize: 12.5,
+    fontWeight: '600',
   },
   statsText: {
-    fontSize: 14,
-  },
-  filtersContainer: {
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 12,
-    marginHorizontal: 16,
-  },
-  filtersTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  filterRow: {
-    marginBottom: 12,
-  },
-  filterLabel: {
-    fontSize: 14,
-    marginBottom: 4,
-    fontWeight: '500',
-  },
-  filterInput: {
-    height: 40,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 14,
-  },
-  clearButton: {
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  clearButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  tableWrapper: {
-    flex: 1,
-    minWidth: '100%',
-  },
-  tableScrollView: {
-    flex: 1,
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    borderBottomWidth: 2,
-    paddingVertical: 12,
-  },
-  headerCell: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-    gap: 4,
-  },
-  headerText: {
     fontSize: 12,
+    paddingHorizontal: 16,
+  },
+  listContent: {
+    padding: 16,
+    gap: 12,
+  },
+  card: {
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 12,
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  cardHeaderText: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 15,
     fontWeight: '700',
-    textTransform: 'uppercase',
-    textAlign: 'center',
   },
-  tableRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    minHeight: 70,
-  },
-  cell: {
-    padding: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  idCell: {
-    flex: 1,
-    minWidth: 80,
-  },
-  usernameCell: {
-    flex: 1.5,
-    minWidth: 100,
-  },
-  gucIdCell: {
-    flex: 1,
-    minWidth: 80,
-  },
-  seasonCell: {
-    flex: 1,
-    minWidth: 80,
-  },
-  versionCell: {
-    flex: 3,
-    minWidth: 200,
-  },
-  notesCell: {
-    flex: 2,
-    minWidth: 120,
-  },
-  dateCell: {
-    flex: 1,
-    minWidth: 80,
-  },
-  cellText: {
+  cardSubtitle: {
     fontSize: 12,
-    textAlign: 'center',
+    marginTop: 1,
   },
-  idText: {
-    fontSize: 10,
+  deleteButton: {
+    padding: 6,
   },
-  dateText: {
-    fontSize: 10,
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10,
   },
-  expandIndicator: {
-    position: 'absolute',
-    right: 4,
-    top: 4,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 10,
-    padding: 2,
+  chip: {
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  notesText: {
+    fontSize: 13.5,
+    lineHeight: 19,
+    marginTop: 10,
+  },
+  cardFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  footerLinkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: 4,
+  },
+  footerLinkText: {
+    fontSize: 12.5,
+    fontWeight: '600',
   },
   centerContainer: {
     flex: 1,
@@ -721,10 +649,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   emptyContainer: {
-    padding: 40,
+    padding: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 220,
   },
   emptyText: {
     marginTop: 12,
@@ -734,14 +661,77 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    justifyContent: 'flex-end',
   },
-  modalContent: {
-    width: '90%',
+  sheetContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    padding: 20,
+    paddingBottom: 32,
+  },
+  sheetHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  sheetTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  clearLink: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  sheetRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 13,
+  },
+  sheetRowText: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  filterGroupLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  chipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+  },
+  doneButton: {
+    marginTop: 20,
+    paddingVertical: 13,
+    borderRadius: Radius.lg,
+    alignItems: 'center',
+  },
+  doneButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  detailContent: {
+    width: '100%',
+    maxWidth: 420,
+    alignSelf: 'center',
+    marginHorizontal: 20,
     maxHeight: '80%',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
   },
@@ -751,6 +741,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
+    borderBottomColor: 'transparent',
   },
   modalTitle: {
     fontSize: 18,
@@ -761,11 +752,50 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   modalBody: {
-    padding: 16,
+    paddingHorizontal: 16,
   },
-  modalText: {
-    fontSize: 16,
-    lineHeight: 24,
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    gap: 12,
+  },
+  detailLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  detailValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    flexShrink: 1,
+    textAlign: 'right',
+  },
+  notesFullLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 14,
+    marginBottom: 6,
+  },
+  notesFullText: {
+    fontSize: 14,
+    lineHeight: 21,
+    marginBottom: 16,
+  },
+  deleteFullButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    margin: 16,
+    paddingVertical: 12,
+    borderRadius: Radius.lg,
+  },
+  deleteFullButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
-

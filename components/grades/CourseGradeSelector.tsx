@@ -1,10 +1,10 @@
 import { useCustomAlert } from '@/components/CustomAlert';
+import { DropdownItem, DropdownMenu, DropdownTrigger } from '@/components/ui/Dropdown';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { GUCAPIProxy, GradeData } from '@/utils/gucApiProxy';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Dimensions, StyleSheet, Text, View } from 'react-native';
 
 interface Course {
   value: string;
@@ -33,6 +33,9 @@ export default function CourseGradeSelector({
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [loadingGrades, setLoadingGrades] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [buttonLayout, setButtonLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const buttonRef = useRef<View>(null);
+  const screenWidth = Dimensions.get('window').width;
 
   // Load available courses on component mount
   useEffect(() => {
@@ -55,6 +58,15 @@ export default function CourseGradeSelector({
     }
   };
 
+  const handleOpenDropdown = () => {
+    if (buttonRef.current) {
+      buttonRef.current.measureInWindow((x: number, y: number, width: number, height: number) => {
+        setButtonLayout({ x, y, width, height });
+        setShowDropdown(true);
+      });
+    }
+  };
+
   const handleCourseSelect = async (course: Course) => {
     try {
       setSelectedCourse(course);
@@ -65,7 +77,11 @@ export default function CourseGradeSelector({
       const courseGrades = await GUCAPIProxy.getCourseGrades(course.value);
       setGrades(courseGrades);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load grades for the selected course. Please try again.');
+      showAlert({
+        title: 'Error',
+        message: 'Failed to load grades for the selected course. Please try again.',
+        type: 'error',
+      });
     } finally {
       setLoadingGrades(false);
     }
@@ -90,57 +106,38 @@ export default function CourseGradeSelector({
             </Text>
           </View>
         ) : (
-           <TouchableOpacity
-             style={[
-               styles.dropdownButton,
-               {
-                 backgroundColor: colors.cardBackground,
-                 borderColor: colors.border,
-               }
-             ]}
-             onPress={() => setShowDropdown(!showDropdown)}
-             activeOpacity={0.7}
-           >
-             <Text style={[
-               styles.dropdownButtonText,
-               { color: selectedCourse ? colors.mainFont : colors.secondaryFont }
-             ]}>
-               {selectedCourse ? selectedCourse.text : 'Choose a Course'}
-             </Text>
-             <Ionicons
-               name={showDropdown ? 'chevron-up' : 'chevron-down'}
-               size={20}
-               color={colors.secondaryFont}
-             />
-           </TouchableOpacity>
+          <View ref={buttonRef} collapsable={false}>
+            <DropdownTrigger
+              colors={colors}
+              label={selectedCourse ? selectedCourse.text : 'Choose a Course'}
+              placeholder={!selectedCourse}
+              open={showDropdown}
+              onPress={handleOpenDropdown}
+            />
+          </View>
         )}
 
         {/* Dropdown List */}
-        {showDropdown && courses.length > 0 && (
-          <View style={[
-            styles.dropdownList,
-            {
-              backgroundColor: colors.cardBackground,
-              borderColor: colors.border,
-            }
-          ]}>
+        <DropdownMenu
+          colors={colors}
+          visible={showDropdown && courses.length > 0}
+          onClose={() => setShowDropdown(false)}
+          anchor={buttonLayout}
+          maxHeight={320}
+        >
+          <View style={{ maxWidth: screenWidth - 32 }}>
             {courses.map((course, index) => (
-              <TouchableOpacity
+              <DropdownItem
                 key={course.value}
-                style={[
-                  styles.dropdownItem,
-                  index < courses.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: 1 }
-                ]}
+                colors={colors}
+                label={course.text}
+                selected={selectedCourse?.value === course.value}
+                isLast={index === courses.length - 1}
                 onPress={() => handleCourseSelect(course)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.dropdownItemText, { color: colors.mainFont }]}>
-                  {course.text}
-                </Text>
-              </TouchableOpacity>
+              />
             ))}
           </View>
-        )}
+        </DropdownMenu>
       </View>
 
       {/* Grades Display Section */}
@@ -268,38 +265,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 12,
-  },
-  dropdownButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  dropdownButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    flex: 1,
-  },
-  dropdownList: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 4,
-    zIndex: 1000,
-  },
-  dropdownItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  dropdownItemText: {
-    fontSize: 14,
-    fontWeight: '500',
   },
   gradesSection: {
     marginTop: 8,

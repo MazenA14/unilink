@@ -94,20 +94,27 @@ export function parseCmsCourseView(html: string): CMSCourseView {
       const startIndex = descStartMatch.index! + descStartMatch[0].length;
       let depth = 1;
       let endIndex = startIndex;
-      
-      // Find the matching closing div by counting nested divs
-      for (let i = startIndex; i < html.length && depth > 0; i++) {
-        if (html.substring(i, i + 4) === '<div') {
+
+      // Find the matching closing div by counting nested divs, jumping between
+      // tag boundaries instead of scanning character-by-character.
+      let cursor = startIndex;
+      while (depth > 0) {
+        const nextOpen = html.indexOf('<div', cursor);
+        const nextClose = html.indexOf('</div>', cursor);
+        if (nextClose === -1) break;
+
+        if (nextOpen !== -1 && nextOpen < nextClose) {
           depth++;
-        } else if (html.substring(i, i + 6) === '</div>') {
+          cursor = nextOpen + 4;
+        } else {
           depth--;
+          cursor = nextClose + 6;
           if (depth === 0) {
-            endIndex = i;
-            break;
+            endIndex = nextClose;
           }
         }
       }
-      
+
       if (depth === 0) {
         const content = html.substring(startIndex, endIndex);
         announcementsHtml = cleanAnnouncementHtml(content);
@@ -121,19 +128,11 @@ export function parseCmsCourseView(html: string): CMSCourseView {
     // Match the complete week block structure - use a more robust approach
     // Split by the week block start and then find the end of each block
     const weekBlockStarts = html.split(/<div[^>]*class="card mb-5 weeksdata"/gi);
+    // split() already isolates each week's content (the delimiter can't recur
+    // within a block), so no need to re-scan each block for the next boundary.
     const weekBlocks: string[] = [];
-    
     for (let i = 1; i < weekBlockStarts.length; i++) {
-      const blockStart = weekBlockStarts[i];
-      // Find the end of this week block by looking for the next week block or end of content
-      const nextWeekMatch = blockStart.match(/<div[^>]*class="card mb-5 weeksdata"/i);
-      let blockEnd = blockStart.length;
-      if (nextWeekMatch) {
-        blockEnd = nextWeekMatch.index!;
-      }
-      
-      const fullBlock = '<div class="card mb-5 weeksdata' + blockStart.substring(0, blockEnd);
-      weekBlocks.push(fullBlock);
+      weekBlocks.push('<div class="card mb-5 weeksdata' + weekBlockStarts[i]);
     }
     
     for (const block of weekBlocks) {

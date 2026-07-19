@@ -3,7 +3,6 @@ import { AppBar } from '@/components/navigation/AppBar';
 import FeedbackModal from '@/components/FeedbackModal';
  
 import ResetPasswordModal from '@/components/ResetPasswordModal';
-import StatisticsSection from '@/components/StatisticsSection';
 import UpdateModal from '@/components/UpdateModal';
 import WhatsNewModal from '@/components/WhatsNewModal';
 import { Colors } from '@/constants/Colors';
@@ -21,9 +20,18 @@ import { userTrackingService } from '@/utils/services/userTrackingService';
 import { supabase } from '@/utils/supabase';
 import { resetWhatsNewStatus } from '@/utils/whatsNewStorage';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { getAppIcon, setAppIcon } from 'expo-dynamic-app-icon';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+const APP_ICON_OPTIONS: { value: string; label: string; source: number }[] = [
+  { value: 'DEFAULT', label: 'Default', source: require('@/assets/images/app-icons/icon-original.png') },
+  { value: 'blue', label: 'Blue', source: require('@/assets/images/app-icons/icon-blue.png') },
+  { value: 'gold', label: 'Gold', source: require('@/assets/images/app-icons/icon-gold.png') },
+  { value: 'black', label: 'Black', source: require('@/assets/images/app-icons/icon-black.png') },
+  { value: 'white', label: 'White', source: require('@/assets/images/app-icons/icon-white.png') },
+];
 
 export default function SettingsScreen() {
   const colorScheme = useColorScheme();
@@ -36,7 +44,6 @@ export default function SettingsScreen() {
   const [editVisible, setEditVisible] = useState(false);
   const [editValue, setEditValue] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
-  const [username, setUsername] = useState<string>('');
   const [payments, setPayments] = useState<PaymentItem[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
   const [defaultScreenDropdownVisible, setDefaultScreenDropdownVisible] = useState(false);
@@ -49,6 +56,7 @@ export default function SettingsScreen() {
   const [slotsDropdownVisible, setSlotsDropdownVisible] = useState(false);
   const slotsPillRef = useRef<View>(null);
   const [slotsPillLayout, setSlotsPillLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [currentAppIcon, setCurrentAppIcon] = useState<string>('DEFAULT');
   
   // Easter egg state
   const [easterEggTapCount, setEasterEggTapCount] = useState(0);
@@ -147,7 +155,6 @@ export default function SettingsScreen() {
         AuthManager.getUserId(),
       ]);
       const username = creds.username || '';
-      setUsername(username);
       const formattedFromUsername = username
         .split('@')[0]
         .split('.')
@@ -186,6 +193,38 @@ export default function SettingsScreen() {
       if (stored) setDashboardSlots(stored);
     })();
   }, []);
+
+  useEffect(() => {
+    try {
+      setCurrentAppIcon(getAppIcon());
+    } catch {
+      // Not supported (e.g. running in Expo Go)
+    }
+  }, []);
+
+  const changeAppIcon = (iconName: string) => {
+    if (iconName === currentAppIcon) return;
+    try {
+      const result = setAppIcon(iconName);
+      if (result === false) {
+        showAlert({
+          title: 'Unable to Change Icon',
+          message: 'App icons can only be changed in a build with dev-client support, not in Expo Go.',
+          type: 'error',
+          buttons: [{ text: 'OK' }],
+        });
+        return;
+      }
+      setCurrentAppIcon(iconName);
+    } catch {
+      showAlert({
+        title: 'Unable to Change Icon',
+        message: 'App icons can only be changed in a build with dev-client support, not in Expo Go.',
+        type: 'error',
+        buttons: [{ text: 'OK' }],
+      });
+    }
+  };
 
   const openEditNickname = () => {
     setEditValue(displayName);
@@ -311,6 +350,40 @@ export default function SettingsScreen() {
               thumbColor="#ffffff"
             />
           </View>
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <Text style={[styles.primaryText, { color: colors.mainFont, marginBottom: 12 }]}>App Icon</Text>
+          <View style={styles.iconOptionsRow}>
+            {APP_ICON_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={styles.iconOption}
+                onPress={() => changeAppIcon(option.value)}
+              >
+                <View
+                  style={[
+                    styles.iconSwatch,
+                    {
+                      borderColor: currentAppIcon === option.value ? colors.tabColor : colors.border,
+                      borderWidth: currentAppIcon === option.value ? 2.5 : 1,
+                    },
+                  ]}
+                >
+                  <Image source={option.source} style={styles.iconSwatchImage} />
+                </View>
+                <Text
+                  style={[
+                    styles.iconOptionLabel,
+                    {
+                      color: currentAppIcon === option.value ? colors.tabColor : colors.secondaryFont,
+                      fontWeight: currentAppIcon === option.value ? '700' : '500',
+                    },
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>PREFERENCES</Text>
@@ -332,7 +405,7 @@ export default function SettingsScreen() {
               }}
             >
               <Text style={[styles.pillText, { color: colors.background }]}>{getScreenLabel(defaultScreen)}</Text>
-              <Text style={[styles.pillArrow, { color: colors.background }]}>▼</Text>
+              <Ionicons name="chevron-down" size={14} color={colors.background} />
             </TouchableOpacity>
           </View>
           
@@ -354,7 +427,7 @@ export default function SettingsScreen() {
               }}
             >
               <Text style={[styles.pillText, { color: colors.background }]}>{`${dashboardSlots} Slots`}</Text>
-              <Text style={[styles.pillArrow, { color: colors.background }]}>▼</Text>
+              <Ionicons name="chevron-down" size={14} color={colors.background} />
             </TouchableOpacity>
           </View>
 
@@ -562,9 +635,6 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Statistics Section - Only for mazen.abdelazeem */}
-        {username.toLowerCase() === 'mazen.abdelazeem' && <StatisticsSection />}
-
         {/* App Version */}
         <View style={styles.versionContainer}>
           <TouchableOpacity onPress={handleEasterEggTap}>
@@ -636,7 +706,7 @@ export default function SettingsScreen() {
                   width: pillButtonLayout.width,
                   backgroundColor: colors.cardBackground,
                   borderColor: colors.border,
-                  shadowColor: colorScheme === 'dark' ? '#000000' : '#000000',
+                  ...Shadow.lg(colors),
                 }
               ]}
             >
@@ -697,7 +767,7 @@ export default function SettingsScreen() {
                   width: slotsPillLayout.width,
                   backgroundColor: colors.cardBackground,
                   borderColor: colors.border,
-                  shadowColor: colorScheme === 'dark' ? '#000000' : '#000000',
+                  ...Shadow.lg(colors),
                 }
               ]}
             >
@@ -946,24 +1016,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginRight: 6,
   },
-  pillArrow: {
-    fontSize: 10,
-  },
   dropdownOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.1)',
   },
   dropdownContainer: {
     position: 'absolute',
-    borderRadius: 12,
+    borderRadius: Radius.md,
     borderWidth: 1,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
+    overflow: 'hidden',
     zIndex: 1000,
   },
   dropdownItem: {
@@ -982,6 +1043,30 @@ const styles = StyleSheet.create({
   checkmark: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  iconOptionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 14,
+  },
+  iconOption: {
+    alignItems: 'center',
+    width: 64,
+  },
+  iconSwatch: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  iconSwatchImage: {
+    width: '100%',
+    height: '100%',
+  },
+  iconOptionLabel: {
+    fontSize: 11,
+    textAlign: 'center',
   },
   versionContainer: {
     alignItems: 'center',

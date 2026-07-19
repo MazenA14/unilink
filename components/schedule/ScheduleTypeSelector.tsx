@@ -1,4 +1,5 @@
 import { Colors, ScheduleTypeColors } from '@/constants/Colors';
+import { Radius } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ScheduleType } from './types';
@@ -41,7 +42,7 @@ export function ScheduleTypeSelector({ scheduleType, onScheduleTypeChange }: Sch
               style={[
                 styles.scheduleTypeButtonText,
                 {
-                  color: isActive ? (colorScheme === 'dark' ? '#000000' : '#FFFFFF') : colors.mainFont,
+                  color: isActive ? colors.onPrimary : colors.mainFont,
                 },
               ]}
             >
@@ -64,7 +65,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 8,
-    borderRadius: 12,
+    borderRadius: Radius.md,
     borderWidth: 2,
     marginHorizontal: 2,
     alignItems: 'center',

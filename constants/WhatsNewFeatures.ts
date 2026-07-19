@@ -13,6 +13,7 @@ export const WHATS_NEW_CONFIG = {
     "Faster Loading",
     "Transcript Fix",
     "Notifications Fix",
+    "App Icon Fix",
     "Bug Fixes"
   ]
 };
