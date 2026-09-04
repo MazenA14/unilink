@@ -2,7 +2,7 @@
   "expo": {
     "name": "UniLink",
     "slug": "unilink",
-    "version": "3.2",
+    "version": "3.3",
     "orientation": "default",
     "icon": "./assets/images/app-icons/icon-original.png",
     "scheme": "unilink",

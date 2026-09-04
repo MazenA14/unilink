@@ -1,3 +1,4 @@
+import { goBackOrDashboard } from '@/components/navigation/GlobalBackHandler';
 import { Colors } from '@/constants/Colors';
 import { Shadow, withAlpha } from '@/constants/Theme';
 import { useNavigationUI } from '@/contexts/NavigationUIContext';
@@ -41,7 +42,7 @@ export function AppBar({
   const handleLeft = () => {
     if (variant === 'back') {
       if (onBack) onBack();
-      else router.back();
+      else goBackOrDashboard();
     } else {
       openSidebar();
     }

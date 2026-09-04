@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 
+import { GlobalBackHandler } from '@/components/navigation/GlobalBackHandler';
 import { Sidebar } from '@/components/navigation/Sidebar';
 import QuickMediaModal from '@/components/QuickMediaModal';
 import { DefaultScreenProvider } from '@/contexts/DefaultScreenContext';
@@ -60,6 +61,7 @@ function AppContent() {
           <Stack.Screen name="+not-found" />
         </Stack>
         {/* App-wide navigation chrome, overlaid above every screen */}
+        <GlobalBackHandler />
         <Sidebar />
         <GlobalQuickAccess />
       </View>

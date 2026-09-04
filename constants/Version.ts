@@ -2,7 +2,7 @@
  * App version constant
  * Update this value when releasing a new version
  */
-export const APP_VERSION = '3.2';
+export const APP_VERSION = '3.3';
 
 /**
  * Version check API endpoint

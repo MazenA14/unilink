@@ -217,22 +217,16 @@ export default function DashboardScreen() {
 
   // Get today's schedule and day name
   const getTodaysSchedule = () => {
-    if (!scheduleData?.days) return { dayName: '', periods: null };
-    
-    const today = new Date();
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const currentDayName = dayNames[today.getDay()];
-    
-    // If it's Friday, fallback to Saturday
-    const targetDayName = currentDayName === 'Friday' ? 'Saturday' : currentDayName;
-    
-    const todaySchedule = scheduleData.days.find(day => day.dayName === targetDayName);
-    
-    if (todaySchedule) {
-      return { dayName: targetDayName, periods: todaySchedule.periods };
-    }
-    
-    return { dayName: targetDayName, periods: null };
+    const currentDayName = dayNames[currentTime.getDay()];
+
+    if (!scheduleData?.days) return { dayName: currentDayName, periods: null };
+
+    // Days the university does not teach (e.g. Friday) simply have no entry
+    // in the parsed schedule, which is surfaced as a day off below.
+    const todaySchedule = scheduleData.days.find(day => day.dayName === currentDayName);
+
+    return { dayName: currentDayName, periods: todaySchedule?.periods ?? null };
   };
 
   const { dayName, periods } = getTodaysSchedule();
@@ -319,6 +313,13 @@ export default function DashboardScreen() {
     }
     return next;
   };
+
+  // True when today has no classes at all (weekend/day off or an empty day)
+  const hasClassesToday = PERIOD_ORDER.some((key) => {
+    if (!periods) return false;
+    const arr = periods[key as keyof typeof periods];
+    return Array.isArray(arr) ? arr.length > 0 : !!arr;
+  });
 
   // Handle refresh schedule
   const handleRefreshSchedule = async () => {
@@ -525,9 +526,17 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         ) : (
           <View style={[styles.hero, styles.heroEmpty, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}>
-            <Ionicons name="cafe-outline" size={26} color={colors.textTertiary} />
+            <Ionicons
+              name={scheduleLoading ? 'cafe-outline' : hasClassesToday ? 'checkmark-done-outline' : 'sunny-outline'}
+              size={26}
+              color={scheduleLoading || hasClassesToday ? colors.textTertiary : colors.warning}
+            />
             <Text style={[styles.heroEmptyText, { color: colors.textSecondary }]}>
-              {scheduleLoading ? 'Loading your day…' : 'No more classes today'}
+              {scheduleLoading
+                ? 'Loading your day…'
+                : hasClassesToday
+                  ? 'No more classes today'
+                  : `No classes on ${dayName || 'today'}`}
             </Text>
           </View>
         )}
@@ -794,7 +803,9 @@ export default function DashboardScreen() {
                 borderColor: colorScheme === 'dark' ? '#3D2A2A' : '#FFE0E0',
               }]}>
                 <Text style={[styles.courseName, { color: colors.secondaryFont, fontStyle: 'italic', marginBottom: 0 }]}>
-                  No schedule data available
+                  {scheduleData?.days?.length
+                    ? `No classes scheduled on ${dayName || 'today'}`
+                    : 'No schedule data available'}
                 </Text>
               </View>
             )}

@@ -130,7 +130,6 @@ const LoginScreen = () => {
           <View style={styles.headerContainer}>
             <View style={[styles.logoMark, { backgroundColor: colors.primary }, Shadow.glow(colors.primary)]}>
               <Ionicons name="school" size={38} color={colors.onPrimary} />
-              <View style={[styles.logoDot, { backgroundColor: colors.secondary, borderColor: colors.background }]} />
             </View>
             <Text style={[styles.title, { color: colors.textPrimary }]}>UniLink</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
@@ -268,15 +267,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.xl,
-  },
-  logoDot: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 2,
   },
   title: {
     fontSize: 34,
