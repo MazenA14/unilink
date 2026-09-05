@@ -12,8 +12,12 @@ import { parse } from 'node-html-parser';
 /**
  * Personal schedule (GroupSchedule.aspx).
  *
- * Returns: { [dayName]: Array<Array<{ group?, room?, subject? }>> }
+ * Returns: { [dayName]: Array<Array<{ group?, room?, subject?, title? }>> }
  * where the outer array is time slots and each slot is a list of classes.
+ *
+ * `title` comes from the `title` attribute of the subject cell (e.g.
+ * `<td ... title="Advanced Computer lab">CSEN 903 Lab</td>`) and holds the
+ * human readable course name, while `subject` holds the course code.
  */
 export function parsePersonalScheduleHtml(html: string): Record<string, any[]> {
   const root = parse(html, { comment: false });
@@ -48,7 +52,8 @@ export function parsePersonalScheduleHtml(html: string): Record<string, any[]> {
             const group = tds[0].text.trim();
             const room = tds[1].text.trim();
             const subject = tds[2].text.trim();
-            periods.push({ group, room, subject });
+            const title = extractTitleAttribute(tds[2]);
+            periods.push({ group, room, subject, title });
           }
         }
       }
@@ -58,7 +63,8 @@ export function parsePersonalScheduleHtml(html: string): Record<string, any[]> {
         const span = cell.querySelector('span');
         const single = span ? span.text.trim() : '';
         if (single) {
-          periods.push({ subject: single });
+          const title = extractTitleAttribute(span) || extractTitleAttribute(cell);
+          periods.push({ subject: single, title });
         }
       }
 
@@ -67,6 +73,22 @@ export function parsePersonalScheduleHtml(html: string): Record<string, any[]> {
   }
 
   return schedule;
+}
+
+/**
+ * Read the course title from an element's `title` attribute, falling back to
+ * the nearest descendant that carries one (some cells wrap the title on an
+ * inner element instead of the cell itself).
+ */
+function extractTitleAttribute(el: any): string {
+  if (!el) return '';
+
+  const own = (el.getAttribute && el.getAttribute('title')) || '';
+  if (own.trim()) return own.trim();
+
+  const inner = el.querySelector ? el.querySelector('[title]') : null;
+  const nested = (inner && inner.getAttribute('title')) || '';
+  return nested.trim();
 }
 
 /**

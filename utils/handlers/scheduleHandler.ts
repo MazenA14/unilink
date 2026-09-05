@@ -110,7 +110,8 @@ function extractCourseData(course: any): any {
   const subject = course.subject || '';
   const group = course.group || '';
   const room = course.room || '';
-  
+  const title = (course.title || '').trim();
+
   // Extract slot type from subject
   const slotType = extractSlotTypeFromSubject(subject);
   
@@ -128,9 +129,11 @@ function extractCourseData(course: any): any {
   
   // Create course code with group identifier if available
   const courseCode = finalGroupIdentifier ? `${courseName} - ${finalGroupIdentifier}` : courseName;
-  
+
   return {
-    courseName: courseName, // Just the course name without group (e.g., "MCTR 704")
+    // Prefer the human readable title from the cell's `title` attribute
+    // (e.g. "Advanced Computer lab"); fall back to the code when it's missing.
+    courseName: title || courseName,
     courseCode: courseCode, // Course code with group identifier (e.g., "MCTR 704 - P031")
     room: finalRoom,
     instructor: group || undefined,

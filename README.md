@@ -52,6 +52,7 @@
 
 ## Build APK
 - eas build -p android --profile preview
+- eas update --channel production --message "Description of your changes"
 - Use 'npx expo install --check' to review and upgrade your dependencies
 - npm install -g eas-cli (To upgrade eas-cli version)
 - $env:PATH="C:\Users\Mazen\AppData\Local\Android\Sdk\platform-tools;$env:PATH"

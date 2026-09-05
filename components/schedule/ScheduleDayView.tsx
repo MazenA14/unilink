@@ -3,8 +3,6 @@ import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthManager } from '@/utils/auth';
 import { isCurrentTimeSlot } from '@/utils/currentSlotUtils';
-import { GradeCache } from '@/utils/gradeCache';
-import { GUCAPIProxy } from '@/utils/gucApiProxy';
 import { useEffect, useState } from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { MultipleLecturesModal } from './MultipleLecturesModal';
@@ -26,9 +24,6 @@ export function ScheduleDayView({ day, scheduleType = 'personal', currentTime: p
   const typeColor = ScheduleTypeColors[scheduleType];
   const { isShiftedScheduleEnabled } = useShiftedSchedule();
   
-  // State for course name mapping
-  const [courseNameMapping, setCourseNameMapping] = useState<{ [courseId: string]: string }>({});
-  
   // State for multiple lectures modal
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedLectures, setSelectedLectures] = useState<ScheduleClass[]>([]);
@@ -47,41 +42,6 @@ export function ScheduleDayView({ day, scheduleType = 'personal', currentTime: p
     return day.dayName === todayName;
   })();
   
-  // Load course name mapping on component mount
-  useEffect(() => {
-    const loadCourseNameMapping = async () => {
-      try {
-        // First try to get from cache
-        let mapping = await GradeCache.getCachedCourseIdToName();
-        
-        // If no mapping in cache, try to load available courses and create mapping
-        if (!mapping) {
-          try {
-            const availableCourses = await GUCAPIProxy.getAvailableCourses();
-            
-            // Create course ID to name mapping
-            const courseIdToNameMapping: { [courseId: string]: string } = {};
-            availableCourses.forEach(course => {
-              courseIdToNameMapping[course.value] = course.text;
-            });
-            
-            // Cache the mapping
-            await GradeCache.setCachedCourseIdToName(courseIdToNameMapping);
-            mapping = courseIdToNameMapping;
-          } catch {
-          }
-        }
-        
-        if (mapping) {
-          setCourseNameMapping(mapping);
-        }
-      } catch {
-      }
-    };
-    
-    loadCourseNameMapping();
-  }, []);
-
   // Update local currentTime when prop changes
   useEffect(() => {
     if (propCurrentTime) {
@@ -106,86 +66,6 @@ export function ScheduleDayView({ day, scheduleType = 'personal', currentTime: p
     return () => { isMounted = false; };
   }, [propPreferredSlots]);
 
-  // Utility function to get course name by matching course names
-  const getCourseNameByMatching = (scheduleCourseName: string): string | null => {
-    if (!scheduleCourseName || Object.keys(courseNameMapping).length === 0) {
-      return null;
-    }
-    
-    // Try to find a match in the course mapping
-    // First, try exact match
-    for (const [, courseName] of Object.entries(courseNameMapping)) {
-      if (courseName === scheduleCourseName) {
-        return courseName;
-      }
-    }
-    
-    // Try partial matching - look for course names that contain the schedule course name
-    for (const [, courseName] of Object.entries(courseNameMapping)) {
-      if (courseName.toLowerCase().includes(scheduleCourseName.toLowerCase()) ||
-          scheduleCourseName.toLowerCase().includes(courseName.toLowerCase())) {
-        return courseName;
-      }
-    }
-    
-    // Try to match by extracting course code from both
-    const scheduleCourseCode = extractCourseCode(scheduleCourseName);
-    if (scheduleCourseCode) {
-      for (const [, courseName] of Object.entries(courseNameMapping)) {
-        const mappedCourseCode = extractCourseCode(courseName);
-        if (mappedCourseCode && mappedCourseCode === scheduleCourseCode) {
-          return courseName;
-        }
-      }
-    }
-    
-    return null;
-  };
-
-  // Function to extract course title from full course name
-  // Example: "MET Computer Science 7th Semester - DMET502 Computer Graphics" -> "Computer Graphics"
-  const extractCourseTitle = (fullCourseName: string): string => {
-    if (!fullCourseName) return '';
-    
-    // Look for pattern: "something - COURSECODE Course Title"
-    const match = fullCourseName.match(/- ([A-Z]+\d+[A-Z]*)\s+(.+)$/);
-    if (match) {
-      return match[2].trim(); // Return the course title part
-    }
-    
-    // Look for pattern: "something - COURSECODE Course Title (Lab/Tutorial)"
-    const matchWithType = fullCourseName.match(/- ([A-Z]+\d+[A-Z]*)\s+(.+?)\s*\(?(lab|tutorial|tut|seminar|workshop|project|thesis|dissertation)\)?/i);
-    if (matchWithType) {
-      return matchWithType[2].trim();
-    }
-    
-    // Fallback: if no dash pattern, try to extract from end after course code
-    const courseCodeMatch = fullCourseName.match(/([A-Z]+\d+[A-Z]*)\s+(.+)$/);
-    if (courseCodeMatch) {
-      return courseCodeMatch[2].trim();
-    }
-    
-    // If no pattern matches, return the original name
-    return fullCourseName;
-  };
-  
-  // Function to extract course code from course name (e.g., "CSEN 701" -> "CSEN701")
-  const extractCourseCode = (courseName: string): string => {
-    if (!courseName) return '';
-    
-    // Remove spaces and extract course code pattern
-    const match = courseName.match(/([A-Z]{2,4}[a-z]?)\s*(\d{3,4})/);
-    if (match) {
-      return match[1] + match[2]; // e.g., "CSEN" + "701" = "CSEN701"
-    }
-    
-    // Fallback: remove all spaces
-    return courseName.replace(/\s+/g, '');
-  };
-  
-
-  
-  
   // Calculate dynamic padding based on screen width
   const basePadding = Math.max(12, screenWidth * 0.04);
   const dayPadding = basePadding;
@@ -336,30 +216,6 @@ export function ScheduleDayView({ day, scheduleType = 'personal', currentTime: p
                       ...lecture,
                       // Hide instructor for personal schedule
                       instructor: scheduleType === 'personal' ? undefined : lecture.instructor,
-                      courseName: (() => {
-                        // Try to get course name from mapping using matching
-                        const mappedCourseName = getCourseNameByMatching(lecture.courseName);
-                        
-                        if (mappedCourseName) {
-                          // Extract the course title from the mapped course name
-                          const extractedTitle = extractCourseTitle(mappedCourseName);
-                          // If extraction worked (title is different from full name), use it
-                          if (extractedTitle !== mappedCourseName) {
-                            return extractedTitle;
-                          }
-                          // Otherwise, use the mapped course name as is
-                          return mappedCourseName;
-                        }
-                        
-                        // Fallback: try to extract course title from original course name
-                        const originalTitle = extractCourseTitle(lecture.courseName);
-                        if (originalTitle !== lecture.courseName) {
-                          return originalTitle;
-                        }
-                        
-                        // Final fallback to original course name
-                        return lecture.courseName;
-                      })()
                     }))}
                     periodName={period.name} 
                     scheduleType={scheduleType}
