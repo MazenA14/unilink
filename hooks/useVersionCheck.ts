@@ -44,9 +44,12 @@ export function useVersionCheck() {
   }, [forceUpdate]);
 
   const handleUpdateModalUpdate = useCallback(() => {
+    // Forced updates stay on screen: leaving for the download link (or
+    // cancelling the account picker) must not dismiss the blocking modal.
+    if (forceUpdate) return;
     setShowUpdateModal(false);
     // The modal will handle opening the download link
-  }, []);
+  }, [forceUpdate]);
 
   // Note: Version check is now triggered manually when dashboard loads
   // Removed automatic check on mount to allow manual control

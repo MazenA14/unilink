@@ -28,7 +28,11 @@ export default function UpdateModal({ visible, onClose, onUpdate, forceUpdate = 
       const supported = await Linking.canOpenURL(UPDATE_DOWNLOAD_LINK);
       if (supported) {
         await Linking.openURL(UPDATE_DOWNLOAD_LINK);
-        onUpdate();
+        // A forced update must stay up: the user can back out of the
+        // download (account picker, browser) without having updated.
+        if (!forceUpdate) {
+          onUpdate();
+        }
       } else {
         showAlert({
           title: 'Error',
@@ -65,7 +69,7 @@ export default function UpdateModal({ visible, onClose, onUpdate, forceUpdate = 
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={forceUpdate ? undefined : onClose}
+      onRequestClose={forceUpdate ? () => {} : onClose}
     >
       <View style={styles.overlay}>
         <View style={[
