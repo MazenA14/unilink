@@ -1,6 +1,5 @@
 import { AuthManager } from './auth';
 import { gucRequest, GucResponse } from './gucNativeClient';
-import { perfFetch, perfNow } from './perfLog';
 
 export interface GucRequestOptions {
   /** Return the response instead of throwing for 302/303 redirects. */
@@ -28,14 +27,12 @@ export async function makeGucRequest(
     headers['Content-Type'] = options.contentType;
   }
 
-  const fetchStart = perfNow();
   const data = await gucRequest(
     url,
     method,
     body,
     Object.keys(headers).length ? headers : undefined
   );
-  perfFetch(method, url, perfNow() - fetchStart, data.status, (data.body || '').length);
 
   if (data.status === 401) {
     // Session expired: drop the local marker + native cookie jar.

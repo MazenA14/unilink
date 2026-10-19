@@ -10,7 +10,6 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { perfAsync } from '@/utils/perfLog';
 
 export default function CMSHomeScreen() {
   const colorScheme = useColorScheme();
@@ -27,10 +26,10 @@ export default function CMSHomeScreen() {
     try {
       setError(null);
       if (bypassCache) setRefreshing(true); else setLoading(true);
-      const [data, unseenSummary] = await perfAsync('CMS home: everything', () => Promise.all([
-        perfAsync(`CMS home: courses${bypassCache ? ' (refresh)' : ''}`, () => getCmsCourses(!bypassCache ? false : true)),
-        perfAsync('CMS home: unseen summary', () => fetchCmsUnseenSummary().catch(() => null)),
-      ]));
+      const [data, unseenSummary] = await Promise.all([
+        getCmsCourses(!bypassCache ? false : true),
+        fetchCmsUnseenSummary().catch(() => null),
+      ]);
       setCourses(data);
       if (unseenSummary) setUnseen(unseenSummary);
     } catch (e: any) {

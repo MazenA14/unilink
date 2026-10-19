@@ -1,6 +1,5 @@
 import { CourseAttendance, GradeCache } from './gradeCache';
 import { GUCAPIProxy } from './gucApiProxy';
-import { perfAsync } from './perfLog';
 import { getSessionGeneration, onSharedRequestsReset } from './sharedRequest';
 
 /** Skip a new preload if the last successful one finished this recently. */
@@ -21,13 +20,9 @@ export class AttendancePreloader {
    */
   static preloadAttendance(): Promise<void> {
     if (this.preloadPromise) return this.preloadPromise;
-    if (Date.now() - this.lastCompletedAt < FRESH_FOR_MS) {
-      console.log('[PERF] preload  attendance: skipped (refreshed < 5 min ago)');
-      return Promise.resolve();
-    }
-    console.log('[PERF] preload  attendance: start');
+    if (Date.now() - this.lastCompletedAt < FRESH_FOR_MS) return Promise.resolve();
 
-    const run: Promise<void> = perfAsync('Preload: attendance', () => this.performPreload())
+    const run: Promise<void> = this.performPreload()
       .finally(() => { if (this.preloadPromise === run) this.preloadPromise = null; });
     this.preloadPromise = run;
     return run;
@@ -69,10 +64,7 @@ export class AttendancePreloader {
         }
       }
 
-      if (generation !== getSessionGeneration()) {
-        console.log('[PERF] preload  attendance: discarded (session changed mid-run)');
-        return;
-      }
+      if (generation !== getSessionGeneration()) return;
       await GradeCache.setCachedAttendanceData({ ...attendanceData, courses });
       for (const details of detailed) {
         await GradeCache.setCachedCourseAttendance(details.courseId, details);
@@ -80,7 +72,6 @@ export class AttendancePreloader {
 
       this.lastCompletedAt = Date.now();
     } catch (error) {
-      console.log('[PERF] preload  attendance: failed', error);
       // Don't throw error - preloading is optional and shouldn't break the app
     }
   }

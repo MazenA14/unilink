@@ -46,6 +46,9 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.Date
 import java.util.concurrent.Executors
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.read
+import kotlin.concurrent.write
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
@@ -63,11 +66,39 @@ class GucAuthModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
   private val prefs: SharedPreferences =
     reactContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-  // Single background executor: Apache HttpClient calls are blocking.
+  // Single background executor for control ops (credentials, cookies, files).
   private val executor = Executors.newSingleThreadExecutor()
 
+  // Small pool so independent requests (e.g. per-course grade POSTs, or CMS vs
+  // apps.guc pages) don't queue behind each other. Apache HttpClient is
+  // blocking, so each in-flight request occupies one thread.
+  private val requestExecutor = Executors.newFixedThreadPool(REQUEST_THREADS)
+
+  // Requests hold the read lock; credential/cookie changes take the write lock
+  // so they never swap the client or context out from under an in-flight call.
+  private val sessionLock = ReentrantReadWriteLock()
+
   private val cookieStore: CookieStore = BasicCookieStore()
-  private var httpContext: HttpClientContext = HttpClientContext.create()
+  @Volatile
+  private var credsProvider: BasicCredentialsProvider = BasicCredentialsProvider()
+
+  // HttpClientContext is not thread-safe and carries the NTLM auth state /
+  // connection user token, so each pool thread keeps its own. That lets every
+  // thread reuse its NTLM-authenticated connection instead of re-handshaking
+  // per request. Bumping the generation makes threads build a fresh context.
+  @Volatile
+  private var contextGeneration = 0
+  private val threadContext = ThreadLocal<Pair<Int, HttpClientContext>>()
+
+  private fun currentContext(): HttpClientContext {
+    val existing = threadContext.get()
+    if (existing != null && existing.first == contextGeneration) return existing.second
+    val ctx = HttpClientContext.create()
+    ctx.cookieStore = cookieStore
+    ctx.credentialsProvider = credsProvider
+    threadContext.set(Pair(contextGeneration, ctx))
+    return ctx
+  }
 
   private var username: String? = null
   private var password: String? = null
@@ -95,7 +126,7 @@ class GucAuthModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         password = pass
         prefs.edit().putString(KEY_USERNAME, user).putString(KEY_PASSWORD, pass).apply()
         // Rebuild the client so the new credentials take effect.
-        rebuildClient()
+        sessionLock.write { rebuildClient() }
         promise.resolve(null)
       } catch (e: Exception) {
         promise.reject("SET_CREDENTIALS_FAILED", e.message, e)
@@ -110,7 +141,7 @@ class GucAuthModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         username = null
         password = null
         prefs.edit().remove(KEY_USERNAME).remove(KEY_PASSWORD).apply()
-        rebuildClient()
+        sessionLock.write { rebuildClient() }
         promise.resolve(null)
       } catch (e: Exception) {
         promise.reject("CLEAR_CREDENTIALS_FAILED", e.message, e)
@@ -122,10 +153,12 @@ class GucAuthModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
   fun clearCookies(promise: Promise) {
     executor.execute {
       try {
-        cookieStore.clear()
-        // Drop cached auth/connection state so the next request re-handshakes.
-        httpContext = HttpClientContext.create()
-        persistCookies()
+        sessionLock.write {
+          cookieStore.clear()
+          // Drop cached auth/connection state so the next request re-handshakes.
+          contextGeneration++
+          persistCookies()
+        }
         promise.resolve(null)
       } catch (e: Exception) {
         promise.reject("CLEAR_COOKIES_FAILED", e.message, e)
@@ -155,7 +188,7 @@ class GucAuthModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
    */
   @ReactMethod
   fun request(url: String, method: String, body: String?, headers: ReadableMap?, promise: Promise) {
-    executor.execute {
+    requestExecutor.execute { sessionLock.read {
       var httpRequest: HttpRequestBase? = null
       try {
         val active = ensureClient()
@@ -188,7 +221,7 @@ class GucAuthModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
           httpRequest.setHeader("Content-Type", "application/x-www-form-urlencoded")
         }
 
-        active.execute(httpRequest, httpContext).use { response ->
+        active.execute(httpRequest, currentContext()).use { response ->
           val status = response.statusLine.statusCode
           val entity = response.entity
           val responseBody = if (entity != null) EntityUtils.toString(entity, "UTF-8") else ""
@@ -214,7 +247,7 @@ class GucAuthModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
       } finally {
         try { httpRequest?.releaseConnection() } catch (_: Exception) {}
       }
-    }
+    } }
   }
 
   /**
@@ -229,7 +262,7 @@ class GucAuthModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
    */
   @ReactMethod
   fun downloadFile(url: String, destPath: String, headers: ReadableMap?, promise: Promise) {
-    executor.execute {
+    requestExecutor.execute { sessionLock.read {
       var httpRequest: HttpRequestBase? = null
       try {
         val active = ensureClient()
@@ -255,7 +288,7 @@ class GucAuthModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             }
           }
 
-          val response = active.execute(httpRequest, httpContext)
+          val response = active.execute(httpRequest, currentContext())
           status = response.statusLine.statusCode
 
           // Follow redirects manually (client has redirects disabled).
@@ -313,7 +346,7 @@ class GucAuthModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
       } finally {
         try { httpRequest?.releaseConnection() } catch (_: Exception) {}
       }
-    }
+    } }
   }
 
   /**
@@ -444,9 +477,12 @@ class GucAuthModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
   // ---------------------------------------------------------------------------
 
   private fun ensureClient(): CloseableHttpClient {
-    val existing = client
-    if (existing != null) return existing
-    return rebuildClient()
+    client?.let { return it }
+    // Several pool threads can get here at once; build the client only once.
+    synchronized(this) {
+      client?.let { return it }
+      return rebuildClient()
+    }
   }
 
   @Synchronized
@@ -477,26 +513,25 @@ class GucAuthModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
       .setRedirectsEnabled(false)
       .build()
 
-    val credsProvider = BasicCredentialsProvider()
+    val newCredsProvider = BasicCredentialsProvider()
     val u = username
     val p = password
     if (!u.isNullOrEmpty() && p != null) {
       // Empty domain/workstation, exactly like the httpntlm proxy config.
-      credsProvider.setCredentials(AuthScope.ANY, NTCredentials(u, p, "", ""))
+      newCredsProvider.setCredentials(AuthScope.ANY, NTCredentials(u, p, "", ""))
     }
 
     val built = HttpClients.custom()
       .setConnectionManager(connManager)
       .setDefaultRequestConfig(requestConfig)
-      .setDefaultCredentialsProvider(credsProvider)
+      .setDefaultCredentialsProvider(newCredsProvider)
       .setDefaultCookieStore(cookieStore)
       .setUserAgent(USER_AGENT)
       .build()
 
-    // Fresh context so auth/cookie state is bound to the current credentials.
-    httpContext = HttpClientContext.create()
-    httpContext.cookieStore = cookieStore
-    httpContext.credentialsProvider = credsProvider
+    // Fresh per-thread contexts so auth/cookie state is bound to the current credentials.
+    credsProvider = newCredsProvider
+    contextGeneration++
 
     client = built
     return built
@@ -556,6 +591,7 @@ class GucAuthModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     private const val KEY_USERNAME = "guc_username"
     private const val KEY_PASSWORD = "guc_password"
     private const val KEY_COOKIES = "guc_cookies"
+    private const val REQUEST_THREADS = 4
     private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
   }
 }

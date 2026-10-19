@@ -19,7 +19,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { perfAsync } from '@/utils/perfLog';
 import { GradesPreloader } from '@/utils/gradesPreloader';
 
 const GRADE_TYPE_OPTIONS: SegmentOption<GradeType>[] = [
@@ -87,7 +86,7 @@ export default function GradesScreen() {
         }
       }
 
-      const fetchedGrades = await perfAsync('Grades screen: current grades', () => GUCAPI.getCurrentGrades());
+      const fetchedGrades = await GUCAPI.getCurrentGrades();
       
       setGrades(fetchedGrades);
       
@@ -153,7 +152,7 @@ export default function GradesScreen() {
       }
 
       // Use new efficient method to get all seasons with their data
-      const seasonsWithData = await perfAsync('Grades screen: previous seasons', () => GUCAPI.getAllSeasonsWithData());
+      const seasonsWithData = await GUCAPI.getAllSeasonsWithData();
       
       // Convert to the format expected by the UI
       const seasonsWithGrades = seasonsWithData.map(seasonData => {
@@ -382,7 +381,7 @@ export default function GradesScreen() {
       }
       
       // Use the new detailed grades API method
-      const detailedGrades = await perfAsync(`Grades screen: detailed grades ${courseName}`, () => GUCAPI.getDetailedCourseGrades(seasonId, courseId));
+      const detailedGrades = await GUCAPI.getDetailedCourseGrades(seasonId, courseId);
       
       // Cache the results
       await GradeCache.setCachedDetailedGrades(seasonId, courseId, detailedGrades);

@@ -1,7 +1,6 @@
 import { AttendancePreloader } from './attendancePreloader';
 import { GradeCache } from './gradeCache';
 import { GradeData, GUCAPIProxy } from './gucApiProxy';
-import { perfAsync } from './perfLog';
 import { getSessionGeneration, onSharedRequestsReset } from './sharedRequest';
 
 /** Skip a new preload if the last successful one finished this recently. */
@@ -22,13 +21,9 @@ export class GradesPreloader {
    */
   static preloadCurrentGrades(): Promise<void> {
     if (this.preloadPromise) return this.preloadPromise;
-    if (Date.now() - this.lastCompletedAt < FRESH_FOR_MS) {
-      console.log('[PERF] preload  grades: skipped (refreshed < 5 min ago)');
-      return Promise.resolve();
-    }
-    console.log('[PERF] preload  grades: start');
+    if (Date.now() - this.lastCompletedAt < FRESH_FOR_MS) return Promise.resolve();
 
-    const run: Promise<void> = perfAsync('Preload: grades', () => this.performPreload())
+    const run: Promise<void> = this.performPreload()
       .finally(() => { if (this.preloadPromise === run) this.preloadPromise = null; });
     this.preloadPromise = run;
     return run;
@@ -63,10 +58,7 @@ export class GradesPreloader {
         GUCAPIProxy.getCurrentGrades(),
         GUCAPIProxy.getAvailableCourses(),
       ]);
-      if (generation !== getSessionGeneration()) {
-        console.log('[PERF] preload  grades: discarded (session changed mid-run)');
-        return;
-      }
+      if (generation !== getSessionGeneration()) return;
       await GradeCache.setCachedCurrentGrades(currentGrades);
       await GradeCache.setCachedCurrentCourses(availableCourses);
 
@@ -77,23 +69,20 @@ export class GradesPreloader {
       });
       await GradeCache.setCachedCourseIdToName(courseIdToNameMapping);
 
-      // One course at a time: native requests are serialized anyway, and this
-      // lets requests from screens the user opens meanwhile slot in between.
+      // One course at a time: GUC's server processes a session's requests one
+      // by one anyway, and this keeps the other native pool threads free for
+      // CMS and user-initiated requests.
       const gradesByCourse: { [courseId: string]: GradeData[] } = {};
       for (const course of availableCourses) {
         try {
           gradesByCourse[course.value] = await GUCAPIProxy.getCourseGrades(course.value);
         } catch {}
       }
-      if (generation !== getSessionGeneration()) {
-        console.log('[PERF] preload  grades: discarded (session changed mid-run)');
-        return;
-      }
+      if (generation !== getSessionGeneration()) return;
       await GradeCache.setCachedCurrentCourseGradesBatch(gradesByCourse);
 
       this.lastCompletedAt = Date.now();
     } catch (error) {
-      console.log('[PERF] preload  grades: failed', error);
       // Don't throw error - preloading is optional and shouldn't break the app
     }
   }

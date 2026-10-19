@@ -1,7 +1,6 @@
 import { extractCourseGradeData, extractCourses, extractGradeData, extractViewState } from './extractors/gradeExtractor';
 import { GradeCache } from './gradeCache';
 import { makeGucRequest } from './gucRequest';
-import { perfAsync, perfSync } from './perfLog';
 import { invalidateShared, isOptionSelected, sharedRequest } from './sharedRequest';
 import { getOutstandingPayments, payOutstanding } from './handlers/paymentHandler';
 import { getScheduleData } from './handlers/scheduleHandler';
@@ -105,10 +104,10 @@ export class GUCAPIProxy {
       const html = responseData.html || responseData.body;
       
       // Step 3: Extract courses from dropdown
-      const courses = perfSync(`extractCourses (season ${seasonId})`, () => extractCourses(html));
+      const courses = extractCourses(html);
       
       // Step 4: Extract midterm grades from the midterm table
-      const midtermGrades = perfSync(`extractGradeData (season ${seasonId})`, () => extractGradeData(html));
+      const midtermGrades = extractGradeData(html);
       
       // If no courses found but have midterm grades, create courses from grades
       let finalCourses = courses;
@@ -163,7 +162,7 @@ export class GUCAPIProxy {
         return null;
       });
 
-      const results = await perfAsync(`getAllSeasonsWithData (${allSeasons.length} seasons)`, () => Promise.all(seasonPromises));
+      const results = await Promise.all(seasonPromises);
 
       const seasonsWithData = results.filter(
         (data): data is {
@@ -299,7 +298,7 @@ export class GUCAPIProxy {
       const courseHtml = courseResponse.html || courseResponse.body;
       
       // Step 4: Extract detailed course grades from Quiz/Assignment table
-      const detailedGrades = perfSync(`extractCourseGradeData (season ${seasonId}, course ${courseId})`, () => extractCourseGradeData(courseHtml));
+      const detailedGrades = extractCourseGradeData(courseHtml);
       
       return detailedGrades;
     } catch {
@@ -415,7 +414,6 @@ export class GUCAPIProxy {
     if (result.courseSelected) return result.grades;
 
     // The shared page's view state didn't take; retry with a fresh page.
-    console.log(`[PERF] retry  getCourseGrades (${courseId}) with a fresh page`);
     const freshHtml = await this.getCurrentGradesPage(true);
     return (await this.postCourseGrades(freshHtml, courseId)).grades;
   }
@@ -469,7 +467,7 @@ export class GUCAPIProxy {
     const hasCourseDropdown = courseHtml.includes('smCrsLst') || courseHtml.includes('ContentPlaceHolderright_ContentPlaceHoldercontent_smCrsLst');
 
     // Extract course-specific grade items (Quiz/Assignment table)
-    const courseGrades = perfSync(`extractCourseGradeData (current, ${courseId})`, () => extractCourseGradeData(courseHtml));
+    const courseGrades = extractCourseGradeData(courseHtml);
 
     // Only extract midterm grades if we're NOT on the course-specific page
     // (i.e., if there's no course dropdown, we're on the season-level view)
@@ -489,7 +487,7 @@ export class GUCAPIProxy {
   static async getCurrentGrades(): Promise<GradeData[]> {
     // Always fetch fresh here; the per-course calls that follow reuse this page.
     const html = await this.getCurrentGradesPage(true);
-    return perfSync('extractGradeData (current)', () => extractGradeData(html));
+    return extractGradeData(html);
   }
   /**
    * The student index/profile page. Login, the dashboard and user tracking all
@@ -1162,7 +1160,7 @@ export class GUCAPIProxy {
   }> {
     // Always fetch fresh here; the per-course calls that follow reuse this page.
     const { html } = await this.getAttendancePage(true);
-    return perfSync('parseAttendanceData', () => this.parseAttendanceData(html));
+    return this.parseAttendanceData(html);
   }
 
   /**
@@ -1182,7 +1180,6 @@ export class GUCAPIProxy {
     if (result.courseSelected) return result.data;
 
     // The shared page's view state didn't take; retry with a fresh page.
-    console.log(`[PERF] retry  getCourseAttendance (${courseId}) with a fresh page`);
     const freshPage = await this.getAttendancePage(true);
     return (await this.postCourseAttendance(freshPage, courseId)).data;
   }
@@ -1209,7 +1206,7 @@ export class GUCAPIProxy {
     );
 
     const courseHtml = courseResponse.html || courseResponse.body;
-    const data = perfSync(`parseCourseAttendanceData (${courseId})`, () => this.parseCourseAttendanceData(courseHtml, courseId));
+    const data = this.parseCourseAttendanceData(courseHtml, courseId);
     return { data, courseSelected: isOptionSelected(courseHtml, courseId) };
   }
   /**
