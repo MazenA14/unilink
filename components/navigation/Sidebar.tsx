@@ -1,3 +1,4 @@
+import ShareAppModal from '@/components/ShareAppModal';
 import { Colors } from '@/constants/Colors';
 import { Radius, Shadow, withAlpha } from '@/constants/Theme';
 import { useNavigationUI } from '@/contexts/NavigationUIContext';
@@ -33,7 +34,7 @@ interface NavEntry {
   /** tab routes use replace; pushed routes use push; actions run onPress */
   route?: string;
   mode?: 'replace' | 'push';
-  action?: 'quickAccess';
+  action?: 'quickAccess' | 'share';
 }
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -51,6 +52,7 @@ export function Sidebar() {
 
   const [displayName, setDisplayName] = useState('Student');
   const [userId, setUserId] = useState<string | null>(null);
+  const [shareVisible, setShareVisible] = useState(false);
 
   const anim = useRef(new Animated.Value(0)).current;
   const [mounted, setMounted] = useState(false);
@@ -187,6 +189,10 @@ export function Sidebar() {
           openQuickAccess();
           return;
         }
+        if (entry.action === 'share') {
+          setShareVisible(true);
+          return;
+        }
         if (!entry.route) return;
         if (entry.mode === 'replace') router.replace(entry.route as any);
         else router.push(entry.route as any);
@@ -214,6 +220,7 @@ export function Sidebar() {
     { key: 'eval-staff', label: 'Evaluate Staff', icon: 'ribbon-outline', route: '/evaluation/staff', mode: 'push' },
     { key: 'dates', label: 'Important Dates', icon: 'calendar-number-outline', route: '/dates', mode: 'push' },
     { key: 'quick', label: 'Quick Access', icon: 'folder-open-outline', action: 'quickAccess' },
+    { key: 'share', label: 'Share App', icon: 'share-social-outline', action: 'share' },
   ];
 
   const settingsEntry: NavEntry = { key: 'settings', label: 'Settings', icon: 'settings-outline', route: '/(tabs)/settings', mode: 'replace' };
@@ -349,6 +356,8 @@ export function Sidebar() {
           </Animated.View>
         </>
       )}
+
+      <ShareAppModal visible={shareVisible} onClose={() => setShareVisible(false)} />
     </View>
   );
 }

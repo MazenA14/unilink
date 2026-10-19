@@ -15,7 +15,7 @@ import { useVersionCheck } from '@/hooks/useVersionCheck';
 import { useWhatsNew } from '@/hooks/useWhatsNew';
 import { AuthManager } from '@/utils/auth';
 import { resolveCourseTitle } from '@/utils/courseTitle';
-import { isCurrentTimeSlot } from '@/utils/currentSlotUtils';
+import { getTimeSlots, isCurrentTimeSlot } from '@/utils/currentSlotUtils';
 import { GradeCache } from '@/utils/gradeCache';
 import { CmsUnseenSummary, fetchCmsUnseenSummary, getCachedCmsUnseenSummary } from '@/utils/handlers/cmsHandler';
 import { GUCAPIProxy } from '@/utils/gucApiProxy';
@@ -249,6 +249,8 @@ export default function DashboardScreen() {
   const getHeroClass = () => {
     if (!periods) return null;
     const nowMin = currentTime.getHours() * 60 + currentTime.getMinutes();
+    // Use actual class times (not the break-extended slots) so a break shows the next class
+    const slots = getTimeSlots(isShiftedScheduleEnabled);
     let next: any = null;
     for (let i = 0; i < PERIOD_ORDER.length; i++) {
       const key = PERIOD_ORDER[i];
@@ -256,7 +258,11 @@ export default function DashboardScreen() {
       const cd = Array.isArray(arr) ? arr[0] : arr;
       if (!cd) continue;
       const periodNumber = PERIOD_LABELS[i];
-      if (isCurrentTimeSlot(key, isShiftedScheduleEnabled, currentTime)) {
+      const slot = slots.find((s) => s.key === key);
+      const inProgress = !!slot
+        && nowMin >= slot.startHour * 60 + slot.startMinute
+        && nowMin < slot.endHour * 60 + slot.endMinute;
+      if (inProgress) {
         return { state: 'Now' as const, classData: cd, periodNumber, timing: getPeriodTiming(key) };
       }
       if (!next && getPeriodStartMinutes(key) >= nowMin) {
