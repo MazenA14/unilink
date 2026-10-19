@@ -85,7 +85,7 @@ export function AppBar({
               <Ionicons name="notifications-outline" size={21} color={colors.mainFont} />
               {unreadCount > 0 && (
                 <View style={[styles.badge, { backgroundColor: colors.danger, borderColor: colors.background }]}>
-                  <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : String(unreadCount)}</Text>
+                  <Text style={[styles.badgeText, { color: colors.onAccent }]}>{unreadCount > 99 ? '99+' : String(unreadCount)}</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -152,7 +152,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   badgeText: {
-    color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '700',
   },

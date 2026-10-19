@@ -147,7 +147,7 @@ export default function EvaluationFormScreen() {
 
                 {form.agreeQuestions.length > 1 && (
                   <View style={[styles.bulkRow, { borderBottomColor: colors.border }]}>
-                    <Ionicons name="flash" size={14} color="#F59E0B" />
+                    <Ionicons name="flash" size={14} color={colors.warning} />
                     <Text style={styles.bulkRowLabel}>Bulk</Text>
                     <View style={styles.numberRow}>
                       {form.agreeQuestions[0].options.map((option, i) => {
@@ -157,11 +157,11 @@ export default function EvaluationFormScreen() {
                             key={option.value}
                             style={[
                               styles.numberChip,
-                              { backgroundColor: selected ? '#F59E0B' : 'transparent', borderColor: '#F59E0B' },
+                              { backgroundColor: selected ? colors.warning : 'transparent', borderColor: colors.warning },
                             ]}
                             onPress={() => applyToAll(form.agreeQuestions, option.value)}
                           >
-                            <Text style={[styles.numberChipText, { color: selected ? 'white' : '#F59E0B' }]}>{i + 1}</Text>
+                            <Text style={[styles.numberChipText, { color: selected ? colors.onAccent : colors.warning }]}>{i + 1}</Text>
                           </TouchableOpacity>
                         );
                       })}
@@ -193,7 +193,7 @@ export default function EvaluationFormScreen() {
                             ]}
                             onPress={() => setAnswers((prev) => ({ ...prev, [question.radioName]: option.value }))}
                           >
-                            <Text style={[styles.numberChipText, { color: selected ? 'white' : colors.mainFont }]}>{i + 1}</Text>
+                            <Text style={[styles.numberChipText, { color: selected ? colors.onPrimary : colors.mainFont }]}>{i + 1}</Text>
                           </TouchableOpacity>
                         );
                       })}
@@ -207,7 +207,7 @@ export default function EvaluationFormScreen() {
               <View style={[styles.sectionCard, { backgroundColor: colors.cardBackground }]}>
                 {form.scaleQuestions.length > 1 && (
                   <View style={[styles.bulkRow, { borderBottomColor: colors.border }]}>
-                    <Ionicons name="flash" size={14} color="#F59E0B" />
+                    <Ionicons name="flash" size={14} color={colors.warning} />
                     <Text style={styles.bulkRowLabel}>Bulk</Text>
                     <View style={styles.numberRow}>
                       {form.scaleQuestions[0].options.map((option) => {
@@ -217,11 +217,11 @@ export default function EvaluationFormScreen() {
                             key={option.value}
                             style={[
                               styles.numberChip,
-                              { backgroundColor: selected ? '#F59E0B' : 'transparent', borderColor: '#F59E0B' },
+                              { backgroundColor: selected ? colors.warning : 'transparent', borderColor: colors.warning },
                             ]}
                             onPress={() => applyToAll(form.scaleQuestions, option.value)}
                           >
-                            <Text style={[styles.numberChipText, { color: selected ? 'white' : '#F59E0B' }]}>{option.label}</Text>
+                            <Text style={[styles.numberChipText, { color: selected ? colors.onAccent : colors.warning }]}>{option.label}</Text>
                           </TouchableOpacity>
                         );
                       })}
@@ -255,7 +255,7 @@ export default function EvaluationFormScreen() {
                               ]}
                               onPress={() => setAnswers((prev) => ({ ...prev, [question.radioName]: option.value }))}
                             >
-                              <Text style={[styles.numberChipText, { color: selected ? 'white' : colors.mainFont }]}>
+                              <Text style={[styles.numberChipText, { color: selected ? colors.onPrimary : colors.mainFont }]}>
                                 {option.label}
                               </Text>
                             </TouchableOpacity>
@@ -287,15 +287,15 @@ export default function EvaluationFormScreen() {
             <TouchableOpacity
               style={[
                 styles.submitButton,
-                { backgroundColor: allQuestionsAnswered ? '#F59E0B' : colors.border },
+                { backgroundColor: allQuestionsAnswered ? colors.warning : colors.border },
               ]}
               disabled={!allQuestionsAnswered || submitting}
               onPress={handleSubmit}
             >
               {submitting ? (
-                <ActivityIndicator size="small" color="white" />
+                <ActivityIndicator size="small" color={colors.onAccent} />
               ) : (
-                <Text style={styles.submitText}>Submit Evaluation</Text>
+                <Text style={[styles.submitText, { color: colors.onAccent }]}>Submit Evaluation</Text>
               )}
             </TouchableOpacity>
           </ScrollView>
@@ -361,5 +361,5 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 32,
   },
-  submitText: { color: 'white', fontSize: 16, fontWeight: '700' },
+  submitText: { fontSize: 16, fontWeight: '700' },
 });

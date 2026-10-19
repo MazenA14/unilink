@@ -1,3 +1,6 @@
+import BottomSheet from '@/components/ui/BottomSheet';
+import { DropdownItem, DropdownMenu, SheetHeader, sheetRatioFor } from '@/components/ui/Dropdown';
+import { SheetButtons } from '@/components/ui/SheetButtons';
 import { AppBar } from '@/components/navigation/AppBar';
 import { Colors } from '@/constants/Colors';
 import { Radius, Shadow } from '@/constants/Theme';
@@ -6,20 +9,8 @@ import { supabase } from '@/utils/supabase';
 import { exportRowsToCSV } from '@/utils/csvExporter';
 import { formatRelativeTime } from '@/utils/formatRelativeTime';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useMemo, useState } from 'react';
-import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Modal,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface Feedback {
   id: string;
@@ -60,6 +51,9 @@ export default function FeedbackTableScreen() {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [detailFeedback, setDetailFeedback] = useState<Feedback | null>(null);
+  const lastFeedback = useRef<Feedback | null>(null);
+  if (detailFeedback) lastFeedback.current = detailFeedback;
+  const shownDetailFeedback = detailFeedback ?? lastFeedback.current;
 
   useEffect(() => {
     fetchFeedback();
@@ -336,8 +330,8 @@ export default function FeedbackTableScreen() {
           ]}
           onPress={() => setFilterModalVisible(true)}
         >
-          <Ionicons name="options-outline" size={15} color={activeFilterCount > 0 ? 'white' : colors.mainFont} />
-          <Text style={[styles.toolbarButtonText, { color: activeFilterCount > 0 ? 'white' : colors.mainFont }]}>
+          <Ionicons name="options-outline" size={15} color={activeFilterCount > 0 ? colors.onPrimary : colors.mainFont} />
+          <Text style={[styles.toolbarButtonText, { color: activeFilterCount > 0 ? colors.onPrimary : colors.mainFont }]}>
             Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
           </Text>
         </TouchableOpacity>
@@ -369,7 +363,7 @@ export default function FeedbackTableScreen() {
           <Ionicons name="alert-circle" size={48} color={colors.gradeFailing} />
           <Text style={[styles.errorText, { color: colors.gradeFailing }]}>{error}</Text>
           <TouchableOpacity onPress={() => fetchFeedback()} style={[styles.retryButton, { backgroundColor: colors.tint }]}>
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={[styles.retryButtonText, { color: colors.onPrimary }]}>Retry</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -396,37 +390,46 @@ export default function FeedbackTableScreen() {
         }
       />
 
-      {/* Sort Modal */}
-      <Modal visible={sortModalVisible} transparent animationType="fade" onRequestClose={() => setSortModalVisible(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSortModalVisible(false)}>
-          <View style={[styles.sheetContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <Text style={[styles.sheetTitle, { color: colors.mainFont }]}>Sort By</Text>
-            {SORT_OPTIONS.map(option => (
-              <TouchableOpacity
-                key={option.field}
-                style={styles.sheetRow}
-                onPress={() => handleSelectSort(option.field)}
-              >
-                <Text style={[styles.sheetRowText, { color: colors.mainFont }]}>{option.label}</Text>
-                {sortField === option.field && (
-                  <Ionicons name={sortDirection === 'asc' ? 'arrow-up' : 'arrow-down'} size={16} color={colors.tint} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      {/* Sort sheet */}
+      <DropdownMenu
+        colors={colors}
+        visible={sortModalVisible}
+        onClose={() => setSortModalVisible(false)}
+        title="Sort by"
+        subtitle="Tap the active field again to flip the order"
+        heightRatio={sheetRatioFor(SORT_OPTIONS.length, 66, 110)}
+      >
+        {SORT_OPTIONS.map(option => (
+          <DropdownItem
+            key={option.field}
+            colors={colors}
+            label={option.label}
+            selected={sortField === option.field}
+            subtitle={sortField === option.field ? (sortDirection === 'asc' ? 'Ascending' : 'Descending') : undefined}
+            onPress={() => handleSelectSort(option.field)}
+          />
+        ))}
+      </DropdownMenu>
 
-      {/* Filter Modal */}
-      <Modal visible={filterModalVisible} transparent animationType="fade" onRequestClose={() => setFilterModalVisible(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setFilterModalVisible(false)}>
-          <View style={[styles.sheetContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <View style={styles.sheetHeaderRow}>
-              <Text style={[styles.sheetTitle, { color: colors.mainFont }]}>Filters</Text>
-              <TouchableOpacity onPress={() => setVersionFilter(null)}>
+      {/* Filter sheet */}
+      <BottomSheet
+        visible={filterModalVisible}
+        onRequestClose={() => setFilterModalVisible(false)}
+        autoHeight
+        header={
+          <SheetHeader
+            colors={colors}
+            title="Filters"
+            right={
+              <TouchableOpacity onPress={() => setVersionFilter(null)} hitSlop={8}>
                 <Text style={[styles.clearLink, { color: colors.tint }]}>Clear</Text>
               </TouchableOpacity>
-            </View>
+            }
+          />
+        }
+        footer={<SheetButtons primary={{ label: 'Done', onPress: () => setFilterModalVisible(false) }} />}
+      >
+        <View style={styles.sheetBody}>
 
             <Text style={[styles.filterGroupLabel, { color: colors.secondaryFont }]}>Version</Text>
             <View style={styles.chipsWrap}>
@@ -446,34 +449,30 @@ export default function FeedbackTableScreen() {
               ))}
             </View>
 
-            <TouchableOpacity
-              style={[styles.doneButton, { backgroundColor: colors.tint }]}
-              onPress={() => setFilterModalVisible(false)}
-            >
-              <Text style={[styles.doneButtonText, { color: colors.onPrimary }]}>Done</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        </View>
+      </BottomSheet>
 
-      {/* Detail Modal */}
-      <Modal visible={detailFeedback !== null} transparent animationType="fade" onRequestClose={() => setDetailFeedback(null)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.detailContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.mainFont }]}>
-                {detailFeedback?.username || 'Anonymous'}
-              </Text>
-              <TouchableOpacity onPress={() => setDetailFeedback(null)} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color={colors.mainFont} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.modalBody}>
-              {detailFeedback && [
-                ['GUC ID', detailFeedback.guc_id || 'N/A'],
-                ['Season', detailFeedback.joined_season?.toString() || 'N/A'],
-                ['Version', detailFeedback.version ? `v${detailFeedback.version}` : 'N/A'],
-                ['Date', formatDate(detailFeedback.date)],
+      {/* Detail sheet */}
+      <BottomSheet
+        visible={detailFeedback !== null}
+        onRequestClose={() => setDetailFeedback(null)}
+        autoHeight
+        heightRatio={0.85}
+        header={<SheetHeader colors={colors} title={shownDetailFeedback?.username || 'Anonymous'} />}
+        footer={
+          shownDetailFeedback ? (
+            <SheetButtons
+              primary={{ label: 'Delete Feedback', icon: 'trash-outline', tone: 'danger', onPress: () => handleDeleteFeedback(shownDetailFeedback) }}
+            />
+          ) : undefined
+        }
+      >
+        <View style={styles.sheetBody}>
+              {shownDetailFeedback && [
+                ['GUC ID', shownDetailFeedback.guc_id || 'N/A'],
+                ['Season', shownDetailFeedback.joined_season?.toString() || 'N/A'],
+                ['Version', shownDetailFeedback.version ? `v${shownDetailFeedback.version}` : 'N/A'],
+                ['Date', formatDate(shownDetailFeedback.date)],
               ].map(([label, value]) => (
                 <View key={label} style={[styles.detailRow, { borderBottomColor: colors.border }]}>
                   <Text style={[styles.detailLabel, { color: colors.secondaryFont }]}>{label}</Text>
@@ -482,26 +481,19 @@ export default function FeedbackTableScreen() {
               ))}
               <Text style={[styles.notesFullLabel, { color: colors.secondaryFont }]}>Notes</Text>
               <Text style={[styles.notesFullText, { color: colors.mainFont }]}>
-                {detailFeedback?.notes || 'No notes provided'}
+                {shownDetailFeedback?.notes || 'No notes provided'}
               </Text>
-            </ScrollView>
-            {detailFeedback && (
-              <TouchableOpacity
-                style={[styles.deleteFullButton, { backgroundColor: colors.gradeFailing }]}
-                onPress={() => handleDeleteFeedback(detailFeedback)}
-              >
-                <Ionicons name="trash-outline" size={16} color="white" />
-                <Text style={styles.deleteFullButtonText}>Delete Feedback</Text>
-              </TouchableOpacity>
-            )}
-          </View>
         </View>
-      </Modal>
+      </BottomSheet>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  sheetBody: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
   container: {
     flex: 1,
   },
@@ -644,7 +636,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   retryButtonText: {
-    color: 'white',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -658,43 +649,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  sheetContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderWidth: 1,
-    borderBottomWidth: 0,
-    padding: 20,
-    paddingBottom: 32,
-  },
-  sheetHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sheetTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
   clearLink: {
     fontSize: 13,
     fontWeight: '600',
     marginBottom: 12,
-  },
-  sheetRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 13,
-  },
-  sheetRowText: {
-    fontSize: 15,
-    fontWeight: '500',
   },
   filterGroupLabel: {
     fontSize: 12,
@@ -714,45 +672,6 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: Radius.pill,
     borderWidth: 1,
-  },
-  doneButton: {
-    marginTop: 20,
-    paddingVertical: 13,
-    borderRadius: Radius.lg,
-    alignItems: 'center',
-  },
-  doneButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  detailContent: {
-    width: '100%',
-    maxWidth: 420,
-    alignSelf: 'center',
-    marginHorizontal: 20,
-    maxHeight: '80%',
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'transparent',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  closeButton: {
-    padding: 4,
-  },
-  modalBody: {
-    paddingHorizontal: 16,
   },
   detailRow: {
     flexDirection: 'row',
@@ -783,19 +702,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     marginBottom: 16,
-  },
-  deleteFullButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    margin: 16,
-    paddingVertical: 12,
-    borderRadius: Radius.lg,
-  },
-  deleteFullButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '700',
   },
 });

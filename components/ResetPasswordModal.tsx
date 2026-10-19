@@ -1,19 +1,11 @@
+import BottomSheet from '@/components/ui/BottomSheet';
+import { SheetHeader } from '@/components/ui/Dropdown';
+import { SheetButtons } from '@/components/ui/SheetButtons';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
-} from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface ResetPasswordModalProps {
   visible: boolean;
@@ -136,65 +128,38 @@ const ResetPasswordModal = ({ visible, onClose, onSuccess }: ResetPasswordModalP
     onClose();
   };
 
-  if (!visible) {
-    return null;
-  }
-
   return (
-    <Modal
+    <BottomSheet
       visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={handleClose}
+      onRequestClose={isLoading ? () => {} : handleClose}
+      heightRatio={0.9}
+      autoHeight
+      header={<SheetHeader colors={colors} title="Reset Password" subtitle="You'll be logged out after a successful reset" />}
+      footer={
+        <SheetButtons
+          secondary={{ label: 'Cancel', onPress: handleClose, disabled: isLoading }}
+          primary={{ label: isLoading ? 'Resetting...' : 'Reset Password', onPress: handleSubmit, loading: isLoading }}
+        />
+      }
     >
-      <View style={styles.overlay}>
-        <KeyboardAvoidingView
-          style={styles.keyboardAvoidingView}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-        >
-          <View style={[
-            styles.modalContainer,
-            {
-              backgroundColor: colors.surfaceElevated,
-              borderColor: colors.border,
-            }
-          ]}>
-          <View style={styles.header}>
-            {/* <View style={styles.iconContainer}>
-              <Ionicons name="key-outline" size={24} color={colors.tabColor} />
-            </View> */}
-            <Text style={[styles.title, { color: colors.mainFont }]}>
-              Reset Password
-            </Text>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={handleClose}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="close" size={24} color={colors.secondaryFont} />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
             <View style={styles.content}>
               <Text style={[styles.description, { color: colors.mainFont }]}>
                 Enter your current credentials and new password to reset your account password.
               </Text>
               
               {error ? (
-                <View style={[styles.errorBox, { backgroundColor: '#ffebee', borderColor: '#f44336' }]}>
-                  <Ionicons name="alert-circle-outline" size={20} color="#f44336" />
-                  <Text style={[styles.errorText, { color: '#f44336' }]}>
+                <View style={[styles.errorBox, { backgroundColor: colors.dangerSoft, borderColor: colors.danger }]}>
+                  <Ionicons name="alert-circle-outline" size={20} color={colors.danger} />
+                  <Text style={[styles.errorText, { color: colors.danger }]}>
                     {error}
                   </Text>
                 </View>
               ) : null}
               
               {success ? (
-                <View style={[styles.errorBox, { backgroundColor: '#e8f5e8', borderColor: '#4caf50' }]}>
-                  <Ionicons name="checkmark-circle-outline" size={20} color="#4caf50" />
-                  <Text style={[styles.errorText, { color: '#4caf50' }]}>
+                <View style={[styles.errorBox, { backgroundColor: colors.successSoft, borderColor: colors.success }]}>
+                  <Ionicons name="checkmark-circle-outline" size={20} color={colors.success} />
+                  <Text style={[styles.errorText, { color: colors.success }]}>
                     {success}
                   </Text>
                 </View>
@@ -306,112 +271,14 @@ const ResetPasswordModal = ({ visible, onClose, onSuccess }: ResetPasswordModalP
                 </View>
               </View>
             </View>
-          </ScrollView>
-
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.cancelButton, { borderColor: colors.border }]}
-              onPress={handleClose}
-              disabled={isLoading}
-            >
-              <Text style={[styles.cancelButtonText, { color: colors.mainFont }]}>
-                Cancel
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[
-                styles.submitButton, 
-                { backgroundColor: colors.tabColor },
-                isLoading && { backgroundColor: colors.secondaryFont, opacity: 0.7 }
-              ]}
-              onPress={handleSubmit}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator color={colors.background} size="small" />
-                  <Text style={[styles.loadingText, { color: colors.background }]}>Resetting...</Text>
-                </View>
-              ) : (
-                <View style={styles.buttonContent}>
-                  {/* <Ionicons name="checkmark-outline" size={20} color={colors.background} /> */}
-                  <Text style={[styles.submitButtonText, { color: colors.background }]}>
-                    Reset Password
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-        </KeyboardAvoidingView>
-      </View>
-    </Modal>
+    </BottomSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 40,
-  },
-  keyboardAvoidingView: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-    paddingTop: 50,
-    paddingBottom: 100,
-  },
-  modalContainer: {
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '90%',
-    minHeight: 500,
-    borderRadius: 20,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 15,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 16,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    flex: 1,
-  },
-  closeButton: {
-    padding: 4,
-  },
-  scrollView: {
-    flex: 1,
-  },
   content: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
+    paddingTop: 16,
     paddingBottom: 24,
   },
   description: {
@@ -472,49 +339,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 4,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-    gap: 12,
-  },
-  cancelButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  submitButton: {
-    flex: 2,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  loadingText: {
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
 

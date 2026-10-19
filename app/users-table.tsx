@@ -1,3 +1,6 @@
+import BottomSheet from '@/components/ui/BottomSheet';
+import { DropdownItem, DropdownMenu, SheetHeader, sheetRatioFor } from '@/components/ui/Dropdown';
+import { SheetButtons } from '@/components/ui/SheetButtons';
 import { AppBar } from '@/components/navigation/AppBar';
 import { Colors } from '@/constants/Colors';
 import { Radius, Shadow } from '@/constants/Theme';
@@ -7,20 +10,8 @@ import { supabase } from '@/utils/supabase';
 import { exportRowsToCSV } from '@/utils/csvExporter';
 import { formatRelativeTime } from '@/utils/formatRelativeTime';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useMemo, useState } from 'react';
-import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Modal,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface User {
   guc_id: string;
@@ -66,6 +57,9 @@ export default function UsersTableScreen() {
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [detailUser, setDetailUser] = useState<User | null>(null);
+  const lastUser = useRef<User | null>(null);
+  if (detailUser) lastUser.current = detailUser;
+  const shownDetailUser = detailUser ?? lastUser.current;
 
   useEffect(() => {
     fetchUsers();
@@ -394,7 +388,7 @@ export default function UsersTableScreen() {
           <Ionicons name="alert-circle" size={48} color={colors.gradeFailing} />
           <Text style={[styles.errorText, { color: colors.gradeFailing }]}>{error}</Text>
           <TouchableOpacity onPress={() => fetchUsers()} style={[styles.retryButton, { backgroundColor: colors.tint }]}>
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={[styles.retryButtonText, { color: colors.onPrimary }]}>Retry</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -421,37 +415,46 @@ export default function UsersTableScreen() {
         }
       />
 
-      {/* Sort Modal */}
-      <Modal visible={sortModalVisible} transparent animationType="fade" onRequestClose={() => setSortModalVisible(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSortModalVisible(false)}>
-          <View style={[styles.sheetContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <Text style={[styles.sheetTitle, { color: colors.mainFont }]}>Sort By</Text>
-            {SORT_OPTIONS.map(option => (
-              <TouchableOpacity
-                key={option.field}
-                style={styles.sheetRow}
-                onPress={() => handleSelectSort(option.field)}
-              >
-                <Text style={[styles.sheetRowText, { color: colors.mainFont }]}>{option.label}</Text>
-                {sortField === option.field && (
-                  <Ionicons name={sortDirection === 'asc' ? 'arrow-up' : 'arrow-down'} size={16} color={colors.tint} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      {/* Sort sheet */}
+      <DropdownMenu
+        colors={colors}
+        visible={sortModalVisible}
+        onClose={() => setSortModalVisible(false)}
+        title="Sort by"
+        subtitle="Tap the active field again to flip the order"
+        heightRatio={sheetRatioFor(SORT_OPTIONS.length, 66, 110)}
+      >
+        {SORT_OPTIONS.map(option => (
+          <DropdownItem
+            key={option.field}
+            colors={colors}
+            label={option.label}
+            selected={sortField === option.field}
+            subtitle={sortField === option.field ? (sortDirection === 'asc' ? 'Ascending' : 'Descending') : undefined}
+            onPress={() => handleSelectSort(option.field)}
+          />
+        ))}
+      </DropdownMenu>
 
-      {/* Filter Modal */}
-      <Modal visible={filterModalVisible} transparent animationType="fade" onRequestClose={() => setFilterModalVisible(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setFilterModalVisible(false)}>
-          <View style={[styles.sheetContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <View style={styles.sheetHeaderRow}>
-              <Text style={[styles.sheetTitle, { color: colors.mainFont }]}>Filters</Text>
-              <TouchableOpacity onPress={clearFilters}>
+      {/* Filter sheet */}
+      <BottomSheet
+        visible={filterModalVisible}
+        onRequestClose={() => setFilterModalVisible(false)}
+        autoHeight
+        header={
+          <SheetHeader
+            colors={colors}
+            title="Filters"
+            right={
+              <TouchableOpacity onPress={clearFilters} hitSlop={8}>
                 <Text style={[styles.clearLink, { color: colors.tint }]}>Clear</Text>
               </TouchableOpacity>
-            </View>
+            }
+          />
+        }
+        footer={<SheetButtons primary={{ label: 'Done', onPress: () => setFilterModalVisible(false) }} />}
+      >
+        <View style={styles.sheetBody}>
 
             <Text style={[styles.filterGroupLabel, { color: colors.secondaryFont }]}>Major</Text>
             <View style={styles.chipsWrap}>
@@ -489,60 +492,51 @@ export default function UsersTableScreen() {
               ))}
             </View>
 
-            <TouchableOpacity
-              style={[styles.doneButton, { backgroundColor: colors.tint }]}
-              onPress={() => setFilterModalVisible(false)}
-            >
-              <Text style={[styles.doneButtonText, { color: colors.onPrimary }]}>Done</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        </View>
+      </BottomSheet>
 
-      {/* Detail Modal */}
-      <Modal visible={detailUser !== null} transparent animationType="fade" onRequestClose={() => setDetailUser(null)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.detailContent, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.mainFont }]}>{detailUser?.username || 'User'}</Text>
-              <TouchableOpacity onPress={() => setDetailUser(null)} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color={colors.mainFont} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.modalBody}>
-              {detailUser && [
-                ['GUC ID', detailUser.guc_id || 'N/A'],
-                ['Major', detailUser.major || 'N/A'],
-                ['Season', detailUser.joined_season?.toString() || 'N/A'],
-                ['Date Joined', formatDate(detailUser.date_joined_app)],
-                ['Last Open', formatDate(detailUser.last_open_time)],
-                ['Times Opened', detailUser.times_opened?.toString() || '0'],
-                ['Joined Version', detailUser.joined_version?.toString() || 'N/A'],
-                ['Current Version', detailUser.current_version?.toString() || 'N/A'],
+      {/* Detail sheet */}
+      <BottomSheet
+        visible={detailUser !== null}
+        onRequestClose={() => setDetailUser(null)}
+        autoHeight
+        heightRatio={0.85}
+        header={<SheetHeader colors={colors} title={shownDetailUser?.username || 'User'} />}
+        footer={
+          shownDetailUser ? (
+            <SheetButtons
+              primary={{ label: 'Delete User', icon: 'trash-outline', tone: 'danger', onPress: () => handleDeleteUser(shownDetailUser) }}
+            />
+          ) : undefined
+        }
+      >
+        <View style={styles.sheetBody}>
+              {shownDetailUser && [
+                ['GUC ID', shownDetailUser.guc_id || 'N/A'],
+                ['Major', shownDetailUser.major || 'N/A'],
+                ['Season', shownDetailUser.joined_season?.toString() || 'N/A'],
+                ['Date Joined', formatDate(shownDetailUser.date_joined_app)],
+                ['Last Open', formatDate(shownDetailUser.last_open_time)],
+                ['Times Opened', shownDetailUser.times_opened?.toString() || '0'],
+                ['Joined Version', shownDetailUser.joined_version?.toString() || 'N/A'],
+                ['Current Version', shownDetailUser.current_version?.toString() || 'N/A'],
               ].map(([label, value]) => (
                 <View key={label} style={[styles.detailRow, { borderBottomColor: colors.border }]}>
                   <Text style={[styles.detailLabel, { color: colors.secondaryFont }]}>{label}</Text>
                   <Text style={[styles.detailValue, { color: colors.mainFont }]}>{value}</Text>
                 </View>
               ))}
-            </ScrollView>
-            {detailUser && (
-              <TouchableOpacity
-                style={[styles.deleteFullButton, { backgroundColor: colors.gradeFailing }]}
-                onPress={() => handleDeleteUser(detailUser)}
-              >
-                <Ionicons name="trash-outline" size={16} color="white" />
-                <Text style={styles.deleteFullButtonText}>Delete User</Text>
-              </TouchableOpacity>
-            )}
-          </View>
         </View>
-      </Modal>
+      </BottomSheet>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  sheetBody: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
   container: {
     flex: 1,
   },
@@ -692,7 +686,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   retryButtonText: {
-    color: 'white',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -706,43 +699,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  sheetContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderWidth: 1,
-    borderBottomWidth: 0,
-    padding: 20,
-    paddingBottom: 32,
-  },
-  sheetHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sheetTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
   clearLink: {
     fontSize: 13,
     fontWeight: '600',
     marginBottom: 12,
-  },
-  sheetRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 13,
-  },
-  sheetRowText: {
-    fontSize: 15,
-    fontWeight: '500',
   },
   filterGroupLabel: {
     fontSize: 12,
@@ -763,45 +723,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     borderWidth: 1,
   },
-  doneButton: {
-    marginTop: 20,
-    paddingVertical: 13,
-    borderRadius: Radius.lg,
-    alignItems: 'center',
-  },
-  doneButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  detailContent: {
-    width: '100%',
-    maxWidth: 420,
-    alignSelf: 'center',
-    marginHorizontal: 20,
-    maxHeight: '80%',
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'transparent',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  closeButton: {
-    padding: 4,
-  },
-  modalBody: {
-    paddingHorizontal: 16,
-  },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -818,19 +739,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flexShrink: 1,
     textAlign: 'right',
-  },
-  deleteFullButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    margin: 16,
-    paddingVertical: 12,
-    borderRadius: Radius.lg,
-  },
-  deleteFullButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '700',
   },
 });

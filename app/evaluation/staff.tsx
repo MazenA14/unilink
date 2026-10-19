@@ -87,7 +87,7 @@ export default function EvaluateStaffScreen() {
                 items.map((item) => (
                   <TouchableOpacity
                     key={item.value}
-                    style={[styles.itemCard, { backgroundColor: colors.cardBackground, borderLeftColor: '#F59E0B' }]}
+                    style={[styles.itemCard, { backgroundColor: colors.cardBackground, borderLeftColor: colors.warning }]}
                     onPress={() =>
                       router.push({
                         pathname: '/evaluation/form',

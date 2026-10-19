@@ -1,13 +1,21 @@
 ---
 name: design-system
-description: UniLink's centralized design token system and how to restyle screens consistently
+description: UniLink's centralized design token system (original red + dark gray, refined Oct 2026) and how to restyle screens consistently
 metadata:
   type: project
 ---
 
 UniLink (GUC student portal, Expo/React Native) has a centralized design system introduced in a July 2026 UI revamp.
 
-**Direction:** Crimson (`#E11D48`) primary + Indigo (`#4F46E5`) secondary on slate neutrals, with an "elevated & layered" surface model (16–20px corners, tangible shadows).
+**Direction (Oct 2026):** the original brand palette, refined — red `#FF4136` (coral `#FF6B5A` in dark) on neutral grays; dark mode on the original `#1A1A1A` charcoal (cards `#2A2A2A`, surfaces `#242424`). A pastel periwinkle palette was tried and rejected by the user as too dull — keep the red + dark gray identity. Slot/schedule/grade colours are the original saturated set.
+
+**Contrast tokens:** `onPrimary` (white in light, deep ink in dark) for content on primary/tint fills; `onAccent` (white, both modes) for content on pastel accent fills (slot types, grades, GPA, danger/warning buttons). Never hardcode white on a coloured fill. `link` token for hyperlinks.
+
+**Shared pickers:** every dropdown opens as a bottom sheet. `components/ui/Dropdown.tsx` (`DropdownTrigger` select field with caption/icon, `DropdownMenu` = BottomSheet + `SheetHeader`, `DropdownItem`, `sheetRatioFor(rows)`), `components/ui/PickerSheet.tsx` (single-select from an options array), `components/ui/SegmentedControl.tsx` (2–4 inline choices: Grades Current/Previous, Schedule Mine/Staff/Course, Settings theme). `BottomSheet` supports `onEndReached` for paginated lists and lifts above the keyboard.
+
+**Dialogs:** every dialog is a `BottomSheet` (`components/ui/BottomSheet.tsx`: `autoHeight` for short content, `footer` for pinned actions via `components/ui/SheetButtons.tsx`, `dismissible={false}` for forced flows). Only `CustomAlert` (confirm/delete prompts) and the full-screen image viewer in Quick Access remain plain `Modal`s.
+
+**Keyboard:** modals with inputs wrap their overlay in `KeyboardAwareView` (`components/ui/KeyboardAware.tsx`), which pads by the measured keyboard overlap (works in Android edge-to-edge modals, no double shift if the window resized). Use it for any new modal with a TextInput instead of KeyboardAvoidingView.
 
 **Token files:**
 - `constants/Colors.ts` — `Colors.light` / `Colors.dark`. All legacy keys preserved (mainFont, secondaryFont, tabColor, cardBackground, grade*, etc.) plus new tokens: `primary/secondary` (+ Dark/Light/Soft/on*), surface tiers (`surface`, `surfaceElevated`, `surfaceSunken`, `surfaceAlt`), `textPrimary/Secondary/Tertiary`, `border/borderStrong/divider`, semantic (`success/warning/info/danger` + `*Soft`), `shadow`, `overlay`.

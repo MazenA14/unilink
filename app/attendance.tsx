@@ -292,7 +292,7 @@ export default function AttendanceScreen() {
                           <Text style={[styles.courseCodeText, { color: colors.tint }]}>{report.code}</Text>
                         </View>
                         <View style={[styles.levelBadge, { backgroundColor: getAbsenceLevelColor(report.absenceLevel) }]}>
-                          <Text style={styles.levelBadgeText}>
+                          <Text style={[styles.levelBadgeText, { color: colors.onAccent }]}>
                             Level {report.absenceLevel}
                           </Text>
                         </View>
@@ -345,7 +345,7 @@ export default function AttendanceScreen() {
                             <View style={styles.rightSection}>
                               {warningLevel && (
                                 <View style={[styles.dynamicLevelBadge, { backgroundColor: getAbsenceLevelColor(warningLevel) }]}>
-                                  <Text style={styles.dynamicLevelBadgeText}>
+                                  <Text style={[styles.dynamicLevelBadgeText, { color: colors.onAccent }]}>
                                     Level {warningLevel}
                                   </Text>
                                 </View>
@@ -556,11 +556,9 @@ const styles = StyleSheet.create({
   warningBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF3CD',
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FFEAA7',
   },
   warningText: {
     marginLeft: 8,
@@ -624,7 +622,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   levelBadgeText: {
-    color: 'white',
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -686,7 +683,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   staticLevelBadgeText: {
-    color: 'white',
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -697,7 +693,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dynamicLevelBadgeText: {
-    color: 'white',
     fontSize: 12,
     fontWeight: 'bold',
   },

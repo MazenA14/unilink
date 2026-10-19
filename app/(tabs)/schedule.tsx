@@ -2,8 +2,8 @@ import { CalendarExportModal } from '@/components/CalendarExportModal';
 import { useCustomAlert } from '@/components/CustomAlert';
 import { AppBar } from '@/components/navigation/AppBar';
 import { EmptyState, LoadingIndicator, ScheduleSelector, ScheduleTable } from '@/components/schedule';
-import { ScheduleMenuNew } from '@/components/ScheduleMenuNew';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
+import { SegmentOption, SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Colors } from '@/constants/Colors';
 import { useScheduleContext } from '@/contexts/ScheduleContext';
 import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
@@ -16,6 +16,14 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+type ScheduleTypeKey = 'personal' | 'staff' | 'course';
+
+const SCHEDULE_TYPE_OPTIONS: SegmentOption<ScheduleTypeKey>[] = [
+  { value: 'personal', label: 'Me', icon: 'person-outline' },
+  { value: 'staff', label: 'Staff', icon: 'people-outline' },
+  { value: 'course', label: 'Course', icon: 'book-outline' },
+];
 
 export default function ScheduleScreen() {
   const colorScheme = useColorScheme();
@@ -39,8 +47,6 @@ export default function ScheduleScreen() {
     refetch,
   } = useScheduleTypes(initialScheduleType);
 
-  // Menu state
-  const [menuVisible, setMenuVisible] = useState(false);
   const [preferredSlots, setPreferredSlots] = useState<number>(5);
   
   // State to force re-render for current slot indicator
@@ -121,20 +127,6 @@ export default function ScheduleScreen() {
         type: 'error',
       });
     }
-  };
-
-  // Menu handlers
-  const handleMenuPress = () => {
-    setMenuVisible(true);
-  };
-
-  const handleMenuClose = () => {
-    setMenuVisible(false);
-  };
-
-  const handleMenuOptionPress = (option: string) => {
-    handleScheduleTypeChange(option as any);
-    setMenuVisible(false);
   };
 
   // Open export modal
@@ -268,69 +260,39 @@ export default function ScheduleScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <AppBar title="Schedule" large />
+      <AppBar
+        title="Schedule"
+        large
+        rightActions={
+          scheduleData && hasScheduleData(scheduleData) ? (
+            <TouchableOpacity
+              style={[
+                styles.exportButton,
+                { backgroundColor: colors.primarySoft, borderColor: colors.border, opacity: isExporting ? 0.6 : 1 },
+              ]}
+              onPress={handleOpenExportModal}
+              disabled={isExporting}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Export schedule to calendar"
+            >
+              <Ionicons name={isExporting ? 'hourglass-outline' : 'calendar-outline'} size={20} color={colors.primary} />
+            </TouchableOpacity>
+          ) : undefined
+        }
+      />
       <ScrollView
         style={styles.scrollView}
         refreshControl={<AppRefreshControl refreshing={loading} onRefresh={handleRefresh} />}
       >
-        {/* Header */}
+        {/* Schedule type switcher */}
         <View style={styles.header}>
-        {/* Schedule Section Title */}
-        <View style={styles.section}>
-          <View style={styles.sectionTitleContainer}>
-            <View style={styles.titleWithDropdown}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                {scheduleType === 'personal' ? 'Personal Schedule' : 
-                 scheduleType === 'staff' ? 'Staff Schedule' :
-                 'Course Schedule'}
-              </Text>
-              {/* Menu Button - moved beside title */}
-              <TouchableOpacity
-                style={[
-                  styles.dropdownButton,
-                  {
-                    backgroundColor: colors.cardBackground,
-                    borderColor: colors.border,
-                  }
-                ]}
-                onPress={handleMenuPress}
-                activeOpacity={0.7}
-              >
-                <Ionicons 
-                  name={menuVisible ? "chevron-up" : "chevron-down"} 
-                  size={16} 
-                  color={colors.secondaryFont} 
-                />
-              </TouchableOpacity>
-            </View>
-            
-            {/* Export Button - moved to separate section */}
-            {scheduleData && hasScheduleData(scheduleData) && (
-              <TouchableOpacity
-                style={[
-                  styles.exportButton,
-                  {
-                    backgroundColor: colors.tint,
-                    opacity: isExporting ? 0.6 : 1,
-                  }
-                ]}
-                onPress={handleOpenExportModal}
-                disabled={isExporting}
-                activeOpacity={0.7}
-              >
-                <Ionicons 
-                  name={isExporting ? "hourglass" : "calendar-outline"} 
-                  size={16} 
-                  color="#FFFFFF" 
-                />
-                <Text style={styles.exportButtonText}>Export</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          <SegmentedControl
+            options={SCHEDULE_TYPE_OPTIONS}
+            value={scheduleType as ScheduleTypeKey}
+            onChange={(type) => handleScheduleTypeChange(type as any)}
+          />
         </View>
-        </View>
-        
-        {/* Schedule Type Selector removed: selection now comes from the hamburger menu */}
 
         {/* Schedule Selector (for non-personal schedules) */}
         {scheduleType !== 'personal' && (
@@ -348,13 +310,6 @@ export default function ScheduleScreen() {
         {renderContent()}
       </ScrollView>
 
-      {/* Schedule Menu - Outside ScrollView */}
-      <ScheduleMenuNew
-        visible={menuVisible}
-        onClose={handleMenuClose}
-        onOptionPress={handleMenuOptionPress}
-      />
-      
       {/* Custom Alert Component */}
       <AlertComponent />
       
@@ -433,11 +388,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 16,
     gap: 6,
-  },
-  exportButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
   },
   dropdownButton: {
     width: 28,

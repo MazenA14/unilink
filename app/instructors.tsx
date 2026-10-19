@@ -245,11 +245,11 @@ export default function InstructorsScreen() {
         <Ionicons 
           name="people" 
           size={20} 
-          color={activeTab === 'instructors' ? 'white' : colors.secondaryFont} 
+          color={activeTab === 'instructors' ? colors.onPrimary : colors.secondaryFont} 
         />
         <Text style={[
           styles.tabText,
-          { color: activeTab === 'instructors' ? 'white' : colors.secondaryFont }
+          { color: activeTab === 'instructors' ? colors.onPrimary : colors.secondaryFont }
         ]}>
           Your Instructors ({sortedInstructors.length})
         </Text>
@@ -265,11 +265,11 @@ export default function InstructorsScreen() {
         <Ionicons 
           name="book" 
           size={20} 
-          color={activeTab === 'courses' ? 'white' : colors.secondaryFont} 
+          color={activeTab === 'courses' ? colors.onPrimary : colors.secondaryFont} 
         />
         <Text style={[
           styles.tabText,
-          { color: activeTab === 'courses' ? 'white' : colors.secondaryFont }
+          { color: activeTab === 'courses' ? colors.onPrimary : colors.secondaryFont }
         ]}>
           By Course ({sortedCourses.length})
         </Text>
@@ -311,7 +311,7 @@ export default function InstructorsScreen() {
         style={[styles.retryButton, { backgroundColor: colors.tint }]}
         onPress={() => fetchData()}
       >
-        <Text style={styles.retryButtonText}>Try Again</Text>
+        <Text style={[styles.retryButtonText, { color: colors.onPrimary }]}>Try Again</Text>
       </TouchableOpacity>
     </View>
   );
@@ -585,7 +585,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   retryButtonText: {
-    color: 'white',
     fontSize: 16,
     fontWeight: '600',
   },

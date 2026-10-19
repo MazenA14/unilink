@@ -15,7 +15,7 @@ export default function CMSPortalScreen() {
         <Text style={[styles.title, { color: colors.mainFont }]}>Portal</Text>
         <Text style={[styles.subtitle, { color: colors.secondaryFont }]}>Place portal content here.</Text>
         <TouchableOpacity style={[styles.button, { backgroundColor: colors.tint }]} onPress={() => router.replace('/(tabs)/dashboard')}>
-          <Text style={styles.buttonText}>Back to Dashboard</Text>
+          <Text style={[styles.buttonText, { color: colors.onPrimary }]}>Back to Dashboard</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -27,7 +27,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: '700', marginBottom: 6 },
   subtitle: { fontSize: 14 },
   button: { marginTop: 16, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10 },
-  buttonText: { color: 'white', fontWeight: '600' },
+  buttonText: { fontWeight: '600' },
 });
 
 

@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ScheduleTypeColors, SlotTypeColors } from '@/constants/Colors';
 import { NativeModules, Platform } from 'react-native';
 import { resolveCourseTitle } from './courseTitle';
 import { getTimeSlots } from './currentSlotUtils';
@@ -22,17 +23,7 @@ const { ScheduleWidget } = NativeModules as {
 
 const PERIOD_KEYS = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth'] as const;
 
-const SLOT_TYPE_COLORS: Record<string, string> = {
-  Lecture: '#3B82F6',
-  Tutorial: '#10B981',
-  Lab: '#F59E0B',
-  Practical: '#FF6B35',
-  Seminar: '#8B5CF6',
-  Workshop: '#EF4444',
-  Project: '#06B6D4',
-  Thesis: '#84CC16',
-  Free: '#6B7280',
-};
+const SLOT_TYPE_COLORS: Record<string, string> = SlotTypeColors;
 
 export interface WidgetSession {
   period: string;     // "1st"
@@ -84,7 +75,7 @@ export function buildWidgetPayload(
         type: classData.slotType || undefined,
         room: classData.room || undefined,
         code: classData.courseCode || undefined,
-        color: SLOT_TYPE_COLORS[classData.slotType as string] ?? '#FF6B6B',
+        color: SLOT_TYPE_COLORS[classData.slotType as string] ?? ScheduleTypeColors.personal,
         count: classes.length,
       });
     });

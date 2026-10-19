@@ -101,8 +101,8 @@ export default function ExpandableCourseCard({
                     style={[
                       styles.statusBadgeGrade,
                       { 
-                        color: formatGradeDisplay(course.midtermGrade).startsWith('PLACEHOLDER:') 
-                          ? 'white' 
+                        color: formatGradeDisplay(course.midtermGrade).startsWith('PLACEHOLDER:')
+                          ? colors.textSecondary 
                           : getGradeColor(course.midtermGrade.percentage) 
                       }
                     ]}
@@ -133,7 +133,7 @@ export default function ExpandableCourseCard({
                   styles.unseenBadge,
                   { backgroundColor: colors.tint }
                 ]}>
-                  <Text style={[styles.unseenBadgeText, { color: 'white' }]}>
+                  <Text style={[styles.unseenBadgeText, { color: colors.onPrimary }]}>
                     {unseenGradesCount}
                   </Text>
                 </View>
@@ -189,8 +189,8 @@ export default function ExpandableCourseCard({
                       style={[
                         styles.detailedGradePercentage,
                         { 
-                          color: formatGradeDisplay(grade).startsWith('PLACEHOLDER:') 
-                            ? 'white' 
+                          color: formatGradeDisplay(grade).startsWith('PLACEHOLDER:')
+                            ? colors.textSecondary 
                             : getGradeColor(grade.percentage) 
                         },
                       ]}

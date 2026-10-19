@@ -161,9 +161,9 @@ export default function TranscriptScreen() {
             <View style={styles.gpaContainer}>
               <View style={[styles.gpaCard, { backgroundColor: parsedTranscript?.cumulativeGPA ? getCumulativeGPAColor(parsedTranscript.cumulativeGPA, colors) : colors.tabColor }]}>
                 <View style={styles.gpaHeader}>
-                  <Text style={[styles.gpaLabel, { color: '#FFFFFF' }]}>Cumulative GPA</Text>
+                  <Text style={[styles.gpaLabel, { color: colors.onAccent }]}>Cumulative GPA</Text>
                 </View>
-                <Text style={[styles.gpaValue, { color: '#FFFFFF' }]}>
+                <Text style={[styles.gpaValue, { color: colors.onAccent }]}>
                   {parsedTranscript?.cumulativeGPA || '--'}
                 </Text>
               </View>

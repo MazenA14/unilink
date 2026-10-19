@@ -254,7 +254,7 @@ export default function CMSHomeScreen() {
                               style={[styles.unseenBadge, { backgroundColor: colors.danger }]}
                               accessibilityLabel={`${course.unseenCount} unseen item${course.unseenCount !== 1 ? 's' : ''}`}
                             >
-                              <Text style={styles.unseenBadgeText}>{course.unseenCount} new</Text>
+                              <Text style={[styles.unseenBadgeText, { color: colors.onAccent }]}>{course.unseenCount} new</Text>
                             </View>
                           )}
                         </View>
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
   unseenPill: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   unseenDot: { width: 6, height: 6, borderRadius: 3 },
   unseenBadge: { marginLeft: 'auto', paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: Radius.pill, alignSelf: 'flex-start' },
-  unseenBadgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
+  unseenBadgeText: { fontSize: 11, fontWeight: '800' },
   countPill: { alignSelf: 'flex-start', paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: Radius.pill, marginTop: 2 },
   countPillText: { fontSize: 11, fontWeight: '700' },
   chevronChip: { width: 30, height: 30, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },

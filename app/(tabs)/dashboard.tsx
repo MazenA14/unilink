@@ -4,7 +4,7 @@ import { MultipleLecturesModal } from '@/components/schedule/MultipleLecturesMod
 import UpdateModal from '@/components/UpdateModal';
 import WhatsNewModal from '@/components/WhatsNewModal';
 import { useCustomAlert } from '@/components/CustomAlert';
-import { Colors, ScheduleTypeColors } from '@/constants/Colors';
+import { Colors, ScheduleColors, SlotTypeColors } from '@/constants/Colors';
 import { Radius, Shadow, Spacing, withAlpha } from '@/constants/Theme';
 
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -39,6 +39,7 @@ const sumUnseen = (summary: CmsUnseenSummary) =>
 export default function DashboardScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const scheduleColors = ScheduleColors[colorScheme ?? 'light'];
   const [nickname, setNickname] = useState<string>('Student');
   const [username, setUsername] = useState<string>('');
   const [nicknameModalVisible, setNicknameModalVisible] = useState(false);
@@ -208,20 +209,8 @@ export default function DashboardScreen() {
 
 
   // Get slot type color
-  const getSlotTypeColor = (slotType: string) => {
-    const colors = {
-      'Lecture': '#3B82F6',
-      'Tutorial': '#10B981',
-      'Lab': '#F59E0B',
-      'Practical': '#FF6B35',
-      'Seminar': '#8B5CF6',
-      'Workshop': '#EF4444',
-      'Project': '#06B6D4',
-      'Thesis': '#84CC16',
-      'Free': '#6B7280',
-    };
-    return colors[slotType as keyof typeof colors] || '#6B7280';
-  };
+  const getSlotTypeColor = (slotType: string) =>
+    SlotTypeColors[slotType as keyof typeof SlotTypeColors] || SlotTypeColors.Free;
 
   // Resolve a displayable course title (same mapping used by the schedule rows)
   const resolveClassName = (classData: any): string =>
@@ -526,11 +515,11 @@ export default function DashboardScreen() {
               onPress={() => router.push('/cms/home')}
             >
               <View style={styles.statTop}>
-                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.primary, 0.12) }]}>
-                  <Ionicons name="document-attach" size={18} color={colors.primary} />
+                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.secondary, 0.16) }]}>
+                  <Ionicons name="document-attach" size={18} color={colors.secondary} />
                 </View>
                 {cmsUnseen !== null ? (
-                  <Text style={[styles.statValue, { color: cmsUnseen > 0 ? colors.primary : colors.textPrimary }]}>{cmsUnseen}</Text>
+                  <Text style={[styles.statValue, { color: cmsUnseen > 0 ? colors.secondary : colors.textPrimary }]}>{cmsUnseen}</Text>
                 ) : (
                   <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
                 )}
@@ -547,8 +536,8 @@ export default function DashboardScreen() {
               onPress={() => router.push('/attendance')}
             >
               <View style={styles.statTop}>
-                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.primary, 0.12) }]}>
-                  <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.secondary, 0.16) }]}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.secondary} />
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
               </View>
@@ -562,8 +551,8 @@ export default function DashboardScreen() {
               onPress={() => router.replace('/(tabs)/grades')}
             >
               <View style={styles.statTop}>
-                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.primary, 0.12) }]}>
-                  <Ionicons name="school" size={18} color={colors.primary} />
+                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.secondary, 0.16) }]}>
+                  <Ionicons name="school" size={18} color={colors.secondary} />
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
               </View>
@@ -577,8 +566,8 @@ export default function DashboardScreen() {
               onPress={() => router.replace('/(tabs)/schedule')}
             >
               <View style={styles.statTop}>
-                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.primary, 0.12) }]}>
-                  <Ionicons name="calendar" size={18} color={colors.primary} />
+                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.secondary, 0.16) }]}>
+                  <Ionicons name="calendar" size={18} color={colors.secondary} />
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
               </View>
@@ -625,8 +614,8 @@ export default function DashboardScreen() {
           <View style={styles.periodsContainer}>
             {scheduleLoading ? (
               <View style={[styles.placeholderRow, {
-                backgroundColor: colorScheme === 'dark' ? '#2A1F1F' : '#FFF5F5',
-                borderColor: colorScheme === 'dark' ? '#3D2A2A' : '#FFE0E0',
+                backgroundColor: scheduleColors.periodRowBg,
+                borderColor: scheduleColors.periodRowBorder,
               }]}>
                 <Text style={[styles.courseName, { color: colors.secondaryFont, fontStyle: 'italic', marginBottom: 0 }]}>
                   Loading schedule...
@@ -654,13 +643,13 @@ export default function DashboardScreen() {
                   <PeriodRowComponent
                     key={periodKey}
                     style={[styles.periodRow, {
-                      backgroundColor: colorScheme === 'dark' ? '#2A1F1F' : '#FFF5F5',
+                      backgroundColor: scheduleColors.periodRowBg,
                       borderColor: isCurrentSlot
                         ? colors.tint
-                        : (colorScheme === 'dark' ? '#3D2A2A' : '#FFE0E0'),
+                        : (scheduleColors.periodRowBorder),
                       borderWidth: isCurrentSlot ? 2 : 1,
                       borderRadius: Radius.lg,
-                      shadowColor: isCurrentSlot ? colors.tint : ScheduleTypeColors.personal,
+                      shadowColor: isCurrentSlot ? colors.tint : colors.primary,
                       shadowOffset: { width: 0, height: 2 },
                       shadowOpacity: isCurrentSlot ? 0.3 : 0.1,
                       shadowRadius: isCurrentSlot ? 6 : 4,
@@ -671,30 +660,30 @@ export default function DashboardScreen() {
                     <View style={[styles.periodLabel, {
                       backgroundColor: isCurrentSlot
                         ? colors.tint + '20'
-                        : ScheduleTypeColors.personal + '15',
+                        : colors.primary + '15',
                       borderColor: isCurrentSlot
                         ? colors.tint + '40'
-                        : ScheduleTypeColors.personal + '30',
+                        : colors.primary + '30',
                       borderTopLeftRadius: Radius.lg - 1,
                       borderBottomLeftRadius: Radius.lg - 1,
                     }]}>
                       <Text style={[styles.periodLabelText, {
-                        color: isCurrentSlot ? colors.tint : ScheduleTypeColors.personal,
+                        color: isCurrentSlot ? colors.tint : colors.primary,
                         fontWeight: isCurrentSlot ? '800' : '700'
                       }]}>{periodNumber}</Text>
                       <Text style={[styles.periodTimingText, {
-                        color: isCurrentSlot ? colors.tint : ScheduleTypeColors.personal,
+                        color: isCurrentSlot ? colors.tint : colors.primary,
                         fontSize: 10,
                         fontWeight: isCurrentSlot ? '700' : '500'
                       }]}>{timing}</Text>
                     </View>
                     <View style={[styles.periodContent, {
                       backgroundColor: colors.cardBackground,
-                      borderColor: ScheduleTypeColors.personal + '40',
+                      borderColor: colors.primary + '40',
                       borderTopRightRadius: Radius.lg - 1,
                       borderBottomRightRadius: Radius.lg - 1,
                       borderLeftWidth: 3,
-                      borderLeftColor: ScheduleTypeColors.personal,
+                      borderLeftColor: colors.primary,
                     }]}>
                       {classData && (Array.isArray(classDataArray) ? classDataArray.length > 0 : classData) ? (
                         <View style={styles.periodContentRow}>
@@ -725,12 +714,12 @@ export default function DashboardScreen() {
                             )}
                             {classData.slotType && (
                               <View style={[styles.typePill, { backgroundColor: getSlotTypeColor(classData.slotType) }]}>
-                                <Text style={[styles.typeText, { color: 'white' }]}>{classData.slotType}</Text>
+                                <Text style={[styles.typeText, { color: colors.onAccent }]}>{classData.slotType}</Text>
                               </View>
                             )}
                             {hasMultipleLectures && (
-                              <View style={[styles.multipleLecturesBadge, { backgroundColor: ScheduleTypeColors.personal }]}>
-                                <Text style={[styles.multipleLecturesText, { color: 'white' }]}>{classDataArray.length}</Text>
+                              <View style={[styles.multipleLecturesBadge, { backgroundColor: colors.primary }]}>
+                                <Text style={[styles.multipleLecturesText, { color: colors.onPrimary }]}>{classDataArray.length}</Text>
                               </View>
                             )}
                           </View>
@@ -752,8 +741,8 @@ export default function DashboardScreen() {
               })
             ) : (
               <View style={[styles.placeholderRow, {
-                backgroundColor: colorScheme === 'dark' ? '#2A1F1F' : '#FFF5F5',
-                borderColor: colorScheme === 'dark' ? '#3D2A2A' : '#FFE0E0',
+                backgroundColor: scheduleColors.periodRowBg,
+                borderColor: scheduleColors.periodRowBorder,
               }]}>
                 <Text style={[styles.courseName, { color: colors.secondaryFont, fontStyle: 'italic', marginBottom: 0 }]}>
                   {scheduleData?.days?.length

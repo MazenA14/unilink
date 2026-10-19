@@ -1,26 +1,36 @@
 /**
- * UniLink Color Tokens — ORIGINAL palette (red / coral on gray neutrals).
+ * UniLink Color Tokens — original red/coral on dark-gray palette, refined.
  * -------------------------------------------------------------
- * The original brand palette has been restored. The newer design-system
- * token names (primary, surface, textPrimary, semantic colors, …) are kept
- * so the current UX components keep working, but every one of them is mapped
- * to an original-palette value — so the whole app renders in the old theme.
+ * Brand red `#FF4136` (coral `#FF6B5A` in dark mode) on neutral grays, with
+ * the dark theme built on the original `#1A1A1A` charcoal. Refinements over
+ * the first palette: softer near-black text, a cleaner neutral gray ramp,
+ * hairline borders that read in both modes, and semantic colours tuned so
+ * they stay legible on their soft backgrounds.
+ *
+ * Legacy keys (mainFont, secondaryFont, tabColor, cardBackground, grade*, …)
+ * are kept and mapped onto the tokens so every screen follows the theme.
+ *
+ * Contrast rules:
+ *  - Filled primary buttons use `onPrimary` (white in light, charcoal in
+ *    dark, since the dark-mode coral is light). Never hardcode white on tint.
+ *  - `onAccent` is for content on saturated accent fills (slot types,
+ *    grades, GPA, destructive buttons).
  */
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    tint: '#ff4136',
-    icon: '#6d6d6d',
-    tabIconDefault: '#6d6d6d',
-    tabIconSelected: '#ff4136',
+    text: '#111111',
+    background: '#FFFFFF',
+    tint: '#FF4136',
+    icon: '#6D6D6D',
+    tabIconDefault: '#6D6D6D',
+    tabIconSelected: '#FF4136',
     // Custom app colors
-    mainFont: '#000000',
-    secondaryFont: '#6d6d6d',
-    tabColor: '#ff4136',
-    fileBackground: '#ffde59',
-    border: '#e0e0e0',
-    financials: '#2ecc71',
+    mainFont: '#111111',
+    secondaryFont: '#6D6D6D',
+    tabColor: '#FF4136',
+    fileBackground: '#FFDE59',
+    border: '#E6E6E8',
+    financials: '#27AE60',
     // Grade colors
     gradeExcellent: '#2E7D32',
     gradeGood: '#66BB6A',
@@ -28,65 +38,69 @@ export const Colors = {
     gradeBelowAverage: '#FF5722',
     gradeFailing: '#F44336',
     // Course without grades color
-    noGrades: '#2196F3', // Blue
+    noGrades: '#2196F3',
     // Error colors
     error: '#F44336',
-    cardBackground: '#ffffff',
+    cardBackground: '#FFFFFF',
     // CMS color - distinctive purple for app view changes
     cms: '#8E44AD',
 
-    // ── Design-system tokens (mapped to the original palette) ──
-    // Brand — coral/red
-    primary: '#ff4136',
-    primaryDark: '#e0352b',
-    primaryLight: '#ff6b5a',
-    primarySoft: '#FFECEA',
-    onPrimary: '#ffffff',
-    // Secondary — original blue accent
+    // ── Design-system tokens ──
+    // Brand — red/coral
+    primary: '#FF4136',
+    primaryDark: '#E0352B',
+    primaryLight: '#FF6B5A',
+    primarySoft: '#FFEDEB',
+    onPrimary: '#FFFFFF',
+    // Content on saturated accent fills (slot types, grades, status)
+    onAccent: '#FFFFFF',
+    // Secondary — blue accent
     secondary: '#2196F3',
     secondaryDark: '#1976D2',
     secondaryLight: '#64B5F6',
-    secondarySoft: '#E5F0FF',
-    onSecondary: '#ffffff',
-    // Surface tiers (original cards were light gray on white)
-    surface: '#f3f3f3',
-    surfaceElevated: '#ffffff',
-    surfaceSunken: '#eaeaea',
-    surfaceAlt: '#f7f7f7',
+    secondarySoft: '#E8F2FD',
+    onSecondary: '#FFFFFF',
+    // Links
+    link: '#2563EB',
+    // Surface tiers (light-gray cards on white)
+    surface: '#F4F4F5',
+    surfaceElevated: '#FFFFFF',
+    surfaceSunken: '#ECECEE',
+    surfaceAlt: '#F8F8F9',
     // Text tiers
-    textPrimary: '#000000',
-    textSecondary: '#6d6d6d',
-    textTertiary: '#9a9a9a',
+    textPrimary: '#111111',
+    textSecondary: '#6D6D6D',
+    textTertiary: '#9A9A9E',
     // Lines
-    borderStrong: '#cccccc',
-    divider: '#ececec',
-    // Semantic (original hues)
-    success: '#2ecc71',
-    warning: '#FF9800',
+    borderStrong: '#D2D2D6',
+    divider: '#EDEDEF',
+    // Semantic
+    success: '#27AE60',
+    warning: '#F59E0B',
     info: '#2196F3',
     danger: '#F44336',
-    successSoft: '#E6F7EC',
-    warningSoft: '#FFF4E5',
-    infoSoft: '#E5F0FF',
-    dangerSoft: '#FDECEA',
+    successSoft: '#E7F6EE',
+    warningSoft: '#FEF4E2',
+    infoSoft: '#E8F2FD',
+    dangerSoft: '#FDECEB',
     // Elevation / overlay
     shadow: '#000000',
     overlay: 'rgba(0, 0, 0, 0.5)',
   },
   dark: {
-    text: '#ffffff',
-    background: '#1a1a1a',
-    tint: '#ff6b5a',
-    icon: '#a0a0a0',
-    tabIconDefault: '#a0a0a0',
-    tabIconSelected: '#ff6b5a',
+    text: '#F2F2F2',
+    background: '#1A1A1A',
+    tint: '#FF6B5A',
+    icon: '#A0A0A0',
+    tabIconDefault: '#A0A0A0',
+    tabIconSelected: '#FF6B5A',
     // Custom app colors (dark theme variants)
-    mainFont: '#ffffff',
-    secondaryFont: '#a0a0a0',
-    tabColor: '#ff6b5a',
-    fileBackground: '#b8a142',
-    border: '#404040',
-    financials: '#27ae60',
+    mainFont: '#F2F2F2',
+    secondaryFont: '#A0A0A0',
+    tabColor: '#FF6B5A',
+    fileBackground: '#B8A142',
+    border: '#383838',
+    financials: '#2ECC71',
     // Grade colors (dark theme variants)
     gradeExcellent: '#2E7D32',
     gradeGood: '#66BB6A',
@@ -94,59 +108,63 @@ export const Colors = {
     gradeBelowAverage: '#FF5722',
     gradeFailing: '#F44336',
     // Course without grades color (dark theme)
-    noGrades: '#64B5F6', // Light blue
+    noGrades: '#64B5F6',
     // Error colors (dark theme variants)
     error: '#F44336',
-    cardBackground: '#2a2a2a',
-    // CMS color - distinctive purple for app view changes (dark theme)
+    cardBackground: '#2A2A2A',
+    // CMS color (dark theme)
     cms: '#9B59B6',
 
-    // ── Design-system tokens (mapped to the original palette) ──
-    // Brand — coral/red
-    primary: '#ff6b5a',
-    primaryDark: '#ff4136',
-    primaryLight: '#ff8a7a',
-    primarySoft: '#2e1a17',
-    onPrimary: '#1a1a1a',
-    // Secondary — original blue accent
+    // ── Design-system tokens ──
+    // Brand — coral (light enough for charcoal text on top)
+    primary: '#FF6B5A',
+    primaryDark: '#FF4136',
+    primaryLight: '#FF8A7A',
+    primarySoft: '#3A211E',
+    onPrimary: '#1A1A1A',
+    // Content on saturated accent fills (slot types, grades, status)
+    onAccent: '#FFFFFF',
+    // Secondary — blue accent
     secondary: '#64B5F6',
     secondaryDark: '#2196F3',
     secondaryLight: '#90CAF9',
-    secondarySoft: '#17293a',
-    onSecondary: '#1a1a1a',
-    // Surface tiers (original dark cards)
-    surface: '#232323',
-    surfaceElevated: '#2a2a2a',
-    surfaceSunken: '#1a1a1a',
+    secondarySoft: '#172A3B',
+    onSecondary: '#1A1A1A',
+    // Links
+    link: '#60A5FA',
+    // Surface tiers (charcoal ramp)
+    surface: '#242424',
+    surfaceElevated: '#2A2A2A',
+    surfaceSunken: '#141414',
     surfaceAlt: '#202020',
     // Text tiers
-    textPrimary: '#ffffff',
-    textSecondary: '#a0a0a0',
-    textTertiary: '#7a7a7a',
+    textPrimary: '#F2F2F2',
+    textSecondary: '#A0A0A0',
+    textTertiary: '#727272',
     // Lines
-    borderStrong: '#555555',
-    divider: '#333333',
-    // Semantic (original hues)
-    success: '#27ae60',
-    warning: '#FF9800',
+    borderStrong: '#4A4A4A',
+    divider: '#303030',
+    // Semantic
+    success: '#2ECC71',
+    warning: '#FFA726',
     info: '#64B5F6',
-    danger: '#F44336',
-    successSoft: '#123020',
-    warningSoft: '#3a2e12',
-    infoSoft: '#12253a',
-    dangerSoft: '#3a1414',
+    danger: '#EF5350',
+    successSoft: '#163323',
+    warningSoft: '#3A2D14',
+    infoSoft: '#172A3B',
+    dangerSoft: '#3A1A1A',
     // Elevation / overlay
     shadow: '#000000',
     overlay: 'rgba(0, 0, 0, 0.6)',
   },
 };
 
-// Schedule type colors - Warm theme colors (original)
-export const ScheduleTypeColors = { // FF8C42
-  personal: '#FF6B6B', // Vibrant coral red (matches app theme)
-  staff: '#FF6B6B',    // Match personal (red)
-  instructor: '#FF8C42',    // Match personal (red)
-  course: '#FF6B6B',   // Match personal (red)
+// Schedule type colors - warm theme (original)
+export const ScheduleTypeColors = {
+  personal: '#FF6B6B', // Coral red (matches app theme)
+  staff: '#FF6B6B',
+  instructor: '#FF8C42', // Orange
+  course: '#FF6B6B',
   group: '#FF69B4',    // Hot pink
   combined: '#4CAF50', // Green for combined selections
 };
@@ -155,8 +173,8 @@ export const ScheduleTypeColors = { // FF8C42
 export const SlotTypeColors = {
   Lecture: '#3B82F6',    // Blue
   Tutorial: '#10B981',   // Green
-  Lab: '#F59E0B',        // Amber/Orange
-  Practical: '#FF6B35',  // Orange-Red
+  Lab: '#F59E0B',        // Amber
+  Practical: '#FF6B35',  // Orange-red
   Seminar: '#8B5CF6',    // Purple
   Workshop: '#EF4444',   // Red
   Project: '#06B6D4',    // Cyan
@@ -164,41 +182,41 @@ export const SlotTypeColors = {
   Free: '#6B7280',       // Gray
 };
 
-// Schedule color palettes for light and dark modes (original warm theme)
+// Schedule color palettes for light and dark modes (original warm theme, slightly cleaner)
 export const ScheduleColors = {
   light: {
-    // Background colors - warm and colorful
-    periodRowBg: '#FFF5F5', // Very light red tint
-    periodRowBorder: '#FFE0E0', // Light red border
+    // Background colors
+    periodRowBg: '#FFF6F5',
+    periodRowBorder: '#FFE2DF',
     periodLabelBg: '#FFFFFF',
-    periodLabelBorder: '#FFE0E0',
-    emptyPeriodBg: '#FFF8F8', // Light warm background
-    emptyPeriodBorder: '#FFD6D6', // Warm border
+    periodLabelBorder: '#FFE2DF',
+    emptyPeriodBg: '#FFF9F8',
+    emptyPeriodBorder: '#FFDAD6',
 
     // Text colors
-    periodLabelText: '#2D1B1B', // Warm dark text
-    emptyText: '#8B5A5A', // Warm muted text
+    periodLabelText: '#2A1E1E',
+    emptyText: '#8B5A5A',
 
-    // Accent colors - warm theme
+    // Accent colors
     accent1: '#FFE66D', // Yellow
     accent2: '#FF8B94', // Pink
     accent3: '#FFB347', // Orange
     accent4: '#FFD3A5', // Peach
   },
   dark: {
-    // Background colors - warm dark theme
-    periodRowBg: '#2A1F1F', // Warm dark background
-    periodRowBorder: '#3D2A2A', // Warm dark border
-    periodLabelBg: '#1F1515', // Very dark warm background
+    // Background colors
+    periodRowBg: '#2A1F1F',
+    periodRowBorder: '#3D2A2A',
+    periodLabelBg: '#1F1515',
     periodLabelBorder: '#3D2A2A',
     emptyPeriodBg: '#2A1F1F',
     emptyPeriodBorder: '#3D2A2A',
 
     // Text colors
-    periodLabelText: '#F5E6E6', // Warm light text
-    emptyText: '#B8A0A0', // Warm muted light text
+    periodLabelText: '#F5E6E6',
+    emptyText: '#B8A0A0',
 
-    // Accent colors - warm bright theme
+    // Accent colors
     accent1: '#FFD700', // Gold
     accent2: '#FF69B4', // Hot pink
     accent3: '#FF8C00', // Dark orange

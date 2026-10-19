@@ -1,16 +1,8 @@
+import BottomSheet from '@/components/ui/BottomSheet';
+import { SheetHeader } from '@/components/ui/Dropdown';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { useEffect, useState } from 'react';
-import {
-    Animated,
-    Dimensions,
-    Modal,
-    PanResponder,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View
-} from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 interface AttendanceWarningInfoModalProps {
   visible: boolean;
@@ -21,92 +13,6 @@ export default function AttendanceWarningInfoModal({ visible, onClose }: Attenda
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   
-  // Animation values
-  const translateY = useState(new Animated.Value(0))[0];
-  const opacity = useState(new Animated.Value(0))[0];
-  const { height: screenHeight } = Dimensions.get('window');
-  
-  // Header pan responder for swipe down gesture
-  const dragHandlePanResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: (evt, gestureState) => {
-      // Only respond to downward swipes
-      const isDownwardSwipe = gestureState.dy > 0;
-      const isVerticalSwipe = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
-      
-      return isDownwardSwipe && isVerticalSwipe;
-    },
-    onPanResponderGrant: () => {
-      // Don't set offset - start from current position
-      translateY.setValue(0);
-    },
-    onPanResponderMove: (evt, gestureState) => {
-      if (gestureState.dy > 0) {
-        translateY.setValue(gestureState.dy);
-        const progress = Math.min(gestureState.dy / 200, 1);
-        opacity.setValue(1 - progress);
-      }
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      if (gestureState.dy > 100) {
-        closeModal();
-      } else {
-        Animated.parallel([
-          Animated.spring(translateY, {
-            toValue: 0,
-            useNativeDriver: true,
-          }),
-          Animated.spring(opacity, {
-            toValue: 1,
-            useNativeDriver: true,
-          }),
-        ]).start();
-      }
-    },
-  });
-
-  const closeModal = () => {
-    // Animate modal out
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: screenHeight,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      onClose();
-      // Reset values for next time
-      translateY.setValue(0);
-      opacity.setValue(0);
-    });
-  };
-
-  // Handle modal opening animation
-  useEffect(() => {
-    if (visible) {
-      // Animate modal in
-      translateY.setValue(screenHeight);
-      opacity.setValue(0);
-      Animated.parallel([
-        Animated.timing(translateY, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible]);
-
   const warningLevels = [
     { 
       level: '1', 
@@ -129,36 +35,14 @@ export default function AttendanceWarningInfoModal({ visible, onClose }: Attenda
   ];
 
   return (
-    <Modal
-      animationType="none"
-      transparent={true}
+    <BottomSheet
       visible={visible}
-      onRequestClose={closeModal}
+      onRequestClose={onClose}
+      autoHeight
+      heightRatio={0.85}
+      header={<SheetHeader colors={colors} title="Attendance Warning Levels" />}
     >
-      <Animated.View style={[styles.modalOverlay, { opacity }]}>
-        <Animated.View 
-          style={[
-            styles.modalContainer, 
-            { 
-              backgroundColor: colors.cardBackground,
-              transform: [{ translateY }]
-            }
-          ]}
-        >
-          {/* Modal Header */}
-          <View 
-            style={[styles.modalHeader, { borderBottomColor: colors.border }]}
-            {...dragHandlePanResponder.panHandlers}
-          >
-            {/* Drag Handle */}
-            <View style={[styles.dragHandle, { backgroundColor: colors.border }]} />
-            
-            <View style={styles.headerContent}>
-              <Text style={[styles.title, { color: colors.mainFont }]}>Attendance Warning Levels</Text>
-            </View>
-          </View>
-
-          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+      <View style={styles.modalContent}>
             {/* Warning Levels Section */}
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.mainFont }]}>Warning Level System</Text>
@@ -175,7 +59,7 @@ export default function AttendanceWarningInfoModal({ visible, onClose }: Attenda
                   }]}>
                     <View style={styles.warningLevelHeader}>
                       <View style={[styles.levelBadge, { backgroundColor: warning.color }]}>
-                        <Text style={styles.levelBadgeText}>{warning.title}</Text>
+                        <Text style={[styles.levelBadgeText, { color: colors.onAccent }]}>{warning.title}</Text>
                       </View>
                     </View>
                     <Text style={[styles.warningDescription, { color: colors.mainFont }]}>
@@ -237,55 +121,16 @@ export default function AttendanceWarningInfoModal({ visible, onClose }: Attenda
                 ))}
               </View>
             </View> */}
-          </ScrollView>
-        </Animated.View>
-      </Animated.View>
-    </Modal>
+      </View>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
   // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContainer: {
-    height: '95%',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  modalHeader: {
-    paddingTop: 12,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-  },
-  dragHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
   modalContent: {
-    flex: 1,
     paddingHorizontal: 20,
+    paddingTop: 12,
   },
   section: {
     marginVertical: 20,
@@ -318,7 +163,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   levelBadgeText: {
-    color: 'white',
     fontSize: 12,
     fontWeight: 'bold',
   },

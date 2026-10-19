@@ -9,6 +9,7 @@ export const WHATS_NEW_CONFIG = {
   features: [
     "Class Reminders Before Each Slot (Set in Settings)",
     "Added Schedule Widget",
+    "UI/UX Improvements",
     "Unseen CMS Content Indicators",
     "Notifications Search",
     "Swipe to Mark Read/Unread",

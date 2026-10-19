@@ -309,9 +309,9 @@ export default function StatisticsSection() {
           disabled={stats.loading}
         >
           {stats.loading ? (
-            <ActivityIndicator size="small" color="white" />
+            <ActivityIndicator size="small" color={colors.onPrimary} />
           ) : (
-            <Ionicons name="refresh" size={16} color="white" />
+            <Ionicons name="refresh" size={16} color={colors.onPrimary} />
           )}
         </TouchableOpacity>
       </View>
@@ -354,18 +354,18 @@ export default function StatisticsSection() {
           style={[styles.tableButton, { backgroundColor: colors.tint }]}
           onPress={() => router.push('/users-table')}
         >
-          <Ionicons name="people" size={20} color="white" />
-          <Text style={styles.tableButtonText}>View Full Users Table</Text>
-          <Ionicons name="arrow-forward" size={16} color="white" />
+          <Ionicons name="people" size={20} color={colors.onPrimary} />
+          <Text style={[styles.tableButtonText, { color: colors.onPrimary }]}>View Full Users Table</Text>
+          <Ionicons name="arrow-forward" size={16} color={colors.onPrimary} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.tableButton, { backgroundColor: colors.tint }]}
           onPress={() => router.push('/feedback-table')}
         >
-          <Ionicons name="chatbubbles" size={20} color="white" />
-          <Text style={styles.tableButtonText}>View Full Feedback Table</Text>
-          <Ionicons name="arrow-forward" size={16} color="white" />
+          <Ionicons name="chatbubbles" size={20} color={colors.onPrimary} />
+          <Text style={[styles.tableButtonText, { color: colors.onPrimary }]}>View Full Feedback Table</Text>
+          <Ionicons name="arrow-forward" size={16} color={colors.onPrimary} />
         </TouchableOpacity>
       </View>
     </View>
@@ -504,7 +504,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tableButtonText: {
-    color: 'white',
     fontSize: 15,
     fontWeight: '600',
     flex: 1,

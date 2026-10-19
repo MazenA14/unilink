@@ -201,7 +201,7 @@ export function ScheduleTable({ scheduleData, scheduleType = 'personal', current
                   styles.dayTagText,
                   {
                     color: selectedDayIndex === index 
-                      ? (colorScheme === 'dark' ? '#000000' : '#FFFFFF')
+                      ? colors.onPrimary
                       : colors.text
                   }
                 ]}

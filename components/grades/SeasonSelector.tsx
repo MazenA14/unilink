@@ -1,8 +1,9 @@
+import { DropdownItem, DropdownMenu, DropdownTrigger, sheetRatioFor } from '@/components/ui/Dropdown';
 import { Colors } from '@/constants/Colors';
-import { Radius } from '@/constants/Theme';
+import { Spacing, Type } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import React from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { Season, YearGroup } from './types';
 
 interface SeasonSelectorProps {
@@ -11,88 +12,63 @@ interface SeasonSelectorProps {
   onSeasonSelect: (season: Season) => void;
 }
 
+/** Semester picker: a select field that opens a sheet grouped by year. */
 export default function SeasonSelector({ yearGroups, selectedSeason, onSeasonSelect }: SeasonSelectorProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const [open, setOpen] = useState(false);
 
-  const renderSeasonItem = ({ item }: { item: Season }) => (
-    <TouchableOpacity
-      style={[
-        styles.seasonCard,
-        {
-          backgroundColor: selectedSeason?.value === item.value ? colors.tint : (colors.surface),
-          borderColor: selectedSeason?.value === item.value ? colors.tabColor : colors.border,
-        },
-      ]}
-      onPress={() => onSeasonSelect(item)}
-    >
-      <Text
-        style={[
-          styles.seasonText,
-          {
-            color: selectedSeason?.value === item.value ? colors.onPrimary : colors.mainFont,
-          },
-        ]}
-      >
-        {item.text}
-      </Text>
-    </TouchableOpacity>
-  );
-
-  const renderYearGroup = ({ item }: { item: YearGroup }) => (
-    <View style={styles.yearGroup}>
-      <Text style={[styles.yearTitle, { color: colors.text }]}>{item.year}</Text>
-      <FlatList
-        data={item.seasons}
-        renderItem={renderSeasonItem}
-        keyExtractor={(season) => season.value}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.seasonsList}
-        contentContainerStyle={styles.seasonsListContent}
-      />
-    </View>
-  );
+  const seasonCount = yearGroups.reduce((n, g) => n + g.seasons.length, 0);
 
   return (
-    <FlatList
-      data={yearGroups}
-      renderItem={renderYearGroup}
-      keyExtractor={(item) => item.year}
-      scrollEnabled={false}
-      showsVerticalScrollIndicator={false}
-    />
+    <>
+      <DropdownTrigger
+        colors={colors}
+        caption="Semester"
+        icon="calendar-outline"
+        label={selectedSeason ? selectedSeason.text : 'Choose a semester'}
+        placeholder={!selectedSeason}
+        onPress={() => setOpen(true)}
+      />
+
+      <DropdownMenu
+        colors={colors}
+        visible={open}
+        onClose={() => setOpen(false)}
+        title="Choose semester"
+        subtitle={`${seasonCount} semester${seasonCount === 1 ? '' : 's'} with grades`}
+        heightRatio={sheetRatioFor(seasonCount + yearGroups.length * 0.8, 54, 110)}
+      >
+        {yearGroups.map((group) => (
+          <View key={group.year} style={styles.group}>
+            <Text style={[styles.groupTitle, { color: colors.textSecondary }]}>{group.year}</Text>
+            {group.seasons.map((season) => (
+              <DropdownItem
+                key={season.value}
+                colors={colors}
+                label={season.text}
+                selected={selectedSeason?.value === season.value}
+                onPress={() => {
+                  setOpen(false);
+                  onSeasonSelect(season);
+                }}
+              />
+            ))}
+          </View>
+        ))}
+      </DropdownMenu>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  yearGroup: {
-    marginBottom: 24,
+  group: {
+    marginBottom: Spacing.sm,
   },
-  yearTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    marginLeft: 4,
-  },
-  seasonsList: {
-    marginBottom: 8,
-  },
-  seasonsListContent: {
-    paddingHorizontal: 4,
-  },
-  seasonCard: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: Radius.md,
-    borderWidth: 2,
-    marginRight: 12,
-    minWidth: 120,
-    alignItems: 'center',
-  },
-  seasonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
+  groupTitle: {
+    ...Type.overline,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xs,
   },
 });

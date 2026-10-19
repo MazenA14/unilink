@@ -1,15 +1,15 @@
 import { useCustomAlert } from '@/components/CustomAlert';
 import { AppBar } from '@/components/navigation/AppBar';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
-import { Colors } from '@/constants/Colors';
-import { Radius, Shadow, Spacing, withAlpha } from '@/constants/Theme';
+import BottomSheet from '@/components/ui/BottomSheet';
+import { SheetHeader } from '@/components/ui/Dropdown';
+import { Colors, SlotTypeColors } from '@/constants/Colors';
+import { Radius, Shadow, Spacing, Type, withAlpha } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Course, CourseWeight, CourseWeightsStorage } from '@/utils/courseWeightsStorage';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  FlatList,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,44 +17,55 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// Preset weight names (alphabetically ordered)
+const PRESET_WEIGHT_NAMES = ['Assignments', 'Final', 'Labs', 'Midterm', 'Project', 'Quizzes'];
+
+// Common weight percentages offered as quick picks
+const PRESET_PERCENTAGES = [5, 10, 15, 20, 25, 30, 40, 50, 60];
+
+const sumWeights = (weights: CourseWeight[]) => weights.reduce((sum, w) => sum + w.percentage, 0);
+
+// Trim float noise (e.g. 0.1 + 0.2) for display
+const formatPct = (value: number) => `${Math.round(value * 100) / 100}%`;
 
 export default function CourseWeightsScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const insets = useSafeAreaInsets();
   const { showAlert, AlertComponent } = useCustomAlert();
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
-  
-  // Modal states
-  const [courseModalVisible, setCourseModalVisible] = useState(false);
-  const [weightModalVisible, setWeightModalVisible] = useState(false);
+
+  // Sheet states
+  const [courseSheetVisible, setCourseSheetVisible] = useState(false);
+  const [weightSheetVisible, setWeightSheetVisible] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [editingWeight, setEditingWeight] = useState<CourseWeight | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [presetDropdownVisible, setPresetDropdownVisible] = useState(false);
-  const [percentageDropdownVisible, setPercentageDropdownVisible] = useState(false);
-  
+
   // Form states
   const [courseName, setCourseName] = useState('');
   const [weightName, setWeightName] = useState('');
   const [weightPercentage, setWeightPercentage] = useState('');
 
-  // Preset weight names (alphabetically ordered)
-  const presetWeightNames = [
-    'Assignments',
-    'Final',
-    'Labs',
-    'Midterm',
-    'Project',
-    'Quizzes'
-  ];
-
-  // Preset percentage values (common weight distributions)
-  const presetPercentages = [
-    5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100
-  ];
+  // Segment colours for the stacked weight bar
+  const segmentPalette = useMemo(
+    () => [
+      colors.primary,
+      colors.secondary,
+      SlotTypeColors.Tutorial,
+      SlotTypeColors.Lab,
+      SlotTypeColors.Seminar,
+      SlotTypeColors.Project,
+      SlotTypeColors.Workshop,
+      SlotTypeColors.Thesis,
+    ],
+    [colors.primary, colors.secondary]
+  );
 
   const loadCourses = useCallback(async () => {
     try {
@@ -87,7 +98,6 @@ export default function CourseWeightsScreen() {
       await loadCourses();
     } catch (error) {
       console.error('Failed to refresh courses:', error);
-      // Error handling will be done by the calling component if needed
     } finally {
       setRefreshing(false);
     }
@@ -109,13 +119,13 @@ export default function CourseWeightsScreen() {
   const handleAddCourse = () => {
     setEditingCourse(null);
     setCourseName('');
-    setCourseModalVisible(true);
+    setCourseSheetVisible(true);
   };
 
   const handleEditCourse = (course: Course) => {
     setEditingCourse(course);
     setCourseName(course.name);
-    setCourseModalVisible(true);
+    setCourseSheetVisible(true);
   };
 
   const handleDeleteCourse = (courseId: string) => {
@@ -148,7 +158,7 @@ export default function CourseWeightsScreen() {
     }
 
     const updatedCourses = [...courses];
-    
+
     if (editingCourse) {
       // Update existing course
       const courseIndex = updatedCourses.findIndex(c => c.id === editingCourse.id);
@@ -156,19 +166,18 @@ export default function CourseWeightsScreen() {
         updatedCourses[courseIndex] = { ...editingCourse, name: courseName.trim() };
       }
     } else {
-      // Add new course
+      // Add new course, expanded so weights can be added right away
       const newCourse: Course = {
         id: Date.now().toString(),
         name: courseName.trim(),
         weights: []
       };
       updatedCourses.push(newCourse);
+      setExpandedCourses(prev => new Set(prev).add(newCourse.id));
     }
-    
+
     saveCourses(updatedCourses);
-    setCourseModalVisible(false);
-    setCourseName('');
-    setEditingCourse(null);
+    setCourseSheetVisible(false);
   };
 
   // Weight management functions
@@ -177,7 +186,7 @@ export default function CourseWeightsScreen() {
     setEditingWeight(null);
     setWeightName('');
     setWeightPercentage('');
-    setWeightModalVisible(true);
+    setWeightSheetVisible(true);
   };
 
   const handleEditWeight = (course: Course, weight: CourseWeight) => {
@@ -185,7 +194,7 @@ export default function CourseWeightsScreen() {
     setEditingWeight(weight);
     setWeightName(weight.name);
     setWeightPercentage(weight.percentage.toString());
-    setWeightModalVisible(true);
+    setWeightSheetVisible(true);
   };
 
   const handleDeleteWeight = (courseId: string, weightId: string) => {
@@ -213,16 +222,6 @@ export default function CourseWeightsScreen() {
         }
       ]
     });
-  };
-
-  const handlePresetSelect = (presetName: string) => {
-    setWeightName(presetName);
-    setPresetDropdownVisible(false);
-  };
-
-  const handlePercentagePresetSelect = (percentage: number) => {
-    setWeightPercentage(percentage.toString());
-    setPercentageDropdownVisible(false);
   };
 
   const handleDeleteAllCourses = () => {
@@ -287,7 +286,7 @@ export default function CourseWeightsScreen() {
     const updatedCourses = courses.map(course => {
       if (course.id === selectedCourse.id) {
         const updatedWeights = [...course.weights];
-        
+
         if (editingWeight) {
           // Update existing weight
           const weightIndex = updatedWeights.findIndex(w => w.id === editingWeight.id);
@@ -307,362 +306,307 @@ export default function CourseWeightsScreen() {
           };
           updatedWeights.push(newWeight);
         }
-        
+
         return { ...course, weights: updatedWeights };
       }
       return course;
     });
-    
+
     saveCourses(updatedCourses);
-    setWeightModalVisible(false);
-    setWeightName('');
-    setWeightPercentage('');
-    setEditingWeight(null);
-    setSelectedCourse(null);
-    setPresetDropdownVisible(false);
-    setPercentageDropdownVisible(false);
+    setWeightSheetVisible(false);
   };
 
-  const renderWeightItem = ({ item: weight }: { item: CourseWeight }) => {
-    const course = selectedCourse || courses.find(c => c.weights.some(w => w.id === weight.id));
-    if (!course) return null;
+  // Total of the selected course's other weights, for the editor's live preview
+  const otherWeightsTotal = useMemo(() => {
+    if (!selectedCourse) return 0;
+    const course = courses.find(c => c.id === selectedCourse.id) ?? selectedCourse;
+    return sumWeights(course.weights.filter(w => w.id !== editingWeight?.id));
+  }, [courses, selectedCourse, editingWeight]);
+  const remainingForWeight = Math.max(0, Math.round((100 - otherWeightsTotal) * 100) / 100);
+  const parsedPercentage = parseFloat(weightPercentage);
+  const previewTotal = otherWeightsTotal + (isNaN(parsedPercentage) ? 0 : parsedPercentage);
 
-    return (
-      <View style={[styles.weightItem, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-        <View style={styles.weightInfo}>
-          <Text style={[styles.weightName, { color: colors.text }]}>{weight.name}</Text>
-          <Text style={[styles.weightPercentage, { color: colors.secondaryFont }]}>{weight.percentage}%</Text>
-        </View>
-        <View style={styles.weightActions}>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.tint + '20' }]}
-            onPress={() => handleEditWeight(course, weight)}
-          >
-            <Ionicons name="pencil" size={16} color={colors.tint} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.error + '20' }]}
-            onPress={() => handleDeleteWeight(course.id, weight.id)}
-          >
-            <Ionicons name="trash" size={16} color={colors.error} />
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
+  const getTotalStatus = (total: number) => {
+    const rounded = Math.round(total * 100) / 100;
+    if (rounded === 100) return { tone: colors.success, soft: colors.successSoft, icon: 'checkmark-circle' as const, label: 'Complete' };
+    if (rounded > 100) return { tone: colors.danger, soft: colors.dangerSoft, icon: 'alert-circle' as const, label: `${formatPct(rounded - 100)} over` };
+    return { tone: colors.warning, soft: colors.warningSoft, icon: 'ellipse-outline' as const, label: `${formatPct(100 - rounded)} left` };
   };
 
-  const renderCourseItem = ({ item: course }: { item: Course }) => {
+  const renderCourseCard = (course: Course) => {
     const isExpanded = expandedCourses.has(course.id);
-    
+    const sortedWeights = [...course.weights].sort((a, b) => b.percentage - a.percentage);
+    const total = sumWeights(course.weights);
+    const status = getTotalStatus(total);
+    const scale = Math.max(100, total);
+
     return (
-      <View style={[styles.courseCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-        <TouchableOpacity 
+      <View
+        key={course.id}
+        style={[styles.courseCard, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}
+      >
+        <TouchableOpacity
           style={styles.courseHeader}
           onPress={() => toggleCourseExpansion(course.id)}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: isExpanded }}
         >
-          <View style={styles.courseHeaderContent}>
-            <Text style={[styles.courseName, { color: colors.text }]}>{course.name}</Text>
-            <Ionicons 
-              name={isExpanded ? "chevron-up" : "chevron-down"} 
-              size={20} 
-              color={colors.text} 
-            />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.courseName, { color: colors.textPrimary }]} numberOfLines={2}>
+              {course.name}
+            </Text>
+            <Text style={[styles.courseMeta, { color: colors.textSecondary }]}>
+              {course.weights.length === 0
+                ? 'No components yet'
+                : `${course.weights.length} component${course.weights.length === 1 ? '' : 's'} · ${formatPct(total)}`}
+            </Text>
           </View>
-          <View style={styles.courseActions}>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.tint + '20' }]}
-              onPress={() => handleEditCourse(course)}
-            >
-              <Ionicons name="pencil" size={16} color={colors.tint} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.error + '20' }]}
-              onPress={() => handleDeleteCourse(course.id)}
-            >
-              <Ionicons name="trash" size={16} color={colors.error} />
-            </TouchableOpacity>
-          </View>
+          {course.weights.length > 0 && (
+            <View style={[styles.statusChip, { backgroundColor: status.soft }]}>
+              <Ionicons name={status.icon} size={14} color={status.tone} />
+              <Text style={[styles.statusChipText, { color: status.tone }]}>{status.label}</Text>
+            </View>
+          )}
+          <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textSecondary} />
         </TouchableOpacity>
-        
+
+        {/* Stacked weight bar */}
+        <View style={[styles.bar, { backgroundColor: colors.surfaceSunken }]}>
+          {sortedWeights.map((weight, index) => (
+            <View
+              key={weight.id}
+              style={{
+                width: `${(weight.percentage / scale) * 100}%`,
+                backgroundColor: segmentPalette[index % segmentPalette.length],
+              }}
+            />
+          ))}
+        </View>
+
         {isExpanded && (
           <View style={styles.weightsSection}>
-            <View style={styles.weightsHeader}>
-              <Text style={[styles.weightsTitle, { color: colors.text }]}>Weights</Text>
+            {sortedWeights.map((weight, index) => (
               <TouchableOpacity
-                style={[styles.addWeightButton, { backgroundColor: colors.tint }]}
-                onPress={() => handleAddWeight(course)}
+                key={weight.id}
+                style={[styles.weightRow, { borderBottomColor: colors.divider }]}
+                onPress={() => handleEditWeight(course, weight)}
+                activeOpacity={0.7}
               >
-                <Ionicons name="add" size={16} color={colorScheme === 'dark' ? '#000000' : '#FFFFFF'} />
+                <View style={[styles.weightDot, { backgroundColor: segmentPalette[index % segmentPalette.length] }]} />
+                <Text style={[styles.weightName, { color: colors.textPrimary }]} numberOfLines={1}>
+                  {weight.name}
+                </Text>
+                <Text style={[styles.weightPercentage, { color: colors.textPrimary }]}>{formatPct(weight.percentage)}</Text>
+                <TouchableOpacity
+                  onPress={() => handleDeleteWeight(course.id, weight.id)}
+                  hitSlop={10}
+                  accessibilityLabel={`Delete ${weight.name}`}
+                >
+                  <Ionicons name="close-circle" size={20} color={colors.textTertiary} />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity
+              style={[styles.addWeightButton, { borderColor: withAlpha(colors.primary, 0.45), backgroundColor: colors.primarySoft }]}
+              onPress={() => handleAddWeight(course)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="add" size={18} color={colors.primary} />
+              <Text style={[styles.addWeightText, { color: colors.primary }]}>Add component</Text>
+            </TouchableOpacity>
+
+            <View style={styles.courseFooter}>
+              <TouchableOpacity style={styles.footerAction} onPress={() => handleEditCourse(course)} hitSlop={6}>
+                <Ionicons name="pencil-outline" size={15} color={colors.textSecondary} />
+                <Text style={[styles.footerActionText, { color: colors.textSecondary }]}>Rename</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.footerAction} onPress={() => handleDeleteCourse(course.id)} hitSlop={6}>
+                <Ionicons name="trash-outline" size={15} color={colors.danger} />
+                <Text style={[styles.footerActionText, { color: colors.danger }]}>Delete course</Text>
               </TouchableOpacity>
             </View>
-            
-            {course.weights.length > 0 ? (
-              <FlatList
-                data={course.weights.sort((a, b) => b.percentage - a.percentage)}
-                renderItem={renderWeightItem}
-                keyExtractor={(weight) => weight.id}
-                scrollEnabled={false}
-                style={styles.weightsList}
-              />
-            ) : (
-              <Text style={[styles.emptyWeights, { color: colors.secondaryFont }]}>
-                No weights added yet
-              </Text>
-            )}
           </View>
         )}
       </View>
     );
   };
+
+  const renderChip = (label: string, active: boolean, onPress: () => void, key?: string | number) => (
+    <TouchableOpacity
+      key={key ?? label}
+      style={[
+        styles.chip,
+        {
+          backgroundColor: active ? colors.primary : colors.surfaceSunken,
+          borderColor: active ? colors.primary : colors.border,
+        },
+      ]}
+      onPress={onPress}
+      activeOpacity={0.75}
+    >
+      <Text style={[styles.chipText, { color: active ? colors.onPrimary : colors.textPrimary }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+
+  const previewStatus = getTotalStatus(previewTotal);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppBar
         title="Course Weights"
+        variant="back"
+        showNotifications={false}
         rightActions={
-          <>
-            {courses.length > 0 && (
-              <TouchableOpacity
-                style={[styles.deleteAllButton, { backgroundColor: colors.error }]}
-                onPress={handleDeleteAllCourses}
-              >
-                <Ionicons name="trash" size={18} color="#FFFFFF" />
-              </TouchableOpacity>
-            )}
+          courses.length > 0 ? (
             <TouchableOpacity
-              style={[styles.addButton, { backgroundColor: colors.tint }]}
-              onPress={handleAddCourse}
+              style={[styles.headerIconButton, { backgroundColor: colors.dangerSoft, borderColor: colors.border }]}
+              onPress={handleDeleteAllCourses}
+              accessibilityLabel="Delete all courses"
             >
-              <Ionicons name="add" size={22} color={colorScheme === 'dark' ? '#000000' : '#FFFFFF'} />
+              <Ionicons name="trash-outline" size={19} color={colors.danger} />
             </TouchableOpacity>
-          </>
+          ) : undefined
         }
       />
       <ScrollView
         style={styles.scrollView}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 110 }]}
         refreshControl={<AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Courses List */}
         {courses.length > 0 ? (
-          <FlatList
-            data={courses}
-            renderItem={renderCourseItem}
-            keyExtractor={(course) => course.id}
-            scrollEnabled={false}
-            style={styles.coursesList}
-            contentContainerStyle={styles.coursesListContent}
-          />
+          <>
+            <Text style={[styles.intro, { color: colors.textSecondary }]}>
+              Plan how each course is graded. Components should add up to 100%.
+            </Text>
+            {courses.map(renderCourseCard)}
+          </>
         ) : (
           <View style={styles.emptyState}>
-            <Ionicons name="school-outline" size={64} color={colors.secondaryFont} />
-            <Text style={[styles.emptyStateTitle, { color: colors.text }]}>No Courses</Text>
-            <Text style={[styles.emptyStateSubtitle, { color: colors.secondaryFont }]}>
-              Add your first course to start managing weights
+            <View style={[styles.emptyIcon, { backgroundColor: colors.primarySoft }]}>
+              <Ionicons name="calculator-outline" size={36} color={colors.primary} />
+            </View>
+            <Text style={[styles.emptyStateTitle, { color: colors.textPrimary }]}>No courses yet</Text>
+            <Text style={[styles.emptyStateSubtitle, { color: colors.textSecondary }]}>
+              Add a course and break it down into midterms, quizzes, assignments and more.
             </Text>
           </View>
         )}
       </ScrollView>
 
-      {/* Course Modal */}
-      <Modal
-        visible={courseModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setCourseModalVisible(false)}
+      {/* Add course FAB */}
+      <TouchableOpacity
+        style={[
+          styles.fab,
+          { backgroundColor: colors.primary, bottom: insets.bottom + 20 },
+          Shadow.glow(colors.primary),
+        ]}
+        onPress={handleAddCourse}
+        activeOpacity={0.85}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>
-              {editingCourse ? 'Edit Course' : 'Add Course'}
-            </Text>
-            
-            <TextInput
-              style={[styles.textInput, { 
-                backgroundColor: colors.background, 
-                color: colors.text, 
-                borderColor: colors.border 
-              }]}
-              placeholder="Course name"
-              placeholderTextColor={colors.secondaryFont}
-              value={courseName}
-              onChangeText={setCourseName}
-              autoFocus
-            />
-            
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.border }]}
-                onPress={() => setCourseModalVisible(false)}
-              >
-                <Text style={[styles.modalButtonText, { color: colors.text }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.tint }]}
-                onPress={handleSaveCourse}
-              >
-                <Text style={[styles.modalButtonText, { color: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }]}>
-                  Save
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        <Ionicons name="add" size={22} color={colors.onPrimary} />
+        <Text style={[styles.fabText, { color: colors.onPrimary }]}>Add course</Text>
+      </TouchableOpacity>
 
-      {/* Weight Modal */}
-      <Modal
-        visible={weightModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setWeightModalVisible(false)}
+      {/* Course editor */}
+      <BottomSheet
+        visible={courseSheetVisible}
+        onRequestClose={() => setCourseSheetVisible(false)}
+        heightRatio={0.4}
+        header={
+          <SheetHeader
+            colors={colors}
+            title={editingCourse ? 'Rename course' : 'New course'}
+            right={
+              <TouchableOpacity style={[styles.saveButton, { backgroundColor: colors.primary }]} onPress={handleSaveCourse}>
+                <Text style={[styles.saveButtonText, { color: colors.onPrimary }]}>Save</Text>
+              </TouchableOpacity>
+            }
+          />
+        }
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>
-              {editingWeight ? 'Edit Weight' : 'Add Weight'}
+        <View style={styles.sheetBody}>
+          <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Course name</Text>
+          <TextInput
+            style={[styles.textInput, { backgroundColor: colors.surfaceSunken, color: colors.textPrimary, borderColor: colors.border }]}
+            placeholder="e.g. Data Structures"
+            placeholderTextColor={colors.textTertiary}
+            value={courseName}
+            onChangeText={setCourseName}
+            onSubmitEditing={handleSaveCourse}
+            returnKeyType="done"
+            autoFocus
+          />
+        </View>
+      </BottomSheet>
+
+      {/* Weight editor */}
+      <BottomSheet
+        visible={weightSheetVisible}
+        onRequestClose={() => setWeightSheetVisible(false)}
+        heightRatio={0.72}
+        header={
+          <SheetHeader
+            colors={colors}
+            title={editingWeight ? 'Edit component' : 'Add component'}
+            subtitle={selectedCourse?.name}
+            right={
+              <TouchableOpacity style={[styles.saveButton, { backgroundColor: colors.primary }]} onPress={handleSaveWeight}>
+                <Text style={[styles.saveButtonText, { color: colors.onPrimary }]}>Save</Text>
+              </TouchableOpacity>
+            }
+          />
+        }
+      >
+        <View style={styles.sheetBody}>
+          <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Name</Text>
+          <TextInput
+            style={[styles.textInput, { backgroundColor: colors.surfaceSunken, color: colors.textPrimary, borderColor: colors.border }]}
+            placeholder="e.g. Midterm"
+            placeholderTextColor={colors.textTertiary}
+            value={weightName}
+            onChangeText={setWeightName}
+          />
+          <View style={styles.chipRow}>
+            {PRESET_WEIGHT_NAMES.map((name) => renderChip(name, weightName === name, () => setWeightName(name)))}
+          </View>
+
+          <Text style={[styles.fieldLabel, { color: colors.textSecondary, marginTop: Spacing.xl }]}>Weight</Text>
+          <View style={[styles.percentInputWrap, { backgroundColor: colors.surfaceSunken, borderColor: colors.border }]}>
+            <TextInput
+              style={[styles.percentInput, { color: colors.textPrimary }]}
+              placeholder="0"
+              placeholderTextColor={colors.textTertiary}
+              value={weightPercentage}
+              onChangeText={setWeightPercentage}
+              keyboardType="numeric"
+            />
+            <Text style={[styles.percentSuffix, { color: colors.textSecondary }]}>%</Text>
+          </View>
+          <View style={styles.chipRow}>
+            {remainingForWeight > 0 &&
+              renderChip(
+                `Remaining ${formatPct(remainingForWeight)}`,
+                parsedPercentage === remainingForWeight,
+                () => setWeightPercentage(String(remainingForWeight)),
+                'remaining'
+              )}
+            {PRESET_PERCENTAGES.map((pct) =>
+              renderChip(`${pct}%`, parsedPercentage === pct, () => setWeightPercentage(String(pct)), pct)
+            )}
+          </View>
+
+          <View style={[styles.previewRow, { backgroundColor: previewStatus.soft }]}>
+            <Ionicons name={previewStatus.icon} size={16} color={previewStatus.tone} />
+            <Text style={[styles.previewText, { color: previewStatus.tone }]}>
+              Course total after saving: {formatPct(previewTotal)}
+              {previewStatus.label !== 'Complete' ? ` · ${previewStatus.label}` : ''}
             </Text>
-            
-            <View style={styles.inputContainer}>
-              <View style={styles.inputWithDropdown}>
-                <TextInput
-                  style={[styles.textInputWithButton, { 
-                    backgroundColor: colors.background, 
-                    color: colors.text, 
-                    borderColor: colors.border 
-                  }]}
-                  placeholder="Weight name"
-                  placeholderTextColor={colors.secondaryFont}
-                  value={weightName}
-                  onChangeText={setWeightName}
-                  autoFocus
-                />
-                <TouchableOpacity
-                  style={[styles.presetButton, {
-                    backgroundColor: withAlpha(colors.tint, 0.12),
-                    borderColor: colors.border
-                  }]}
-                  onPress={() => setPresetDropdownVisible(!presetDropdownVisible)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons 
-                    name={presetDropdownVisible ? "chevron-up" : "chevron-down"} 
-                    size={16} 
-                    color={colors.tint} 
-                  />
-                </TouchableOpacity>
-              </View>
-              
-              {presetDropdownVisible && (
-                <View style={[styles.presetDropdown, {
-                  backgroundColor: colors.cardBackground,
-                  borderColor: colors.border,
-                  ...Shadow.md(colors),
-                }]}>
-                  <ScrollView 
-                    style={styles.presetScrollView}
-                    showsVerticalScrollIndicator={true}
-                    nestedScrollEnabled={true}
-                  >
-                    {presetWeightNames.map((presetName) => (
-                      <TouchableOpacity
-                        key={presetName}
-                        style={[styles.presetItem, { 
-                          borderBottomColor: colors.border 
-                        }]}
-                        onPress={() => handlePresetSelect(presetName)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.presetText, { color: colors.text }]}>
-                          {presetName}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <View style={styles.inputWithDropdown}>
-                <TextInput
-                  style={[styles.textInputWithButton, { 
-                    backgroundColor: colors.background, 
-                    color: colors.text, 
-                    borderColor: colors.border 
-                  }]}
-                  placeholder="Percentage"
-                  placeholderTextColor={colors.secondaryFont}
-                  value={weightPercentage}
-                  onChangeText={setWeightPercentage}
-                  keyboardType="numeric"
-                />
-                <TouchableOpacity
-                  style={[styles.presetButton, {
-                    backgroundColor: withAlpha(colors.tint, 0.12),
-                    borderColor: colors.border
-                  }]}
-                  onPress={() => setPercentageDropdownVisible(!percentageDropdownVisible)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons 
-                    name={percentageDropdownVisible ? "chevron-up" : "chevron-down"} 
-                    size={16} 
-                    color={colors.tint} 
-                  />
-                </TouchableOpacity>
-              </View>
-              
-              {percentageDropdownVisible && (
-                <View style={[styles.presetDropdown, {
-                  backgroundColor: colors.cardBackground,
-                  borderColor: colors.border,
-                  ...Shadow.md(colors),
-                }]}>
-                  <ScrollView 
-                    style={styles.presetScrollView}
-                    showsVerticalScrollIndicator={true}
-                    nestedScrollEnabled={true}
-                  >
-                    {presetPercentages.map((percentage) => (
-                      <TouchableOpacity
-                        key={percentage}
-                        style={[styles.presetItem, { 
-                          borderBottomColor: colors.border 
-                        }]}
-                        onPress={() => handlePercentagePresetSelect(percentage)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.presetText, { color: colors.text }]}>
-                          {percentage}%
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-            </View>
-            
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.border }]}
-                onPress={() => setWeightModalVisible(false)}
-              >
-                <Text style={[styles.modalButtonText, { color: colors.text }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.tint }]}
-                onPress={handleSaveWeight}
-              >
-                <Text style={[styles.modalButtonText, { color: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }]}>
-                  Save
-                </Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
-      </Modal>
-      
+      </BottomSheet>
+
       {/* Custom Alert Component */}
       <AlertComponent />
     </View>
@@ -676,212 +620,220 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  content: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xs,
+  },
+  intro: {
+    ...Type.subtext,
+    marginBottom: Spacing.lg,
+    marginHorizontal: Spacing.xs,
+  },
+  headerIconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  deleteAllButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  coursesList: {
-    flex: 1,
-  },
-  coursesListContent: {
-    padding: 20,
-    paddingTop: 0,
   },
   courseCard: {
-    borderRadius: 12,
+    borderRadius: Radius.xl,
     borderWidth: 1,
-    padding: 16,
-    marginBottom: 16,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   courseHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  courseHeaderContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 8,
+    gap: Spacing.sm,
   },
   courseName: {
-    fontSize: 18,
-    fontWeight: '600',
-    flex: 1,
-    marginRight: 8,
+    ...Type.h3,
   },
-  courseActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  weightsSection: {
-    marginTop: 8,
-  },
-  weightsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  weightsTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  addWeightButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  weightsList: {
-    marginTop: 8,
-  },
-  weightItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 8,
-  },
-  weightInfo: {
-    flex: 1,
-  },
-  weightName: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  weightPercentage: {
-    fontSize: 12,
+  courseMeta: {
+    ...Type.subtext,
     marginTop: 2,
   },
-  weightActions: {
+  statusChip: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: Spacing.sm + 2,
+    paddingVertical: 5,
+    borderRadius: Radius.pill,
   },
-  actionButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  statusChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  bar: {
+    flexDirection: 'row',
+    height: 10,
+    borderRadius: Radius.pill,
+    overflow: 'hidden',
+    marginTop: Spacing.md,
+    gap: 2,
+  },
+  weightsSection: {
+    marginTop: Spacing.sm,
+  },
+  weightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  weightDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  weightName: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  weightPercentage: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  addWeightButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
+    marginTop: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
   },
-  emptyWeights: {
+  addWeightText: {
     fontSize: 14,
-    fontStyle: 'italic',
-    textAlign: 'center',
-    padding: 16,
+    fontWeight: '700',
+  },
+  courseFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: Spacing.md,
+    paddingHorizontal: Spacing.xs,
+  },
+  footerAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  footerActionText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   emptyState: {
-    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+    paddingTop: 80,
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 40,
+    marginBottom: Spacing.lg,
   },
   emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
+    ...Type.h2,
+    marginBottom: Spacing.sm,
   },
   emptyStateSubtitle: {
-    fontSize: 16,
+    fontSize: 15,
     textAlign: 'center',
+    lineHeight: 21,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
+  fab: {
+    position: 'absolute',
+    right: Spacing.xl,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: Spacing.xl,
+    height: 52,
+    borderRadius: Radius.pill,
   },
-  modalContent: {
-    width: '90%',
-    borderRadius: 16,
-    padding: 24,
+  fabText: {
+    fontSize: 15,
+    fontWeight: '800',
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 20,
-    textAlign: 'center',
+  saveButton: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.pill,
+  },
+  saveButtonText: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  sheetBody: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
+  },
+  fieldLabel: {
+    ...Type.overline,
+    marginBottom: Spacing.sm,
   },
   textInput: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  inputContainer: {
-    marginBottom: 16,
-    position: 'relative',
-  },
-  inputWithDropdown: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  textInputWithButton: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginRight: 8,
-  },
-  presetButton: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  presetDropdown: {
-    position: 'absolute',
-    top: 52,
-    left: 0,
-    right: 48,
     borderRadius: Radius.md,
-    borderWidth: 1,
-    zIndex: 1000,
-    maxHeight: 200,
-    overflow: 'hidden',
-  },
-  presetScrollView: {
-    maxHeight: 200,
-  },
-  presetItem: {
-    padding: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  presetText: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
     fontSize: 16,
   },
-  modalActions: {
+  chipRow: {
     flexDirection: 'row',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
   },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
+  chip: {
+    paddingHorizontal: Spacing.md + 2,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  percentInputWrap: {
+    flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.lg,
   },
-  modalButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+  percentInput: {
+    flex: 1,
+    fontSize: 22,
+    fontWeight: '800',
+    paddingVertical: Spacing.md,
+  },
+  percentSuffix: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  previewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.xl,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
+  },
+  previewText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

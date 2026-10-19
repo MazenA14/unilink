@@ -1,10 +1,12 @@
+import BottomSheet from '@/components/ui/BottomSheet';
+import { SheetHeader } from '@/components/ui/Dropdown';
 import { Colors } from '@/constants/Colors';
 import { Radius, withAlpha } from '@/constants/Theme';
 import { UPDATE_DOWNLOAD_LINK } from '@/constants/Version';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 // Core encoder only — pure JS, so no native QR/SVG module is needed
 import { create as createQR } from 'qrcode';
 
@@ -105,19 +107,14 @@ export default function ShareAppModal({ visible, onClose }: ShareAppModalProps) 
   };
 
   return (
-    <Modal visible={visible} transparent={true} animationType="fade" onRequestClose={onClose}>
-      <Pressable style={[styles.overlay, { backgroundColor: colors.overlay }]} onPress={onClose}>
-        {/* Inner Pressable swallows taps so only the backdrop closes the modal */}
-        <Pressable style={[styles.content, { backgroundColor: colors.cardBackground }]}>
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.textPrimary }]}>Share UniLink</Text>
-            <TouchableOpacity onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close">
-              <Ionicons name="close" size={22} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Scan the code or send the link to download the app.
-          </Text>
+    <BottomSheet
+      visible={visible}
+      onRequestClose={onClose}
+      autoHeight
+      heightRatio={0.85}
+      header={<SheetHeader colors={colors} title="Share UniLink" subtitle="Scan the code or send the link to download the app" />}
+    >
+      <View style={styles.content}>
 
           <View style={[styles.qrFrame, { borderColor: colors.border }]}>
             <QRCode value={UPDATE_DOWNLOAD_LINK} size={QR_SIZE} />
@@ -153,39 +150,15 @@ export default function ShareAppModal({ visible, onClose }: ShareAppModalProps) 
           <Text style={[styles.copiedText, { color: colors.success, opacity: copied ? 1 : 0 }]}>
             Link copied
           </Text>
-        </Pressable>
-      </Pressable>
-    </Modal>
+      </View>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   content: {
-    width: '86%',
-    maxWidth: 380,
-    padding: 22,
-    borderRadius: Radius.xl,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  title: {
-    fontSize: 19,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-  },
-  subtitle: {
-    fontSize: 13.5,
-    fontWeight: '500',
-    marginTop: 4,
-    marginBottom: 18,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
   qrFrame: {
     alignSelf: 'center',

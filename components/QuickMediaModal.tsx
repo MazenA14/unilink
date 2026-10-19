@@ -1,3 +1,6 @@
+import BottomSheet from '@/components/ui/BottomSheet';
+import { SheetHeader } from '@/components/ui/Dropdown';
+import { SheetButtons } from '@/components/ui/SheetButtons';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -7,20 +10,7 @@ import * as FileSystem from 'expo-file-system';
 import { copyAsync } from 'expo-file-system/legacy';
 import { isAvailableAsync as isSharingAvailableAsync, shareAsync } from 'expo-sharing';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Animated,
-  Dimensions,
-  FlatList,
-  Image,
-  Modal,
-  PanResponder,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Animated, Image, Modal, PanResponder, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useCustomAlert } from './CustomAlert';
 
 interface MediaFile {
@@ -53,17 +43,12 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
   const [renameNewName, setRenameNewName] = useState<string>('');
   const [dropdownVisible, setDropdownVisible] = useState<string | null>(null);
   
-  // Animation values
-  const translateY = useState(new Animated.Value(0))[0];
-  const opacity = useState(new Animated.Value(0))[0];
-  
   // Image preview animation values
   const scale = useState(new Animated.Value(1))[0];
   const translateX = useState(new Animated.Value(0))[0];
   const translateYPreview = useState(new Animated.Value(0))[0];
   const previewOpacity = useState(new Animated.Value(0))[0];
   const infoOpacity = useState(new Animated.Value(0))[0];
-  const { height: screenHeight } = Dimensions.get('window');
   
   // Storage keys
   const MEDIA_FILES_KEY = 'quick_media_files';
@@ -118,42 +103,6 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
       } else if (currentScale > 4) {
         // Cap maximum zoom
         Animated.spring(scale, { toValue: 4, useNativeDriver: true }).start();
-      }
-    },
-  });
-
-  // Header pan responder for swipe down gesture
-  const dragHandlePanResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: (evt, gestureState) => {
-      const isDownwardSwipe = gestureState.dy > 0;
-      const isVerticalSwipe = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
-      return isDownwardSwipe && isVerticalSwipe;
-    },
-    onPanResponderGrant: () => {
-      translateY.setValue(0);
-    },
-    onPanResponderMove: (evt, gestureState) => {
-      if (gestureState.dy > 0) {
-        translateY.setValue(gestureState.dy);
-        const progress = Math.min(gestureState.dy / 200, 1);
-        opacity.setValue(1 - progress);
-      }
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      if (gestureState.dy > 100) {
-        closeModal();
-      } else {
-        Animated.parallel([
-          Animated.spring(translateY, {
-            toValue: 0,
-            useNativeDriver: true,
-          }),
-          Animated.spring(opacity, {
-            toValue: 1,
-            useNativeDriver: true,
-          }),
-        ]).start();
       }
     },
   });
@@ -503,52 +452,15 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
   };
 
 
-  // Modal animation functions
-  const openModal = useCallback(() => {
-    translateY.setValue(screenHeight);
-    opacity.setValue(0);
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [translateY, opacity, screenHeight]);
-
-  const closeModal = () => {
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: screenHeight,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      onClose();
-      // Reset values for next time
-      translateY.setValue(0);
-      opacity.setValue(0);
-    });
-  };
+  const closeModal = onClose;
 
   // Initialize on mount
   useEffect(() => {
     if (visible) {
       initializeMediaDirectory();
       loadMediaFiles();
-      openModal();
     }
-  }, [visible, initializeMediaDirectory, loadMediaFiles, openModal]);
+  }, [visible, initializeMediaDirectory, loadMediaFiles]);
 
   // Clear files on logout (this would be called from auth context)
   const clearAllFiles = useCallback(async () => {
@@ -626,7 +538,7 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
                   }, 100);
                 }}
               >
-                <Ionicons name="create-outline" size={18} color="#4CAF50" />
+                <Ionicons name="create-outline" size={18} color={colors.success} />
                 <Text style={[styles.dropdownItemText, { color: colors.mainFont }]}>Rename</Text>
               </TouchableOpacity>
               
@@ -667,38 +579,12 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
   );
 
   return (
-    <Modal
-      animationType="none"
-      transparent={true}
+    <BottomSheet
       visible={visible}
       onRequestClose={closeModal}
+      heightRatio={0.9}
+      header={<SheetHeader colors={colors} title="Quick Access" subtitle="Images saved on this device" />}
     >
-      <Animated.View style={[styles.modalOverlay, { opacity }]}>
-        <Animated.View 
-          style={[
-            styles.modalContainer, 
-            { 
-              backgroundColor: colors.background,
-              transform: [{ translateY }]
-            }
-          ]}
-        >
-          {/* Modal Header */}
-          <View 
-            style={[styles.modalHeader, { borderBottomColor: colors.border }]}
-            {...dragHandlePanResponder.panHandlers}
-          >
-            {/* Drag Handle */}
-            <View style={[styles.dragHandle, { backgroundColor: colors.border }]} />
-            
-            <View style={styles.headerContent}>
-              <Text style={[styles.modalTitle, { color: colors.mainFont }]}>
-                Quick Access
-              </Text>
-            </View>
-          </View>
-
-          {/* Upload Button */}
           <View style={styles.uploadSection}>
             <TouchableOpacity
               style={[
@@ -712,11 +598,11 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
               disabled={uploading}
             >
               {uploading ? (
-                <ActivityIndicator size="small" color="white" />
+                <ActivityIndicator size="small" color={colors.onPrimary} />
               ) : (
-                <Ionicons name="cloud-upload-outline" size={24} color="white" />
+                <Ionicons name="cloud-upload-outline" size={24} color={colors.onPrimary} />
               )}
-              <Text style={styles.uploadButtonText}>
+              <Text style={[styles.uploadButtonText, { color: colors.onPrimary }]}>
                 {uploading ? 'Uploading...' : 'Upload Image'}
               </Text>
             </TouchableOpacity>
@@ -725,7 +611,6 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
               </Text>
           </View>
 
-          {/* Media Files List */}
           <View style={styles.filesSection}>
             {loading ? (
               <View style={styles.loadingContainer}>
@@ -735,13 +620,11 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
                 </Text>
               </View>
             ) : mediaFiles.length > 0 ? (
-              <FlatList
-                data={mediaFiles}
-                renderItem={renderMediaFile}
-                keyExtractor={(item) => item.id}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.filesList}
-              />
+              <View style={styles.filesList}>
+                {mediaFiles.map((item) => (
+                  <View key={item.id}>{renderMediaFile({ item })}</View>
+                ))}
+              </View>
             ) : (
               <View style={styles.emptyContainer}>
                 <Ionicons name="image-outline" size={64} color={colors.secondaryFont} />
@@ -754,10 +637,7 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
               </View>
             )}
           </View>
-        </Animated.View>
-      </Animated.View>
 
-      {/* Image Preview Modal */}
       <Modal
         visible={previewImage !== null}
         transparent={true}
@@ -888,19 +768,20 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
         </Animated.View>
       </Modal>
 
-      {/* Rename Modal */}
-      <Modal
+      {/* Rename sheet */}
+      <BottomSheet
         visible={renameModalVisible}
-        transparent={true}
-        animationType="fade"
         onRequestClose={handleRenameCancel}
+        autoHeight
+        header={<SheetHeader colors={colors} title="Rename File" />}
+        footer={
+          <SheetButtons
+            secondary={{ label: 'Cancel', onPress: handleRenameCancel }}
+            primary={{ label: 'Rename', onPress: handleRenameConfirm }}
+          />
+        }
       >
-        <View style={styles.renameModalOverlay}>
-          <View style={[styles.renameModalContainer, { backgroundColor: colors.background }]}>
-            <Text style={[styles.renameModalTitle, { color: colors.mainFont }]}>
-              Rename File
-            </Text>
-            
+        <View style={styles.renameBody}>
             <Text style={[styles.renameModalSubtitle, { color: colors.secondaryFont }]}>
               Current name: {renameCurrentName}
             </Text>
@@ -919,79 +800,23 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
               selectTextOnFocus={true}
             />
             
-            <View style={styles.renameModalButtons}>
-              <TouchableOpacity
-                style={[styles.renameModalButton, styles.renameCancelButton, { borderColor: colors.border }]}
-                onPress={handleRenameCancel}
-              >
-                <Text style={[styles.renameModalButtonText, { color: colors.secondaryFont }]}>
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.renameModalButton, styles.renameConfirmButton, { backgroundColor: colors.tint }]}
-                onPress={handleRenameConfirm}
-              >
-                <Text style={[styles.renameModalButtonText, { color: 'white' }]}>
-                  Rename
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
         </View>
-      </Modal>
-      
+      </BottomSheet>
+
       {/* Custom Alert Component */}
       <AlertComponent />
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContainer: {
-    height: '90%',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  modalHeader: {
-    paddingTop: 12,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-  },
-  dragHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  renameBody: {
     paddingHorizontal: 20,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: -0.3,
+    paddingTop: 16,
   },
   uploadSection: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
   },
   uploadButton: {
     flexDirection: 'row',
@@ -1002,7 +827,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   uploadButtonText: {
-    color: 'white',
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
@@ -1013,7 +837,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   filesSection: {
-    flex: 1,
+    minHeight: 240,
   },
   filesList: {
     paddingHorizontal: 20,
@@ -1110,14 +934,6 @@ const styles = StyleSheet.create({
   dropdownDivider: {
     height: 1,
     marginHorizontal: 8,
-  },
-  dropdownOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -1255,30 +1071,6 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   // Rename Modal Styles
-  renameModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  renameModalContainer: {
-    width: '100%',
-    maxWidth: 400,
-    borderRadius: 16,
-    padding: 24,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  renameModalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
   renameModalSubtitle: {
     fontSize: 14,
     marginBottom: 20,
@@ -1291,27 +1083,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    marginBottom: 24,
-  },
-  renameModalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  renameModalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  renameCancelButton: {
-    borderWidth: 1,
-  },
-  renameConfirmButton: {
-    // backgroundColor will be set dynamically
-  },
-  renameModalButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

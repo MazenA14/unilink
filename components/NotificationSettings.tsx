@@ -67,7 +67,7 @@ export default function NotificationSettings({ onClose }: NotificationSettingsPr
             onValueChange={handleToggleNotifications}
             disabled={isLoading}
             trackColor={{ false: colors.border, true: colors.tabColor }}
-            thumbColor="#ffffff"
+            thumbColor={colors.surfaceElevated}
           />
         </View>
 

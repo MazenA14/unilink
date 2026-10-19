@@ -30,7 +30,7 @@ export default function SemesterTable({ semester, index }: SemesterTableProps) {
       </View>
       <View style={styles.courseGrade}>
         <View style={[styles.gradeBadge, { backgroundColor: getGradeColorForComponent(course.letterGrade) }]}>
-          <Text style={[styles.gradeText, { color: '#FFFFFF' }]}>{course.letterGrade}</Text>
+          <Text style={[styles.gradeText, { color: colors.onAccent }]}>{course.letterGrade}</Text>
         </View>
       </View>
       <View style={styles.courseHours}>
@@ -43,11 +43,11 @@ export default function SemesterTable({ semester, index }: SemesterTableProps) {
     <View style={[styles.semesterTable, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={[styles.semesterHeader, { backgroundColor: colors.tabColor }]}>
         <View style={styles.semesterHeaderContent}>
-          <Text style={[styles.semesterTitle, { color: '#FFFFFF' }]}>{semester.name}</Text>
+          <Text style={[styles.semesterTitle, { color: colors.onPrimary }]}>{semester.name}</Text>
           {semester.semesterGPA && semester.semesterGPA !== '0' && (
             <View style={[styles.semesterGpaBadge, { backgroundColor: getSemesterGPAColorForComponent(semester.semesterGPA) }]}>
-              <Text style={[styles.semesterGpaLabel, { color: '#FFFFFF' }]}>GPA</Text>
-              <Text style={[styles.semesterGpaValue, { color: '#FFFFFF' }]}>{semester.semesterGPA}</Text>
+              <Text style={[styles.semesterGpaLabel, { color: colors.onAccent }]}>GPA</Text>
+              <Text style={[styles.semesterGpaValue, { color: colors.onAccent }]}>{semester.semesterGPA}</Text>
             </View>
           )}
         </View>

@@ -1,17 +1,11 @@
+import BottomSheet from '@/components/ui/BottomSheet';
+import { SheetHeader } from '@/components/ui/Dropdown';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useState } from 'react';
-import {
-    Dimensions,
-    Modal,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface CalendarExportModalProps {
   visible: boolean;
@@ -72,29 +66,13 @@ export function CalendarExportModal({
   };
 
   return (
-    <Modal
+    <BottomSheet
       visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
+      onRequestClose={isExporting ? () => {} : onClose}
+      autoHeight
+      heightRatio={0.9}
+      header={<SheetHeader colors={colors} title="Export Schedule" subtitle="Choose a date range and where to send it" />}
     >
-      <View style={styles.overlay}>
-        <View style={[styles.modal, { backgroundColor: colors.background }]}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>
-              Export Schedule
-            </Text>
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: colors.cardBackground }]}
-              onPress={onClose}
-              disabled={isExporting}
-            >
-              <Ionicons name="close" size={20} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Date Selection */}
           <View style={styles.content}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               Select Date Range
@@ -160,10 +138,10 @@ export function CalendarExportModal({
                 onPress={handleDirectExport}
                 disabled={isExporting}
               >
-                <Ionicons name="calendar" size={20} color="#FFFFFF" />
+                <Ionicons name="calendar" size={20} color={colors.onPrimary} />
                 <View style={styles.buttonTextContainer}>
-                  <Text style={styles.exportButtonText}>Add to Calendar</Text>
-                  <Text style={styles.exportButtonSubtext}>
+                  <Text style={[styles.exportButtonText, { color: colors.onPrimary }]}>Add to Calendar</Text>
+                  <Text style={[styles.exportButtonSubtext, { color: colors.onPrimary }]}>
                     Add events directly to your calendar app
                   </Text>
                 </View>
@@ -196,22 +174,6 @@ export function CalendarExportModal({
             </View>
           </View>
 
-          {/* Cancel Button */}
-          <View style={styles.footer}>
-            <TouchableOpacity
-              style={[styles.cancelButton, { backgroundColor: colors.cardBackground }]}
-              onPress={onClose}
-              disabled={isExporting}
-            >
-              <Text style={[styles.cancelButtonText, { color: colors.secondaryFont }]}>
-                Cancel
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-
-      {/* Date Pickers */}
       {showStartDatePicker && (
         <DateTimePicker
           value={startDate}
@@ -231,41 +193,11 @@ export function CalendarExportModal({
           minimumDate={new Date(startDate.getTime() + 24 * 60 * 60 * 1000)}
         />
       )}
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modal: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: Dimensions.get('window').height * 0.8,
-    paddingBottom: 34, // Safe area for home indicator
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   content: {
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -315,25 +247,10 @@ const styles = StyleSheet.create({
   exportButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
     marginBottom: 2,
   },
   exportButtonSubtext: {
     fontSize: 12,
-    color: '#FFFFFF',
     opacity: 0.8,
-  },
-  footer: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-  },
-  cancelButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
   },
 });

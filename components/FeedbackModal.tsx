@@ -1,22 +1,13 @@
+import BottomSheet from '@/components/ui/BottomSheet';
+import { SheetHeader } from '@/components/ui/Dropdown';
+import { SheetButtons } from '@/components/ui/SheetButtons';
 import { Colors } from '@/constants/Colors';
 import { APP_VERSION } from '@/constants/Version';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthManager } from '@/utils/auth';
 import { supabase } from '@/utils/supabase';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
-} from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 interface FeedbackModalProps {
   visible: boolean;
@@ -87,45 +78,26 @@ export default function FeedbackModal({ visible, onClose, onSuccess, onError }: 
     }
   };
 
-  if (!visible) {
-    return null;
-  }
-
   return (
-    <Modal
+    <BottomSheet
       visible={visible}
-      transparent
-      animationType="fade"
       onRequestClose={handleClose}
+      heightRatio={0.85}
+      autoHeight
+      header={<SheetHeader colors={colors} title="Give Feedback" subtitle="Suggestions, ideas or issues" />}
+      footer={
+        <SheetButtons
+          secondary={{ label: 'Cancel', onPress: handleClose, disabled: isSubmitting }}
+          primary={{
+            label: 'Submit Feedback',
+            icon: 'send-outline',
+            onPress: handleSubmit,
+            loading: isSubmitting,
+            disabled: !feedback.trim(),
+          }}
+        />
+      }
     >
-      <View style={styles.overlay}>
-        <KeyboardAvoidingView
-          style={styles.keyboardAvoidingView}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-        >
-          <View style={[
-            styles.modalContainer,
-            {
-              backgroundColor: colors.surfaceElevated,
-              borderColor: colors.border,
-            }
-          ]}>
-            <View style={styles.header}>
-              <Text style={[styles.title, { color: colors.mainFont }]}>
-                Give Feedback
-              </Text>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={handleClose}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                disabled={isSubmitting}
-              >
-                <Ionicons name="close" size={24} color={colors.secondaryFont} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
               <View style={styles.content}>
                 <Text style={[styles.description, { color: colors.mainFont }]}>
                   We&apos;d love to hear your thoughts! Share your feedback, suggestions, or report any issues you&apos;ve encountered.
@@ -135,7 +107,7 @@ export default function FeedbackModal({ visible, onClose, onSuccess, onError }: 
                   <Text style={[styles.inputLabel, { color: colors.mainFont }]}>Your Feedback</Text>
                   <TextInput
                     style={[styles.feedbackInput, { 
-                      backgroundColor: colors.background, 
+                      backgroundColor: colors.surfaceSunken, 
                       color: colors.mainFont,
                       borderColor: colors.border 
                     }]}
@@ -150,102 +122,14 @@ export default function FeedbackModal({ visible, onClose, onSuccess, onError }: 
                   />
                 </View>
               </View>
-            </ScrollView>
-
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.cancelButton, { borderColor: colors.border }]}
-                onPress={handleClose}
-                disabled={isSubmitting}
-              >
-                <Text style={[styles.cancelButtonText, { color: colors.mainFont }]}>
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.submitButton, 
-                  { backgroundColor: colors.tabColor },
-                  isSubmitting && { backgroundColor: colors.secondaryFont, opacity: 0.7 }
-                ]}
-                onPress={handleSubmit}
-                disabled={!feedback.trim() || isSubmitting}
-              >
-                {isSubmitting ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator color={colors.background} size="small" />
-                    <Text style={[styles.loadingText, { color: colors.background }]}>Submitting...</Text>
-                  </View>
-                ) : (
-                  <View style={styles.buttonContent}>
-                    <Text style={[styles.submitButtonText, { color: colors.background }]}>
-                      Submit Feedback
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 40,
-  },
-  keyboardAvoidingView: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-    paddingTop: 50,
-    paddingBottom: 100,
-  },
-  modalContainer: {
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '95%',
-    minHeight: 430,
-    borderRadius: 20,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 15,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    flex: 1,
-  },
-  closeButton: {
-    padding: 4,
-  },
-  scrollView: {
-    flex: 1,
-  },
   content: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
+    paddingTop: 16,
     paddingBottom: 24,
   },
   description: {
@@ -267,48 +151,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     minHeight: 120,
     maxHeight: 200,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-    gap: 12,
-  },
-  cancelButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  submitButton: {
-    flex: 2,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  loadingText: {
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

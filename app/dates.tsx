@@ -1,22 +1,13 @@
+import BottomSheet from '@/components/ui/BottomSheet';
+import { SheetHeader } from '@/components/ui/Dropdown';
+import { SheetButtons } from '@/components/ui/SheetButtons';
 import { useCustomAlert } from '@/components/CustomAlert';
 import { AppBar } from '@/components/navigation/AppBar';
-import { Colors } from '@/constants/Colors';
+import { Colors, SlotTypeColors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import {
-    Animated,
-    FlatList,
-    Modal,
-    PanResponder,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { FlatList, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -30,11 +21,11 @@ interface DateItem {
 }
 
 const typeColors = {
-  quiz: '#3B82F6',
-  assignment: '#10B981',
-  project: '#F59E0B',
-  exam: '#EF4444',
-  other: '#8B5CF6',
+  quiz: SlotTypeColors.Lecture,
+  assignment: SlotTypeColors.Tutorial,
+  project: SlotTypeColors.Lab,
+  exam: SlotTypeColors.Workshop,
+  other: SlotTypeColors.Seminar,
 };
 
 const typeIcons = {
@@ -62,74 +53,8 @@ export default function DatesScreen() {
     type: 'quiz' as DateItem['type'],
   });
 
-  // Animation values for modal
-  const translateY = useState(new Animated.Value(0))[0];
-  const opacity = useState(new Animated.Value(0))[0];
-
-  // Pan responder for swipe-to-dismiss
-  const dragHandlePanResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: (_, gestureState) => {
-      return Math.abs(gestureState.dy) > 5;
-    },
-    onPanResponderGrant: () => {
-      translateY.setOffset((translateY as any)._value);
-    },
-    onPanResponderMove: (_, gestureState) => {
-      if (gestureState.dy > 0) {
-        translateY.setValue(gestureState.dy);
-      }
-    },
-    onPanResponderRelease: (_, gestureState) => {
-      translateY.flattenOffset();
-      
-      if (gestureState.dy > 100 || gestureState.vy > 0.5) {
-        // Dismiss modal
-        closeModal();
-      } else {
-        // Snap back to original position
-        Animated.spring(translateY, {
-          toValue: 0,
-          useNativeDriver: true,
-        }).start();
-      }
-    },
-  });
-
-  const closeModal = () => {
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: 300,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setModalVisible(false);
-      translateY.setValue(0);
-      opacity.setValue(0);
-    });
-  };
-
-  const openModal = () => {
-    setModalVisible(true);
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
+  const openModal = () => setModalVisible(true);
+  const closeModal = () => setModalVisible(false);
 
   // Load dates from storage on component mount
   useEffect(() => {
@@ -304,11 +229,11 @@ export default function DatesScreen() {
     date.setHours(0, 0, 0, 0); // Reset time to start of day
     
     if (date < today) {
-      return '#EF4444'; // Red for past dates
+      return colors.danger; // Past dates
     } else if (date.getTime() === today.getTime()) {
-      return '#3B82F6'; // Blue for today
+      return colors.info; // Today
     } else {
-      return '#10B981'; // Green for future dates
+      return colors.success; // Future dates
     }
   };
 
@@ -319,7 +244,7 @@ export default function DatesScreen() {
       
       <View style={styles.dateCardHeader}>
         <View style={[styles.typeIndicator, { backgroundColor: typeColors[item.type] }]}>
-          <Ionicons name={typeIcons[item.type] as any} size={16} color="white" />
+          <Ionicons name={typeIcons[item.type] as any} size={16} color={colors.onAccent} />
         </View>
         <View style={styles.dateCardContent}>
           <Text style={[styles.dateTitle, { color: colors.mainFont }]}>{item.title}</Text>
@@ -372,13 +297,13 @@ export default function DatesScreen() {
               style={[styles.headerActionButton, { backgroundColor: colors.gradeFailing }]}
               onPress={handleDeleteAll}
             >
-              <Ionicons name="trash" size={18} color="white" />
+              <Ionicons name="trash" size={18} color={colors.onAccent} />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.headerActionButton, { backgroundColor: colors.tint }]}
               onPress={handleOpenModal}
             >
-              <Ionicons name="add" size={20} color="white" />
+              <Ionicons name="add" size={20} color={colors.onPrimary} />
             </TouchableOpacity>
           </>
         }
@@ -408,38 +333,14 @@ export default function DatesScreen() {
       </ScrollView>
 
       {/* Add/Edit Modal */}
-      <Modal
-        animationType="none"
-        transparent={true}
+      <BottomSheet
         visible={modalVisible}
         onRequestClose={closeModal}
+        heightRatio={0.9}
+        header={<SheetHeader colors={colors} title={editingItem ? 'Edit Date' : 'Add New Date'} />}
+        footer={<SheetButtons secondary={{ label: 'Cancel', onPress: closeModal }} primary={{ label: 'Save', onPress: handleAddDate }} />}
       >
-        <Animated.View style={[styles.modalOverlay, { opacity }]}>
-          <Animated.View 
-            style={[
-              styles.modalContainer, 
-              { 
-                backgroundColor: colors.background,
-                transform: [{ translateY }]
-              }
-            ]}
-          >
-            {/* Modal Header */}
-            <View 
-              style={[styles.modalHeader, { borderBottomColor: colors.border }]}
-              {...dragHandlePanResponder.panHandlers}
-            >
-              {/* Drag Handle */}
-              <View style={[styles.dragHandle, { backgroundColor: colors.border }]} />
-              
-              <View style={styles.headerContent}>
-                <Text style={[styles.modalTitle, { color: colors.mainFont }]}>
-                  {editingItem ? 'Edit Date' : 'Add New Date'}
-                </Text>
-              </View>
-            </View>
-
-            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.modalContent}>
             {/* Title Input */}
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, { color: colors.mainFont }]}>Title *</Text>
@@ -521,11 +422,11 @@ export default function DatesScreen() {
                     <Ionicons 
                       name={typeIcons[type as DateItem['type']] as any} 
                       size={20} 
-                      color={formData.type === type ? 'white' : colors.secondaryFont} 
+                      color={formData.type === type ? colors.onAccent : colors.secondaryFont} 
                     />
                     <Text style={[
                       styles.typeOptionText,
-                      { color: formData.type === type ? 'white' : colors.mainFont }
+                      { color: formData.type === type ? colors.onAccent : colors.mainFont }
                     ]}>
                       {getTypeDisplayName(type as DateItem['type'])}
                     </Text>
@@ -552,20 +453,8 @@ export default function DatesScreen() {
                 textAlignVertical="top"
               />
             </View>
-            </ScrollView>
-
-            {/* Save Button */}
-            <View style={styles.modalButtonContainer}>
-              <TouchableOpacity
-                style={[styles.modalSaveButton, { backgroundColor: colors.tint }]}
-                onPress={handleAddDate}
-              >
-                <Text style={styles.modalSaveText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-        </Animated.View>
-      </Modal>
+        </View>
+      </BottomSheet>
 
       {/* Custom Alert */}
       <AlertComponent />
@@ -690,74 +579,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
   locationText: {
     fontSize: 12,
     fontWeight: '500',
     marginLeft: 4,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContainer: {
-    height: '90%',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  modalHeader: {
-    paddingTop: 12,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-  },
-  dragHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    flex: 1,
-  },
   modalContent: {
-    flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  modalButtonContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
     paddingTop: 16,
-  },
-  modalSaveButton: {
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalSaveText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '700',
   },
   inputGroup: {
     marginBottom: 20,

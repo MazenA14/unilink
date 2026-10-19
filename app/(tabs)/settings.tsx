@@ -1,3 +1,6 @@
+import BottomSheet from '@/components/ui/BottomSheet';
+import { SheetHeader } from '@/components/ui/Dropdown';
+import { SheetButtons } from '@/components/ui/SheetButtons';
 import { useCustomAlert } from '@/components/CustomAlert';
 import EditNicknameModal from '@/components/EditNicknameModal';
 import { AppBar } from '@/components/navigation/AppBar';
@@ -7,12 +10,14 @@ import ResetPasswordModal from '@/components/ResetPasswordModal';
 import UpdateModal from '@/components/UpdateModal';
 import WhatsNewModal from '@/components/WhatsNewModal';
 import { Colors } from '@/constants/Colors';
-import { Radius, Shadow, withAlpha } from '@/constants/Theme';
+import { PickerSheet } from '@/components/ui/PickerSheet';
+import { SegmentOption, SegmentedControl } from '@/components/ui/SegmentedControl';
+import { Radius, Shadow } from '@/constants/Theme';
 import { APP_VERSION } from '@/constants/Version';
 import { getWhatsNewConfig } from '@/constants/WhatsNewFeatures';
 import { DefaultScreenType, useDefaultScreen } from '@/contexts/DefaultScreenContext';
 import { useShiftedSchedule } from '@/contexts/ShiftedScheduleContext';
-import { useTheme } from '@/contexts/ThemeContext';
+import { ThemePreference, useTheme } from '@/contexts/ThemeContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useVersionCheck } from '@/hooks/useVersionCheck';
 import { AuthManager } from '@/utils/auth';
@@ -24,8 +29,25 @@ import { resetWhatsNewStatus } from '@/utils/whatsNewStorage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { getAppIcon, setAppIcon } from 'expo-dynamic-app-icon';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Image, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ComponentProps, useEffect, useState } from 'react';
+import { ActivityIndicator, AppState, Image, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+
+const THEME_OPTIONS: SegmentOption<ThemePreference>[] = [
+  { value: 'light', label: 'Light', icon: 'sunny-outline' },
+  { value: 'dark', label: 'Dark', icon: 'moon-outline' },
+  { value: 'system', label: 'System', icon: 'phone-portrait-outline' },
+];
+
+type IconName = ComponentProps<typeof Ionicons>['name'];
+
+/** Tinted leading icon for a settings row. */
+function RowIcon({ name, color, background }: { name: IconName; color: string; background: string }) {
+  return (
+    <View style={[styles.rowIcon, { backgroundColor: background }]}>
+      <Ionicons name={name} size={18} color={color} />
+    </View>
+  );
+}
 
 const APP_ICON_OPTIONS: { value: string; label: string; source: number }[] = [
   { value: 'DEFAULT', label: 'Default', source: require('@/assets/images/app-icons/icon-original.png') },
@@ -48,21 +70,15 @@ export default function SettingsScreen() {
   const [payments, setPayments] = useState<PaymentItem[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
   const [defaultScreenDropdownVisible, setDefaultScreenDropdownVisible] = useState(false);
-  const [pillButtonLayout, setPillButtonLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  const pillButtonRef = useRef<View>(null);
   const [showWhatsNewModal, setShowWhatsNewModal] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [dashboardSlots, setDashboardSlots] = useState<number>(5);
   const [slotsDropdownVisible, setSlotsDropdownVisible] = useState(false);
-  const slotsPillRef = useRef<View>(null);
-  const [slotsPillLayout, setSlotsPillLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [currentAppIcon, setCurrentAppIcon] = useState<string>('DEFAULT');
   const [reminderOffset, setReminderOffsetState] = useState<number>(DEFAULT_REMINDER_OFFSET);
   const [reminderDropdownVisible, setReminderDropdownVisible] = useState(false);
   const [exactAlarmsAllowed, setExactAlarmsAllowed] = useState(true);
-  const reminderPillRef = useRef<View>(null);
-  const [reminderPillLayout, setReminderPillLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   
   // Easter egg state
   const [easterEggTapCount, setEasterEggTapCount] = useState(0);
@@ -126,8 +142,6 @@ export default function SettingsScreen() {
     handleUpdateModalUpdate,
   } = useVersionCheck();
 
-  const isDark = useMemo(() => themePreference === 'dark' || (themePreference === 'system' && (colorScheme === 'dark')), [themePreference, colorScheme]);
-
   // Get what's new config
   const whatsNewConfig = getWhatsNewConfig();
 
@@ -141,12 +155,12 @@ export default function SettingsScreen() {
     setShowWhatsNewModal(false);
   };
 
-  const screenOptions: { value: DefaultScreenType; label: string }[] = [
-    { value: 'dashboard', label: 'Dashboard' },
-    { value: 'grades', label: 'Grades' },
-    { value: 'schedule', label: 'Schedule' },
-    { value: 'transcript', label: 'Transcript' },
-    { value: 'settings', label: 'Settings' },
+  const screenOptions: { value: DefaultScreenType; label: string; icon: IconName }[] = [
+    { value: 'dashboard', label: 'Dashboard', icon: 'home-outline' },
+    { value: 'grades', label: 'Grades', icon: 'school-outline' },
+    { value: 'schedule', label: 'Schedule', icon: 'calendar-outline' },
+    { value: 'transcript', label: 'Transcript', icon: 'document-text-outline' },
+    { value: 'settings', label: 'Settings', icon: 'settings-outline' },
   ];
 
   const getScreenLabel = (screen: DefaultScreenType) => {
@@ -304,18 +318,29 @@ export default function SettingsScreen() {
 
         {/* Profile Section */}
         <Text style={[styles.sectionTitle, { color: colors.secondaryFont, marginTop: 0 }]}>PROFILE</Text>
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}> 
-          <View style={styles.rowBetween}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.primaryText, { color: colors.mainFont }]}>
-                {displayName || ' '}{userId ? `  ·  ${userId}` : ''}
-              </Text>
-              <TouchableOpacity onPress={openEditNickname}>
-                <Text style={[styles.secondaryText, { color: colors.tabColor }]}>Edit Nickname</Text>
-              </TouchableOpacity>
-            </View>
+        <TouchableOpacity
+          style={[styles.card, styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}
+          onPress={openEditNickname}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.avatar, { backgroundColor: colors.primarySoft }]}>
+            <Text style={[styles.avatarText, { color: colors.primary }]}>
+              {(displayName || '?').trim().charAt(0).toUpperCase()}
+            </Text>
           </View>
-        </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.profileName, { color: colors.mainFont }]} numberOfLines={1}>
+              {displayName || ' '}
+            </Text>
+            {userId ? (
+              <Text style={[styles.secondaryText, { color: colors.secondaryFont, marginTop: 2 }]}>{userId}</Text>
+            ) : null}
+          </View>
+          <View style={[styles.editChip, { backgroundColor: colors.primarySoft }]}>
+            <Ionicons name="pencil" size={14} color={colors.primary} />
+            <Text style={[styles.editChipText, { color: colors.primary }]}>Edit</Text>
+          </View>
+        </TouchableOpacity>
 
         {/* Financials Section */}
         <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>FINANCIALS</Text>
@@ -357,17 +382,11 @@ export default function SettingsScreen() {
         {/* Appearance Section */}
         <Text style={[styles.sectionTitle, { color: colors.secondaryFont }]}>APPEARANCE</Text>
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}> 
-          <View style={styles.rowBetween}>
-            <Text style={[styles.primaryText, { color: colors.mainFont }]}>Dark Mode</Text>
-            <Switch
-              value={isDark}
-              onValueChange={(val) => setThemePreference(val ? 'dark' : 'light')}
-              trackColor={{ false: colors.border, true: colors.tabColor }}
-              thumbColor="#ffffff"
-            />
-          </View>
+          <Text style={[styles.primaryText, { color: colors.mainFont, marginBottom: 12 }]}>Theme</Text>
+          <SegmentedControl options={THEME_OPTIONS} value={themePreference} onChange={setThemePreference} />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <View style={styles.rowBetween}>
+            <RowIcon name="time-outline" color={colors.primary} background={colors.primarySoft} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.primaryText, { color: colors.mainFont }]}>Delayed 3rd Slot</Text>
               <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>* For Pharmacy, Applied Arts and Law Students (11:45 -&gt; 12:00)</Text>
@@ -375,8 +394,8 @@ export default function SettingsScreen() {
             <Switch
               value={isShiftedScheduleEnabled}
               onValueChange={setShiftedScheduleEnabled}
-              trackColor={{ false: colors.border, true: colors.tabColor }}
-              thumbColor="#ffffff"
+              trackColor={{ false: colors.borderStrong, true: colors.primary }}
+              thumbColor={colors.surfaceElevated}
             />
           </View>
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -419,50 +438,41 @@ export default function SettingsScreen() {
         
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}> 
           <View style={styles.rowBetween}>
+            <RowIcon name="home-outline" color={colors.primary} background={colors.primarySoft} />
             <View style={{ flex: 1, marginRight: 12 }}>
               <Text style={[styles.primaryText, { color: colors.mainFont }]}>Default Screen</Text>
               <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>Choose which screen to open when the app starts</Text>
             </View>
             <TouchableOpacity
-              ref={pillButtonRef}
-              style={[styles.pillButton, { backgroundColor: colors.tabColor }]}
-              onPress={() => {
-                pillButtonRef.current?.measureInWindow((x, y, width, height) => {
-                  setPillButtonLayout({ x, y, width, height });
-                  setDefaultScreenDropdownVisible(true);
-                });
-              }}
+              style={[styles.valuePill, { backgroundColor: colors.primarySoft }]}
+              onPress={() => setDefaultScreenDropdownVisible(true)}
             >
-              <Text style={[styles.pillText, { color: colors.background }]}>{getScreenLabel(defaultScreen)}</Text>
-              <Ionicons name="chevron-down" size={14} color={colors.background} />
+              <Text style={[styles.pillText, { color: colors.primary }]}>{getScreenLabel(defaultScreen)}</Text>
+              <Ionicons name="chevron-down" size={14} color={colors.primary} />
             </TouchableOpacity>
           </View>
           
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           <View style={styles.rowBetween}>
+            <RowIcon name="layers-outline" color={colors.primary} background={colors.primarySoft} />
             <View style={{ flex: 1, marginRight: 12 }}>
               <Text style={[styles.primaryText, { color: colors.mainFont }]}>Schedule Slots</Text>
               <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>How many periods to show in Today’s schedule</Text>
             </View>
             <TouchableOpacity
-              ref={slotsPillRef}
-              style={[styles.pillButton, { backgroundColor: colors.tabColor }]}
-              onPress={() => {
-                slotsPillRef.current?.measureInWindow((x, y, width, height) => {
-                  setSlotsPillLayout({ x, y, width, height });
-                  setSlotsDropdownVisible(true);
-                });
-              }}
+              style={[styles.valuePill, { backgroundColor: colors.primarySoft }]}
+              onPress={() => setSlotsDropdownVisible(true)}
             >
-              <Text style={[styles.pillText, { color: colors.background }]}>{`${dashboardSlots} Slots`}</Text>
-              <Ionicons name="chevron-down" size={14} color={colors.background} />
+              <Text style={[styles.pillText, { color: colors.primary }]}>{`${dashboardSlots} Slots`}</Text>
+              <Ionicons name="chevron-down" size={14} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           <View style={styles.rowBetween}>
+            <RowIcon name="alarm-outline" color={colors.primary} background={colors.primarySoft} />
             <View style={{ flex: 1, marginRight: 12 }}>
               <Text style={[styles.primaryText, { color: colors.mainFont }]}>Class Reminders</Text>
               <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>Get notified before each class starts</Text>
@@ -473,19 +483,13 @@ export default function SettingsScreen() {
               )}
             </View>
             <TouchableOpacity
-              ref={reminderPillRef}
-              style={[styles.pillButton, { backgroundColor: colors.tabColor }]}
-              onPress={() => {
-                reminderPillRef.current?.measureInWindow((x, y, width, height) => {
-                  setReminderPillLayout({ x, y, width, height });
-                  setReminderDropdownVisible(true);
-                });
-              }}
+              style={[styles.valuePill, { backgroundColor: colors.primarySoft }]}
+              onPress={() => setReminderDropdownVisible(true)}
             >
-              <Text style={[styles.pillText, { color: colors.background }]}>
+              <Text style={[styles.pillText, { color: colors.primary }]}>
                 {reminderOffset === 0 ? 'Off' : `${formatReminderOffset(reminderOffset)} before`}
               </Text>
-              <Ionicons name="chevron-down" size={14} color={colors.background} />
+              <Ionicons name="chevron-down" size={14} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -496,7 +500,7 @@ export default function SettingsScreen() {
             onPress={() => setShowResetPasswordModal(true)}
           >
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-              {/* <Ionicons name="key-outline" size={20} color={colors.tabColor} style={{ marginRight: 12 }} /> */}
+              <RowIcon name="key-outline" color={colors.primary} background={colors.primarySoft} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.primaryText, { color: colors.mainFont }]}>Reset Password</Text>
                 <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>Change your account password</Text>
@@ -613,7 +617,10 @@ export default function SettingsScreen() {
             style={styles.rowBetween}
             onPress={showWhatsNewManually}
           >
-            <Text style={[styles.primaryText, { color: colors.mainFont }]}>See What&apos;s New</Text>
+            <View style={styles.rowLead}>
+              <RowIcon name="sparkles-outline" color={colors.secondaryDark} background={colors.secondarySoft} />
+              <Text style={[styles.primaryText, { color: colors.mainFont }]}>See What&apos;s New</Text>
+            </View>
             {/* <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>
               View latest features
             </Text> */}
@@ -647,6 +654,7 @@ export default function SettingsScreen() {
             disabled={isChecking}
           >
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+              <RowIcon name="cloud-download-outline" color={colors.secondaryDark} background={colors.secondarySoft} />
               <Text style={[styles.primaryText, { color: colors.mainFont }]}>Check for Updates</Text>
               {isChecking && (
                 <ActivityIndicator 
@@ -662,7 +670,10 @@ export default function SettingsScreen() {
             style={styles.rowBetween}
             onPress={() => setShowFeedbackModal(true)}
           >
-            <Text style={[styles.primaryText, { color: colors.mainFont }]}>Give Feedback</Text>
+            <View style={styles.rowLead}>
+              <RowIcon name="chatbubble-ellipses-outline" color={colors.secondaryDark} background={colors.secondarySoft} />
+              <Text style={[styles.primaryText, { color: colors.mainFont }]}>Give Feedback</Text>
+            </View>
           </TouchableOpacity>
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <TouchableOpacity
@@ -682,14 +693,20 @@ export default function SettingsScreen() {
               });
             }}
           >
-            <Text style={[styles.primaryText, { color: colors.mainFont }]}>Contact</Text>
+            <View style={styles.rowLead}>
+              <RowIcon name="mail-outline" color={colors.secondaryDark} background={colors.secondarySoft} />
+              <Text style={[styles.primaryText, { color: colors.mainFont }]}>Contact</Text>
+            </View>
           </TouchableOpacity>
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <TouchableOpacity
             style={styles.rowBetween}
             onPress={logout}
           >
-            <Text style={[styles.primaryText, { color: colors.gradeFailing }]}>Logout</Text>
+            <View style={styles.rowLead}>
+              <RowIcon name="log-out-outline" color={colors.danger} background={colors.dangerSoft} />
+              <Text style={[styles.primaryText, { color: colors.danger, fontWeight: '700' }]}>Logout</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -710,186 +727,42 @@ export default function SettingsScreen() {
         onSaved={setDisplayName}
       />
 
-      {/* Default Screen Selection Dropdown */}
-      <Modal
+      <PickerSheet
         visible={defaultScreenDropdownVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setDefaultScreenDropdownVisible(false)}
-      >
-        <TouchableOpacity 
-          style={styles.dropdownOverlay}
-          activeOpacity={1}
-          onPress={() => setDefaultScreenDropdownVisible(false)}
-        >
-          {pillButtonLayout && (
-            <View 
-              style={[
-                styles.dropdownContainer,
-                {
-                  top: pillButtonLayout.y + pillButtonLayout.height + 8,
-                  left: pillButtonLayout.x,
-                  width: pillButtonLayout.width,
-                  backgroundColor: colors.cardBackground,
-                  borderColor: colors.border,
-                  ...Shadow.lg(colors),
-                }
-              ]}
-            >
-              {screenOptions.map((option, index) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.dropdownItem,
-                    { 
-                      backgroundColor: defaultScreen === option.value ? withAlpha(colors.tabColor, 0.14) : 'transparent',
-                      borderBottomColor: index < screenOptions.length - 1 ? colors.border : 'transparent',
-                      borderTopLeftRadius: index === 0 ? 12 : 0,
-                      borderTopRightRadius: index === 0 ? 12 : 0,
-                      borderBottomLeftRadius: index === screenOptions.length - 1 ? 12 : 0,
-                      borderBottomRightRadius: index === screenOptions.length - 1 ? 12 : 0,
-                    }
-                  ]}
-                  onPress={async () => {
-                    await setDefaultScreen(option.value);
-                    setDefaultScreenDropdownVisible(false);
-                  }}
-                >
-                  <Text style={[
-                    styles.dropdownItemText,
-                    { 
-                      color: defaultScreen === option.value ? colors.tabColor : colors.mainFont,
-                      fontWeight: defaultScreen === option.value ? '600' : '400'
-                    }
-                  ]}>
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </TouchableOpacity>
-      </Modal>
+        onClose={() => setDefaultScreenDropdownVisible(false)}
+        title="Default screen"
+        subtitle="Opens when the app starts"
+        options={screenOptions}
+        selected={defaultScreen}
+        onSelect={(value) => { void setDefaultScreen(value); }}
+      />
 
-      {/* Dashboard Slots Dropdown */}
-      <Modal
+      <PickerSheet
         visible={slotsDropdownVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setSlotsDropdownVisible(false)}
-      >
-        <TouchableOpacity 
-          style={styles.dropdownOverlay}
-          activeOpacity={1}
-          onPress={() => setSlotsDropdownVisible(false)}
-        >
-          {slotsPillLayout && (
-            <View 
-              style={[
-                styles.dropdownContainer,
-                {
-                  top: slotsPillLayout.y + slotsPillLayout.height + 8,
-                  left: slotsPillLayout.x,
-                  width: slotsPillLayout.width,
-                  backgroundColor: colors.cardBackground,
-                  borderColor: colors.border,
-                  ...Shadow.lg(colors),
-                }
-              ]}
-            >
-              {[5,6,7,8].map((val, index, arr) => (
-                <TouchableOpacity
-                  key={val}
-                  style={[
-                    styles.dropdownItem,
-                    { 
-                      backgroundColor: dashboardSlots === val ? withAlpha(colors.tabColor, 0.14) : 'transparent',
-                      borderBottomColor: index < arr.length - 1 ? colors.border : 'transparent',
-                      borderTopLeftRadius: index === 0 ? 12 : 0,
-                      borderTopRightRadius: index === 0 ? 12 : 0,
-                      borderBottomLeftRadius: index === arr.length - 1 ? 12 : 0,
-                      borderBottomRightRadius: index === arr.length - 1 ? 12 : 0,
-                    }
-                  ]}
-                  onPress={async () => {
-                    setDashboardSlots(val);
-                    await AuthManager.storeDashboardSlots(val);
-                    setSlotsDropdownVisible(false);
-                  }}
-                >
-                  <Text style={[
-                    styles.dropdownItemText,
-                    { 
-                      color: dashboardSlots === val ? colors.tabColor : colors.mainFont,
-                      fontWeight: dashboardSlots === val ? '600' : '400'
-                    }
-                  ]}>
-                    {val} Slots
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </TouchableOpacity>
-      </Modal>
+        onClose={() => setSlotsDropdownVisible(false)}
+        title="Schedule slots"
+        subtitle="Periods shown in Today's schedule"
+        options={[5, 6, 7, 8].map((val) => ({ value: val, label: `${val} Slots` }))}
+        selected={dashboardSlots}
+        onSelect={(val) => {
+          setDashboardSlots(val);
+          void AuthManager.storeDashboardSlots(val);
+        }}
+      />
 
-      {/* Class Reminder Offset Dropdown */}
-      <Modal
+      <PickerSheet
         visible={reminderDropdownVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setReminderDropdownVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.dropdownOverlay}
-          activeOpacity={1}
-          onPress={() => setReminderDropdownVisible(false)}
-        >
-          {reminderPillLayout && (
-            <View
-              style={[
-                styles.dropdownContainer,
-                {
-                  top: reminderPillLayout.y + reminderPillLayout.height + 8,
-                  left: reminderPillLayout.x,
-                  width: reminderPillLayout.width,
-                  backgroundColor: colors.cardBackground,
-                  borderColor: colors.border,
-                  ...Shadow.lg(colors),
-                }
-              ]}
-            >
-              {REMINDER_OFFSET_OPTIONS.map((option, index, arr) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.dropdownItem,
-                    {
-                      backgroundColor: reminderOffset === option.value ? withAlpha(colors.tabColor, 0.14) : 'transparent',
-                      borderBottomColor: index < arr.length - 1 ? colors.border : 'transparent',
-                      borderTopLeftRadius: index === 0 ? 12 : 0,
-                      borderTopRightRadius: index === 0 ? 12 : 0,
-                      borderBottomLeftRadius: index === arr.length - 1 ? 12 : 0,
-                      borderBottomRightRadius: index === arr.length - 1 ? 12 : 0,
-                    }
-                  ]}
-                  onPress={() => changeReminderOffset(option.value)}
-                >
-                  <Text style={[
-                    styles.dropdownItemText,
-                    {
-                      color: reminderOffset === option.value ? colors.tabColor : colors.mainFont,
-                      fontWeight: reminderOffset === option.value ? '600' : '400'
-                    }
-                  ]}>
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </TouchableOpacity>
-      </Modal>
+        onClose={() => setReminderDropdownVisible(false)}
+        title="Class reminders"
+        subtitle="How early to notify you"
+        options={REMINDER_OFFSET_OPTIONS.map((o) => ({
+          value: o.value as number,
+          label: o.value === 0 ? 'Off' : `${o.label} before`,
+          icon: (o.value === 0 ? 'notifications-off-outline' : 'notifications-outline') as IconName,
+        }))}
+        selected={reminderOffset}
+        onSelect={(val) => { void changeReminderOffset(val); }}
+      />
 
       {/* What's New Modal */}
       <WhatsNewModal
@@ -940,28 +813,18 @@ export default function SettingsScreen() {
         }}
       />
 
-      {/* Easter Egg Modal */}
-      <Modal
+      {/* Easter Egg */}
+      <BottomSheet
         visible={showEasterEggModal}
-        transparent={true}
-        animationType="fade"
         onRequestClose={() => setShowEasterEggModal(false)}
+        autoHeight
+        header={<SheetHeader colors={colors} title="You found it!" />}
+        footer={<SheetButtons primary={{ label: 'Close', onPress: () => setShowEasterEggModal(false) }} />}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
-            {/* <Text style={[styles.modalTitle, { color: colors.mainFont }]}>Easter Egg Found!</Text> */}
-            <Text style={[styles.easterEggText, { color: colors.mainFont }]}>
-              App created by Mazen Ahmed MET 58- on 23/9/2025
-            </Text>
-            <TouchableOpacity
-              style={[styles.easterEggButton, { backgroundColor: colors.tabColor }]}
-              onPress={() => setShowEasterEggModal(false)}
-            >
-              <Text style={[styles.easterEggButtonText, { color: '#ffffff' }]}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+        <Text style={[styles.easterEggText, { color: colors.mainFont }]}>
+          App created by Mazen Ahmed MET 58- on 23/9/2025
+        </Text>
+      </BottomSheet>
 
       {AlertComponent()}
       </ScrollView>
@@ -976,19 +839,13 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
   },
-  title: {
-    fontSize: 30,
-    fontWeight: '800',
-    marginBottom: 8,
-    letterSpacing: -0.6,
-  },
   sectionTitle: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
     marginTop: 26,
     marginBottom: 10,
-    marginLeft: 4,
-    letterSpacing: 0.8,
+    marginLeft: 6,
+    letterSpacing: 1,
   },
   card: {
     borderRadius: Radius.lg,
@@ -1038,71 +895,66 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   divider: {
-    height: 1,
-    marginVertical: 12,
+    height: StyleSheet.hairlineWidth,
+    marginVertical: 14,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    width: '84%',
-    padding: 24,
-    borderRadius: Radius.xl,
-  },
-  modalTitle: {
-    fontSize: 19,
-    fontWeight: '800',
-    marginBottom: 16,
-    letterSpacing: -0.3,
-  },
-  pillContainer: {
-    marginTop: 12,
-    alignItems: 'flex-end',
-  },
-  pillButton: {
+  valuePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    gap: 6,
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
-    minWidth: 120,
-    justifyContent: 'center',
+    borderRadius: Radius.pill,
   },
   pillText: {
     fontSize: 14,
-    fontWeight: '600',
-    marginRight: 6,
+    fontWeight: '700',
   },
-  dropdownOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  dropdownContainer: {
-    position: 'absolute',
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    overflow: 'hidden',
-    zIndex: 1000,
-  },
-  dropdownItem: {
-    flexDirection: 'row',
+  rowIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
+    marginRight: 12,
   },
-  dropdownItemText: {
-    fontSize: 14,
-    fontWeight: '500',
-    textAlign: 'center',
+  rowLead: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  checkmark: {
-    fontSize: 14,
-    fontWeight: '600',
+  profileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  profileName: {
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  editChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: Radius.pill,
+  },
+  editChipText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   iconOptionsRow: {
     flexDirection: 'row',
@@ -1140,38 +992,12 @@ const styles = StyleSheet.create({
     opacity: 0.6,
     letterSpacing: 0.5,
   },
-  infoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    marginTop: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  infoButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginLeft: 8,
-    flex: 1,
-  },
   easterEggText: {
     fontSize: 16,
     fontWeight: '500',
     textAlign: 'center',
     lineHeight: 24,
-  },
-  easterEggButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
-    alignSelf: 'center',
-  },
-  easterEggButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
 });

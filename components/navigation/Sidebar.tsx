@@ -244,7 +244,7 @@ export function Sidebar() {
   const renderItem = (entry: NavEntry) => {
     const active = isActive(entry);
     // One neutral treatment for every item; only the active one carries the brand colour
-    const iconColor = active ? colors.primary : colors.textSecondary;
+    const iconColor = active ? colors.primary : colorScheme === 'dark' ? '#D4D4D4' : '#4A4A4A';
     return (
       <TouchableOpacity
         key={entry.key}
@@ -306,7 +306,7 @@ export function Sidebar() {
         {/* Profile header */}
         <View style={styles.profile}>
           <View style={[styles.avatar, { backgroundColor: colors.primary }, Shadow.glow(colors.primary)]}>
-            <Text style={styles.avatarText}>{initials || 'U'}</Text>
+            <Text style={[styles.avatarText, { color: colors.onPrimary }]}>{initials || 'U'}</Text>
           </View>
           <View style={styles.profileText}>
             <Text style={[styles.profileName, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -393,7 +393,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarText: {
-    color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '800',
   },

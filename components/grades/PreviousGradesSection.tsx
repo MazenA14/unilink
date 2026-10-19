@@ -45,7 +45,6 @@ export default function PreviousGradesSection({
     <>
       {/* Seasons Section */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Previous Grades</Text>
         {loadingSeasons ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.tint} />

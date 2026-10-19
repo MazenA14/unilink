@@ -1,15 +1,12 @@
+import BottomSheet from '@/components/ui/BottomSheet';
+import { SheetHeader } from '@/components/ui/Dropdown';
+import { SheetButtons } from '@/components/ui/SheetButtons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCustomAlert } from '@/components/CustomAlert';
 import { Colors } from '@/constants/Colors';
 import { APP_VERSION, UPDATE_DOWNLOAD_LINK } from '@/constants/Version';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import {
-  Linking,
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 
 interface UpdateModalProps {
   visible: boolean;
@@ -65,184 +62,60 @@ export default function UpdateModal({ visible, onClose, onUpdate, forceUpdate = 
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={forceUpdate ? () => {} : onClose}
-    >
-      <View style={styles.overlay}>
-        <View style={[
-          styles.modalContainer,
-          {
-            backgroundColor: colors.surfaceElevated,
-            borderColor: colors.border,
-          }
-        ]}>
-          <View style={styles.header}>
-            <View style={styles.titleContainer}>
-              <View style={styles.titleTextContainer}>
-                <Text style={[styles.title, { color: colors.mainFont }]}>
-                  {forceUpdate ? 'Update Required' : 'Update Available'}
-                </Text>
-                <Text style={[styles.version, { color: colors.secondaryFont }]}>
-                  Current Version {APP_VERSION}
-                </Text>
-              </View>
-            </View>
-            {!forceUpdate && (
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={onClose}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                {/* Close button can be added here if needed */}
-              </TouchableOpacity>
-            )}
+    <>
+      <BottomSheet
+        visible={visible}
+        onRequestClose={onClose}
+        dismissible={!forceUpdate}
+        autoHeight
+        header={
+          <SheetHeader
+            colors={colors}
+            title={forceUpdate ? 'Update Required' : 'Update Available'}
+            subtitle={`Current version ${APP_VERSION}`}
+          />
+        }
+        footer={
+          <SheetButtons
+            secondary={forceUpdate ? undefined : { label: 'Later', onPress: onClose }}
+            primary={{ label: 'Update Now', icon: 'download-outline', onPress: handleUpdatePress }}
+          />
+        }
+      >
+        <View style={styles.content}>
+          <View style={[styles.iconBadge, { backgroundColor: colors.primarySoft }]}>
+            <Ionicons name={forceUpdate ? 'alert-circle-outline' : 'sparkles-outline'} size={26} color={colors.primary} />
           </View>
-          
-          <View style={styles.content}>
-            <Text style={[styles.description, { color: colors.mainFont }]}>
-              {forceUpdate
-                ? 'This version of UniLink is no longer supported. Please update to the latest version to continue using the app.'
-                : 'A new version of UniLink is available. Please update to the latest version to continue using the app with the best experience.'}
-            </Text>
-            
-          </View>
-          
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.updateButton, { backgroundColor: colors.tabColor }]}
-              onPress={handleUpdatePress}
-            >
-              <Text style={[styles.updateButtonText, { color: colors.background }]}>
-                Update Now
-              </Text>
-            </TouchableOpacity>
-            
-            {!forceUpdate && (
-              <TouchableOpacity
-                style={[styles.laterButton, { borderColor: colors.border }]}
-                onPress={onClose}
-              >
-                <Text style={[styles.laterButtonText, { color: colors.mainFont }]}>
-                  Later
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          <Text style={[styles.description, { color: colors.mainFont }]}>
+            {forceUpdate
+              ? 'This version of UniLink is no longer supported. Please update to the latest version to continue using the app.'
+              : 'A new version of UniLink is available. Please update to the latest version to continue using the app with the best experience.'}
+          </Text>
         </View>
-      </View>
+      </BottomSheet>
       {AlertComponent()}
-    </Modal>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 40,
-  },
-  modalContainer: {
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '90%',
-    borderRadius: 20,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 15,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 16,
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  titleTextContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  version: {
-    fontSize: 14,
-    opacity: 0.7,
-  },
-  closeButton: {
-    padding: 4,
-  },
   content: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+  },
+  iconBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   description: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  featuresList: {
-    gap: 16,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: 4,
-  },
-  bulletPoint: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginTop: 6,
-    marginRight: 12,
-    flexShrink: 0,
-  },
-  featureText: {
+    flex: 1,
     fontSize: 15,
     lineHeight: 22,
-    flex: 1,
-  },
-  buttonContainer: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-    gap: 12,
-  },
-  updateButton: {
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  updateButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  laterButton: {
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  laterButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
   },
 });

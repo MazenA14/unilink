@@ -7,9 +7,9 @@ import {
     Season,
     YearGroup
 } from '@/components/grades';
-import { GradesMenu } from '@/components/GradesMenu';
 import { AppBar } from '@/components/navigation/AppBar';
 import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
+import { SegmentOption, SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { GradeCache } from '@/utils/gradeCache';
@@ -18,8 +18,12 @@ import { GUCAPIProxy as GUCAPI, GradeData } from '@/utils/gucApiProxy';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
+const GRADE_TYPE_OPTIONS: SegmentOption<GradeType>[] = [
+  { value: 'current', label: 'Current', icon: 'today-outline' },
+  { value: 'previous', label: 'Previous', icon: 'time-outline' },
+];
 
 export default function GradesScreen() {
   const colorScheme = useColorScheme();
@@ -39,9 +43,6 @@ export default function GradesScreen() {
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [loadingGrades, setLoadingGrades] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  
-  // Menu state
-  const [menuVisible, setMenuVisible] = useState(false);
   
   // Refresh trigger for current grades
   const [currentGradesRefreshTrigger, setCurrentGradesRefreshTrigger] = useState(0);
@@ -552,77 +553,30 @@ export default function GradesScreen() {
     return sum / coursesWithMidtermGrades.length;
   };
 
-  // Menu handlers
-  const handleMenuPress = () => {
-    setMenuVisible(true);
-  };
-
-  const handleMenuClose = () => {
-    setMenuVisible(false);
-  };
-
-  const handleMenuOptionPress = (option: string) => {
-    setGradeType(option as GradeType);
-    setMenuVisible(false);
-  };
-
-
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <AppBar title="Grades" large />
+      <AppBar
+        title="Grades"
+        large
+        rightActions={
+          <TouchableOpacity
+            style={[styles.weightsButton, { backgroundColor: colors.primarySoft, borderColor: colors.border }]}
+            onPress={() => router.push('/course-weights')}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Course weights"
+          >
+            <Ionicons name="calculator-outline" size={20} color={colors.primary} />
+          </TouchableOpacity>
+        }
+      />
       <ScrollView
         style={styles.scrollView}
         refreshControl={<AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Header */}
+        {/* Grade type switcher */}
         <View style={styles.header}>
-          {/* Grade Type Section */}
-          <View style={styles.section}>
-            <View style={styles.sectionTitleContainer}>
-              <View style={styles.sectionTitleWithDropdown}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                  {gradeType === 'current' ? 'Current Grades' : 'Previous Grades'}
-                </Text>
-                <TouchableOpacity
-                  style={[
-                    styles.dropdownButton,
-                    {
-                      backgroundColor: colors.cardBackground,
-                      borderColor: colors.border,
-                    }
-                  ]}
-                  onPress={handleMenuPress}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons 
-                    name={menuVisible ? "chevron-up" : "chevron-down"} 
-                    size={16} 
-                    color={colors.secondaryFont} 
-                  />
-                </TouchableOpacity>
-              </View>
-              <TouchableOpacity
-                style={[
-                  styles.courseWeightsButton,
-                  {
-                    backgroundColor: colors.tint,
-                    borderColor: colors.tint,
-                  }
-                ]}
-                onPress={() => router.push('/course-weights')}
-                activeOpacity={0.7}
-              >
-                <Ionicons 
-                  name="calculator-outline" 
-                  size={16} 
-                  color="white" 
-                  style={styles.courseWeightsButtonIcon}
-                />
-                <Text style={styles.courseWeightsButtonText}>Weights</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          <SegmentedControl options={GRADE_TYPE_OPTIONS} value={gradeType} onChange={setGradeType} />
         </View>
 
         {/* Custom refresh message for previous grades */}
@@ -666,13 +620,6 @@ export default function GradesScreen() {
         )}
       </ScrollView>
 
-      {/* Grades Menu - Outside ScrollView */}
-      <GradesMenu
-        visible={menuVisible}
-        onClose={handleMenuClose}
-        onOptionPress={handleMenuOptionPress}
-      />
-      
       {/* Custom Alert Component */}
       <AlertComponent />
     </View>
@@ -688,66 +635,16 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingBottom: 10,
+    paddingBottom: 16,
     paddingTop: 4,
   },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  section: {
-    // marginBottom: 20,
-  },
-  sectionTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 11,
-    marginBottom: 12,
-  },
-  sectionTitleWithDropdown: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginRight: 12,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  courseWeightsButton: {
-    flexDirection: 'row',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
-  courseWeightsButtonIcon: {
-    marginRight: 6,
-  },
-  courseWeightsButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  dropdownButton: {
-    width: 28,
-    height: 28,
+  weightsButton: {
+    width: 44,
+    height: 44,
     borderRadius: 14,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
   },
   refreshMessageContainer: {
     marginHorizontal: 20,

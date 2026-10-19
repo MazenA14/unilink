@@ -1,54 +1,44 @@
-import { Colors, ScheduleTypeColors } from '@/constants/Colors';
-import { Radius, Shadow, Spacing, withAlpha } from '@/constants/Theme';
-import { DropdownTrigger } from '@/components/ui/Dropdown';
+import BottomSheet from '@/components/ui/BottomSheet';
+import { DropdownTrigger, SheetHeader } from '@/components/ui/Dropdown';
+import { Colors } from '@/constants/Colors';
+import { Radius, Spacing } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Dimensions, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ScheduleOption, ScheduleType } from './types';
 
 // Memoized option item component for better performance
-const OptionItem = memo(({ 
-  option, 
-  isSelected, 
-  isFirst, 
-  isLast, 
-  onPress, 
-  colors, 
-  typeColor, 
+const OptionItem = memo(({
+  option,
+  isSelected,
+  onPress,
+  colors,
   type
 }: {
   option: ScheduleOption;
   isSelected: boolean;
-  isFirst: boolean;
-  isLast: boolean;
   onPress: () => void;
-  colors: any;
-  typeColor: string;
+  colors: typeof Colors.light;
   type: ScheduleType;
 }) => (
   <TouchableOpacity
-    style={[
-      styles.optionItem,
-      {
-        backgroundColor: isSelected ? withAlpha(typeColor, 0.14) : 'transparent',
-        borderBottomColor: colors.divider,
-      }
-    ]}
+    style={[styles.optionItem, { backgroundColor: isSelected ? colors.primarySoft : 'transparent' }]}
     onPress={onPress}
+    activeOpacity={0.7}
   >
     <View style={styles.optionContent}>
-      <Text style={[styles.optionName, { color: colors.mainFont }]}>
+      <Text style={[styles.optionName, { color: isSelected ? colors.primary : colors.textPrimary }]}>
         {option.name}
       </Text>
       {/* Only show department for types other than staff and course */}
       {type !== 'staff' && type !== 'course' && option.department && (
-        <Text style={[styles.optionDepartment, { color: colors.secondaryFont }]}>
+        <Text style={[styles.optionDepartment, { color: colors.textSecondary }]}>
           {option.department}
         </Text>
       )}
       {type !== 'staff' && type !== 'course' && option.additionalInfo && (
-        <Text style={[styles.optionAdditionalInfo, { color: colors.secondaryFont }]}>
+        <Text style={[styles.optionAdditionalInfo, { color: colors.textSecondary }]}>
           {option.additionalInfo}
         </Text>
       )}
@@ -56,7 +46,7 @@ const OptionItem = memo(({
     <Ionicons
       name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
       size={22}
-      color={isSelected ? typeColor : colors.secondaryFont}
+      color={isSelected ? colors.primary : colors.textTertiary}
     />
   </TouchableOpacity>
 ));
@@ -72,24 +62,20 @@ interface ScheduleSelectorProps {
   loading?: boolean;
 }
 
-export function ScheduleSelector({ 
-  type, 
-  options, 
-  selectedValue, 
-  onSelectionChange, 
+export function ScheduleSelector({
+  type,
+  options,
+  selectedValue,
+  onSelectionChange,
   placeholder,
-  loading = false 
+  loading = false
 }: ScheduleSelectorProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [modalVisible, setModalVisible] = useState(false);
-  const [buttonLayout, setButtonLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [visibleItemsCount, setVisibleItemsCount] = useState(50); // Start with 50 items
-  const typeColor = ScheduleTypeColors[type];
-  const screenWidth = Dimensions.get('window').width;
-  const buttonRef = useRef<any>(null);
 
   const selectedOption = options.find(option => option.id === selectedValue);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
@@ -124,12 +110,12 @@ export function ScheduleSelector({
     if (!debouncedSearchQuery.trim()) {
       return options;
     }
-    
+
     const query = debouncedSearchQuery.toLowerCase().trim();
-    
+
     return options.filter(option => {
       const name = option.name.toLowerCase();
-      
+
       // Simple one-to-one string matching - fastest possible search
       return name.includes(query);
     });
@@ -188,239 +174,175 @@ export function ScheduleSelector({
     }
   }, [visibleItemsCount, filteredOptions.length]);
 
-  // Highlighting removed for maximum performance
-
-  // Optimized search handler
   const handleSearchChange = useCallback((text: string) => {
     setSearchQuery(text);
-    // For very large lists, we could add a small delay here
-    // but for most use cases, immediate filtering is better
   }, []);
 
   const handleButtonPress = useCallback(() => {
-    if (buttonRef.current) {
-      buttonRef.current.measureInWindow((x: number, y: number, width: number, height: number) => {
-        setButtonLayout({ x, y, width, height });
-        setSearchQuery(''); // Clear search when opening modal
-        setVisibleItemsCount(50); // Reset to initial batch size
-        setModalVisible(true);
-      });
-    }
+    setSearchQuery(''); // Clear search when opening
+    setVisibleItemsCount(50); // Reset to initial batch size
+    setModalVisible(true);
   }, []);
 
   if (type === 'personal') {
     return null; // Personal schedule doesn't need a selector
   }
 
+  const noun = type === 'staff' ? 'staff members' : type === 'course' ? 'courses' : 'groups';
+
   return (
     <View style={styles.container}>
-      <View ref={buttonRef} collapsable={false}>
-        <DropdownTrigger
-          colors={colors}
-          label={loading ? 'Loading...' : selectedOption?.name || placeholder}
-          placeholder={!selectedOption && !loading}
-          open={modalVisible}
-          onPress={handleButtonPress}
-          disabled={loading}
-        />
-      </View>
+      <DropdownTrigger
+        colors={colors}
+        caption={type === 'staff' ? 'Staff member' : 'Course'}
+        icon={type === 'staff' ? 'person-outline' : 'book-outline'}
+        label={loading ? 'Loading...' : selectedOption?.name || placeholder}
+        placeholder={!selectedOption && !loading}
+        onPress={handleButtonPress}
+        disabled={loading}
+      />
 
-      <Modal
+      <BottomSheet
         visible={modalVisible}
-        transparent={true}
-        animationType="fade"
         onRequestClose={() => setModalVisible(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setModalVisible(false)}
-        >
-          <View style={[
-            styles.dropdownContent,
-            {
-              backgroundColor: colors.cardBackground,
-              borderColor: colors.border,
-              top: buttonLayout.y + buttonLayout.height + Spacing.xs,
-              left: buttonLayout.x,
-              width: buttonLayout.width || screenWidth - 32,
-              ...Shadow.lg(colors),
+        heightRatio={0.85}
+        onEndReached={handleLoadMore}
+        header={
+          <SheetHeader
+            colors={colors}
+            title={type === 'staff' ? 'Choose staff' : 'Choose courses'}
+            subtitle={
+              selectedIds.size > 0
+                ? `${selectedIds.size} selected`
+                : searchQuery.length > 0
+                  ? `${filteredOptions.length} ${noun} found`
+                  : 'Select one or more to combine'
             }
-          ]}>
-            {/* Search Input */}
-                    <View style={[styles.searchContainer, { borderBottomColor: colors.border }]}>
-                      <Ionicons
-                        name="search"
-                        size={20}
-                        color={colors.secondaryFont}
-                        style={styles.searchIcon}
-                      />
-                      <TextInput
-                        style={[styles.searchInput, {
-                          color: colors.text,
-                          backgroundColor: colors.background,
-                          borderColor: colors.border
-                        }]}
-                        placeholder={`Search ${type === 'staff' ? 'staff members' : type === 'course' ? 'courses' : 'groups'}...`}
-                        placeholderTextColor={colors.secondaryFont}
-                        value={searchQuery}
-                        onChangeText={handleSearchChange}
-                        autoCorrect={false}
-                        autoCapitalize="none"
-                        returnKeyType="search"
-                        clearButtonMode="never"
-                        enablesReturnKeyAutomatically={false}
-                        autoFocus={true}
-                      />
-                      {searchQuery.length > 0 && (
-                        <TouchableOpacity
-                          onPress={() => setSearchQuery('')}
-                          style={styles.clearButton}
-                        >
-                          <Ionicons
-                            name="close-circle"
-                            size={20}
-                            color={colors.secondaryFont}
-                          />
-                        </TouchableOpacity>
-                      )}
-                    </View>
-            
-            {/* Results count and search status */}
-            {searchQuery.length > 0 && (
-              <View style={[styles.resultsCountContainer, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.resultsCountText, { color: colors.secondaryFont }]}>
-                  {paginatedOptions.length} of {filteredOptions.length} {type === 'staff' ? 'staff members' : type === 'course' ? 'courses' : 'groups'} shown
-                  {filteredOptions.length > 0 && (
-                    <Text style={{ color: typeColor, fontWeight: '600' }}> • Found</Text>
-                  )}
-                  {visibleItemsCount < filteredOptions.length && (
-                    <Text style={{ color: colors.secondaryFont, fontSize: 11 }}> • Scroll for more</Text>
-                  )}
-                </Text>
+            right={
+              <View style={styles.headerActions}>
+                {selectedIds.size > 0 && (
+                  <TouchableOpacity onPress={handleClear} style={styles.headerTextButton} hitSlop={8}>
+                    <Text style={[styles.headerTextButtonLabel, { color: colors.textSecondary }]}>Clear</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[styles.applyButton, { backgroundColor: colors.primary, opacity: selectedIds.size ? 1 : 0.5 }]}
+                  onPress={handleApply}
+                  disabled={selectedIds.size === 0}
+                >
+                  <Text style={[styles.applyButtonText, { color: colors.onPrimary }]}>Apply</Text>
+                </TouchableOpacity>
               </View>
-            )}
-            
-            <FlatList
-              data={paginatedOptions}
-              style={styles.optionsList}
-              showsVerticalScrollIndicator={false}
-              onEndReached={handleLoadMore}
-              onEndReachedThreshold={0.3}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item: option, index }) => {
-                const isSelected = selectedIds.has(option.id);
-                const isFirst = index === 0;
-                const isLast = index === paginatedOptions.length - 1;
-                
-                return (
-                  <OptionItem
-                    key={option.id}
-                    option={option}
-                    isSelected={isSelected}
-                    isFirst={isFirst}
-                    isLast={isLast}
-                    onPress={() => handleSelection(option.id)}
-                    colors={colors}
-                    typeColor={typeColor}
-                    type={type}
-                  />
-                );
-              }}
-            />
-            {/* Footer actions */}
-            <View style={[styles.footerActions, { borderTopColor: colors.border }]}> 
-              <TouchableOpacity style={[styles.footerButton, { borderColor: colors.border }]} onPress={handleClear}>
-                <Text style={[styles.footerButtonText, { color: colors.secondaryFont }]}>Clear</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.footerButtonPrimary, { backgroundColor: typeColor }]} onPress={handleApply}>
-                <Text style={[styles.footerButtonPrimaryText, { color: '#fff' }]}>Apply</Text>
-              </TouchableOpacity>
+            }
+          >
+            <View style={[styles.searchContainer, { backgroundColor: colors.surfaceSunken, borderColor: colors.border }]}>
+              <Ionicons name="search" size={18} color={colors.textSecondary} />
+              <TextInput
+                style={[styles.searchInput, { color: colors.textPrimary }]}
+                placeholder={`Search ${noun}...`}
+                placeholderTextColor={colors.textTertiary}
+                value={searchQuery}
+                onChangeText={handleSearchChange}
+                autoCorrect={false}
+                autoCapitalize="none"
+                returnKeyType="search"
+                clearButtonMode="never"
+                enablesReturnKeyAutomatically={false}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
+                  <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
             </View>
-            {filteredOptions.length === 0 && (
-              <View style={styles.noResultsContainer}>
-                <Text style={[styles.noResultsText, { color: colors.secondaryFont }]}>
-                  No {type === 'staff' ? 'staff members' : type === 'course' ? 'courses' : 'groups'} found
-                </Text>
-                {/* <Text style={[styles.noResultsSubtext, { color: colors.secondaryFont }]}>
-                  Try adjusting your search
-                </Text> */}
-              </View>
-            )}
-          </View>
-        </TouchableOpacity>
-      </Modal>
+          </SheetHeader>
+        }
+      >
+        <View style={styles.optionsList}>
+          {paginatedOptions.map((option) => (
+            <OptionItem
+              key={option.id}
+              option={option}
+              isSelected={selectedIds.has(option.id)}
+              onPress={() => handleSelection(option.id)}
+              colors={colors}
+              type={type}
+            />
+          ))}
+          {filteredOptions.length === 0 && (
+            <View style={styles.noResultsContainer}>
+              <Ionicons name="search-outline" size={28} color={colors.textTertiary} />
+              <Text style={[styles.noResultsText, { color: colors.textSecondary }]}>No {noun} found</Text>
+            </View>
+          )}
+        </View>
+      </BottomSheet>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginHorizontal: 16,
+    marginHorizontal: 20,
     marginBottom: 16,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
   },
-  dropdownContent: {
-    position: 'absolute',
-    maxHeight: 400,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    zIndex: 1000,
+  headerTextButton: {
+    paddingVertical: Spacing.xs,
+  },
+  headerTextButtonLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  applyButton: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.pill,
+  },
+  applyButtonText: {
+    fontSize: 14,
+    fontWeight: '800',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderBottomWidth: 1,
-  },
-  searchIcon: {
-    marginRight: 8,
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    height: 46,
+    borderRadius: Radius.md,
+    borderWidth: 1,
   },
   searchInput: {
     flex: 1,
-    height: 43,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
     fontSize: 16,
-  },
-  clearButton: {
-    marginLeft: 8,
-    padding: 4,
-  },
-  resultsCountContainer: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-  },
-  resultsCountText: {
-    fontSize: 12,
-    fontWeight: '500',
+    paddingVertical: 0,
   },
   noResultsContainer: {
-    padding: 20,
+    paddingVertical: 40,
     alignItems: 'center',
+    gap: Spacing.sm,
   },
   noResultsText: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  noResultsSubtext: {
-    fontSize: 14,
+    fontSize: 15,
+    fontWeight: '600',
   },
   optionsList: {
-    maxHeight: 320,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+    gap: 2,
   },
   optionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between', // Added to space out content and checkmark
-    padding: 12,
-    borderBottomWidth: 1,
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    minHeight: 52,
+    borderRadius: Radius.md,
   },
   optionContent: {
     flex: 1,
@@ -428,39 +350,13 @@ const styles = StyleSheet.create({
   optionName: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 2,
   },
   optionDepartment: {
     fontSize: 14,
-    marginBottom: 2,
+    marginTop: 2,
   },
   optionAdditionalInfo: {
     fontSize: 12,
-  },
-  footerActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    borderTopWidth: 1,
-  },
-  footerButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  footerButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  footerButtonPrimary: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  footerButtonPrimaryText: {
-    fontSize: 14,
-    fontWeight: '700',
+    marginTop: 2,
   },
 });

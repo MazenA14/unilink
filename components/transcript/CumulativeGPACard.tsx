@@ -27,26 +27,26 @@ export default function CumulativeGPACard({ transcriptData }: CumulativeGPACardP
       }]}>
         <View style={styles.gpaHeader}>
           <View style={styles.titleRow}>
-            <Text style={[styles.cumulativeGPATitle, { color: '#FFFFFF' }]}>
+            <Text style={[styles.cumulativeGPATitle, { color: colors.onAccent }]}>
               Cumulative GPA
             </Text>
             <TouchableOpacity 
               onPress={() => setShowGradingInfo(true)}
               style={styles.infoButton}
             >
-              <Ionicons name="information-circle-outline" size={20} color="#FFFFFF" />
+              <Ionicons name="information-circle-outline" size={20} color={colors.onAccent} />
             </TouchableOpacity>
           </View>
-          <Text style={[styles.cumulativeGPAText, { color: '#FFFFFF' }]}>
+          <Text style={[styles.cumulativeGPAText, { color: colors.onAccent }]}>
             {transcriptData.studyGroup}
           </Text>
         </View>
         <View style={styles.gpaValue}>
-          <Text style={[styles.cumulativeGPANumber, { color: '#FFFFFF' }]}>
+          <Text style={[styles.cumulativeGPANumber, { color: colors.onAccent }]}>
             {transcriptData.cumulativeGPA}
           </Text>
         </View>
-        <Text style={[styles.cumulativeGPADate, { color: '#FFFFFF' }]}>
+        <Text style={[styles.cumulativeGPADate, { color: colors.onAccent }]}>
           Updated {transcriptData.date}
         </Text>
       </View>

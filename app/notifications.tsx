@@ -335,7 +335,7 @@ export default function NotificationsScreen() {
               fetchNotifications();
             }}
           >
-            <Text style={styles.retryButtonText}>Try Again</Text>
+            <Text style={[styles.retryButtonText, { color: colors.onPrimary }]}>Try Again</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -733,7 +733,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   retryButtonText: {
-    color: 'white',
     fontSize: 16,
     fontWeight: '600',
   },

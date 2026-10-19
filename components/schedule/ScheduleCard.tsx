@@ -153,7 +153,7 @@ export function ScheduleCard({ classData, periodName, scheduleType = 'personal',
         {/* Multiple lectures count badge */}
         {hasMultipleLectures && (
           <View style={[styles.countBadge, { backgroundColor: typeColor }]}>
-            <Text style={styles.countText}>{lectures.length}</Text>
+            <Text style={[styles.countText, { color: colors.onAccent }]}>{lectures.length}</Text>
           </View>
         )}
       </View>
@@ -189,7 +189,6 @@ const styles = StyleSheet.create({
     right: 0,
   },
   countText: {
-    color: 'white',
     fontSize: 12,
     fontWeight: '600',
   },

@@ -1,5 +1,5 @@
 import { Colors } from '@/constants/Colors';
-import { Radius } from '@/constants/Theme';
+import { Radius, Spacing } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import React from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity } from 'react-native';
@@ -11,33 +11,33 @@ interface YearSelectorProps {
   onYearSelect: (year: StudyYear) => void;
 }
 
+/** Horizontal chip row — study years are few, so they stay visible inline. */
 export default function YearSelector({ studyYears, selectedYear, onYearSelect }: YearSelectorProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  
-  const renderYearItem = ({ item }: { item: StudyYear }) => (
-    <TouchableOpacity
-      style={[
-        styles.yearCard,
-        {
-          backgroundColor: selectedYear?.value === item.value ? colors.tabColor : (colors.surface),
-          borderColor: selectedYear?.value === item.value ? colors.tabColor : colors.border,
-        },
-      ]}
-      onPress={() => onYearSelect(item)}
-    >
-      <Text
+
+  const renderYearItem = ({ item }: { item: StudyYear }) => {
+    const active = selectedYear?.value === item.value;
+    return (
+      <TouchableOpacity
         style={[
-          styles.yearText,
+          styles.chip,
           {
-            color: selectedYear?.value === item.value ? colors.onPrimary : colors.mainFont,
+            backgroundColor: active ? colors.primary : colors.surface,
+            borderColor: active ? colors.primary : colors.border,
           },
         ]}
+        onPress={() => onYearSelect(item)}
+        activeOpacity={0.75}
+        accessibilityRole="button"
+        accessibilityState={{ selected: active }}
       >
-        {item.text}
-      </Text>
-    </TouchableOpacity>
-  );
+        <Text style={[styles.chipText, { color: active ? colors.onPrimary : colors.textPrimary }]}>
+          {item.text}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <FlatList
@@ -46,31 +46,28 @@ export default function YearSelector({ studyYears, selectedYear, onYearSelect }:
       keyExtractor={(year) => year.value}
       horizontal
       showsHorizontalScrollIndicator={false}
-      style={styles.yearsList}
-      contentContainerStyle={styles.yearsListContent}
+      style={styles.list}
+      contentContainerStyle={styles.listContent}
     />
   );
 }
 
 const styles = StyleSheet.create({
-  yearsList: {
-    marginBottom: 10,
+  list: {
+    marginBottom: Spacing.sm,
   },
-  yearsListContent: {
-    paddingHorizontal: 4,
+  listContent: {
+    paddingHorizontal: Spacing.xs,
+    gap: Spacing.sm,
   },
-  yearCard: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: Radius.md,
-    borderWidth: 2,
-    marginRight: 12,
-    minWidth: 140,
-    alignItems: 'center',
+  chip: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm + 2,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
   },
-  yearText: {
-    fontSize: 15,
-    fontWeight: '600',
-    textAlign: 'center',
+  chipText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

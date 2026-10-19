@@ -521,8 +521,8 @@ export default function CMSCourseViewScreen() {
                                     onPress={() => handleWatchVideo(content.watchUrl!)}
                                     activeOpacity={0.85}
                                   >
-                                    <Ionicons name="play" size={14} color="#fff" style={styles.actionIcon} />
-                                    <Text style={styles.actionButtonText}>Watch Video</Text>
+                                    <Ionicons name="play" size={14} color={colors.onAccent} style={styles.actionIcon} />
+                                    <Text style={[styles.actionButtonText, { color: colors.onAccent }]}>Watch Video</Text>
                                   </TouchableOpacity>
                                 ) : content.downloadUrl ? (
                                   (() => {
@@ -552,11 +552,11 @@ export default function CMSCourseViewScreen() {
                                           activeOpacity={0.85}
                                         >
                                           {downloading ? (
-                                            <ActivityIndicator size="small" color="#fff" style={styles.actionIcon} />
+                                            <ActivityIndicator size="small" color={colors.onAccent} style={styles.actionIcon} />
                                           ) : (
-                                            <Ionicons name="download-outline" size={14} color="#fff" style={styles.actionIcon} />
+                                            <Ionicons name="download-outline" size={14} color={colors.onAccent} style={styles.actionIcon} />
                                           )}
-                                          <Text style={styles.actionButtonText}>Download</Text>
+                                          <Text style={[styles.actionButtonText, { color: colors.onAccent }]}>Download</Text>
                                         </TouchableOpacity>
                                       </View>
                                     );
@@ -655,7 +655,7 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.5 },
   watchButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: Spacing.md, borderRadius: Radius.pill, alignSelf: 'flex-start' },
   actionIcon: { marginRight: 5 },
-  actionButtonText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  actionButtonText: { fontSize: 12, fontWeight: '700' },
   emptyWeek: { alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.lg },
   emptyContent: { fontSize: 14, textAlign: 'center' },
   emptyWrap: { alignItems: 'center', paddingTop: Spacing.huge, gap: Spacing.md },

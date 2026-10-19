@@ -205,7 +205,7 @@ export function ScheduleDayView({ day, scheduleType = 'personal', currentTime: p
                   backgroundColor: SlotTypeColors[getSlotType(classData) as keyof typeof SlotTypeColors]
                 }]}>
                   <Text style={[styles.slotTypeText, { 
-                    color: 'white'
+                    color: colors.onAccent
                   }]}>{getSlotType(classData)}</Text>
                 </View>
               </View>

@@ -1,20 +1,10 @@
+import BottomSheet from '@/components/ui/BottomSheet';
+import { SheetHeader } from '@/components/ui/Dropdown';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCallback, useEffect, useState } from 'react';
-import {
-    ActivityIndicator,
-    Animated,
-    Dimensions,
-    Linking,
-    Modal,
-    PanResponder,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { ActivityIndicator, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface InstructorProfile {
   name: string;
@@ -42,87 +32,6 @@ export function InstructorProfileModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Animation values
-  const translateY = useState(new Animated.Value(0))[0];
-  const opacity = useState(new Animated.Value(0))[0];
-  const { height: screenHeight } = Dimensions.get('window');
-
-  // Pan responder for drag handle
-  const dragHandlePanResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: (evt, gestureState) => {
-      // Only respond to downward swipes
-      const isDownwardSwipe = gestureState.dy > 0;
-      const isVerticalSwipe = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
-      
-      return isDownwardSwipe && isVerticalSwipe;
-    },
-    onPanResponderGrant: () => {
-      // Don't set offset - start from current position
-      translateY.setValue(0);
-    },
-    onPanResponderMove: (evt, gestureState) => {
-      if (gestureState.dy > 0) {
-        translateY.setValue(gestureState.dy);
-        const progress = Math.min(gestureState.dy / 200, 1);
-        opacity.setValue(1 - progress);
-      }
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      if (gestureState.dy > 100) {
-        closeModal();
-      } else {
-        Animated.parallel([
-          Animated.spring(translateY, {
-            toValue: 0,
-            useNativeDriver: true,
-          }),
-          Animated.spring(opacity, {
-            toValue: 1,
-            useNativeDriver: true,
-          }),
-        ]).start();
-      }
-    },
-  });
-
-  const openModal = useCallback(() => {
-    translateY.setValue(screenHeight);
-    opacity.setValue(0);
-    
-    Animated.parallel([
-      Animated.spring(translateY, {
-        toValue: 0,
-        useNativeDriver: true,
-        tension: 100,
-        friction: 8,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [screenHeight, translateY, opacity]);
-
-  const closeModal = useCallback(() => {
-    Animated.parallel([
-      Animated.spring(translateY, {
-        toValue: screenHeight,
-        useNativeDriver: true,
-        tension: 100,
-        friction: 8,
-      }),
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      onClose();
-    });
-  }, [screenHeight, translateY, opacity, onClose]);
-
   const fetchProfile = useCallback(async () => {
     if (!instructorName) return;
     
@@ -145,13 +54,12 @@ export function InstructorProfileModal({
 
   useEffect(() => {
     if (visible && instructorName) {
-      openModal();
       fetchProfile();
     } else {
       setProfile(null);
       setError(null);
     }
-  }, [visible, instructorName, fetchProfile, openModal]);
+  }, [visible, instructorName, fetchProfile]);
 
   const handleEmailPress = useCallback(() => {
     if (profile?.email) {
@@ -185,7 +93,7 @@ export function InstructorProfileModal({
             style={[styles.retryButton, { backgroundColor: colors.tint }]}
             onPress={fetchProfile}
           >
-            <Text style={styles.retryButtonText}>Try Again</Text>
+            <Text style={[styles.retryButtonText, { color: colors.onPrimary }]}>Try Again</Text>
           </TouchableOpacity>
         </View>
       );
@@ -207,9 +115,9 @@ export function InstructorProfileModal({
         {/* Header */}
         <View style={[styles.header, { backgroundColor: colors.tint }]}>
           <View style={styles.avatarContainer}>
-            <Ionicons name="person" size={40} color="white" />
+            <Ionicons name="person" size={40} color={colors.onPrimary} />
           </View>
-          <Text style={styles.instructorName}>{profile.name}</Text>
+          <Text style={[styles.instructorName, { color: colors.onPrimary }]}>{profile.name}</Text>
         </View>
 
         {/* Details */}
@@ -271,105 +179,25 @@ export function InstructorProfileModal({
   };
 
   return (
-    <Modal
-      animationType="none"
-      transparent={true}
+    <BottomSheet
       visible={visible}
-      onRequestClose={closeModal}
+      onRequestClose={onClose}
+      autoHeight
+      heightRatio={0.85}
+      header={<SheetHeader colors={colors} title="Instructor Profile" />}
     >
-      <Animated.View style={[styles.modalOverlay, { opacity }]}>
-        <Animated.View 
-          style={[
-            styles.modalContainer, 
-            { 
-              backgroundColor: colors.cardBackground,
-              transform: [{ translateY }]
-            }
-          ]}
-        >
-          {/* Modal Header */}
-          <View 
-            style={[styles.modalHeader, { borderBottomColor: colors.border }]}
-            {...dragHandlePanResponder.panHandlers}
-          >
-            {/* Drag Handle */}
-            <View style={[styles.dragHandle, { backgroundColor: colors.border }]} />
-            
-            <View style={styles.headerContent}>
-              <Text style={[styles.modalTitle, { color: colors.mainFont }]}>
-                Instructor Profile
-              </Text>
-              <View style={styles.modalHeaderActions}>
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={closeModal}
-                >
-                  {/* Close button removed to match notification modal */}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-
-          {/* Modal Content */}
-          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
-            {renderProfileContent()}
-          </ScrollView>
-        </Animated.View>
-      </Animated.View>
-    </Modal>
+      <View style={styles.modalContent}>
+        {renderProfileContent()}
+      </View>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
   // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContainer: {
-    height: '95%',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  modalHeader: {
-    paddingTop: 12,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-  },
-  dragHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  modalHeaderActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-  },
-  closeButton: {
-    padding: 4,
-  },
   modalContent: {
-    flex: 1,
     paddingHorizontal: 20,
+    paddingTop: 12,
   },
   loadingContainer: {
     flex: 1,
@@ -408,7 +236,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   retryButtonText: {
-    color: 'white',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -444,7 +271,6 @@ const styles = StyleSheet.create({
   instructorName: {
     fontSize: 24,
     fontWeight: '700',
-    color: 'white',
     textAlign: 'center',
   },
   detailsContainer: {
