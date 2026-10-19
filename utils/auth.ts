@@ -308,6 +308,10 @@ export class AuthManager {
         AsyncStorage.removeItem('whats_new_version')
       ]);
       
+      // Remove the schedule from the Android home-screen widget
+      const { clearScheduleWidget } = await import('./scheduleWidget');
+      await clearScheduleWidget();
+
       // Clear any other potential cache keys
       await Promise.all([
         AsyncStorage.removeItem('shiftedScheduleEnabled'),

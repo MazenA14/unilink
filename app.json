@@ -59,6 +59,7 @@
         }
       ],
       "./plugins/withGucAuth",
+      "./plugins/withScheduleWidget",
       [
         "expo-dynamic-app-icon",
         {

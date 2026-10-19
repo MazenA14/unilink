@@ -1,3 +1,4 @@
+import { syncScheduleWidget } from '@/utils/scheduleWidget';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
@@ -36,6 +37,8 @@ export function ShiftedScheduleProvider({ children }: ShiftedScheduleProviderPro
     setShiftedScheduleEnabled(enabled);
     try {
       await AsyncStorage.setItem('shiftedScheduleEnabled', JSON.stringify(enabled));
+      // Slot times changed, so refresh the home-screen widget
+      void syncScheduleWidget();
     } catch (error) {
       // Failed to cache shifted schedule preference
     }

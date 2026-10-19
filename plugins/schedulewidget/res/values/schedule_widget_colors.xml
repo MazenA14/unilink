@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="sw_bg">#FFFFFF</color>
+    <color name="sw_text_primary">#111111</color>
+    <color name="sw_text_secondary">#6D6D6D</color>
+    <color name="sw_text_tertiary">#ABABAB</color>
+    <color name="sw_accent">#FF4136</color>
+    <color name="sw_status_bg">#FFF1F0</color>
+    <color name="sw_item_bg">#F5F5F5</color>
+    <color name="sw_item_current_bg">#FFF5F5</color>
+    <color name="sw_chip_bg">#FFE5E3</color>
+    <color name="sw_bar_past">#D4D4D4</color>
+    <color name="sw_badge_text">#FFFFFF</color>
+</resources>

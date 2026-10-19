@@ -13,10 +13,12 @@ import { useSchedule } from '@/hooks/useSchedule';
 import { useVersionCheck } from '@/hooks/useVersionCheck';
 import { useWhatsNew } from '@/hooks/useWhatsNew';
 import { AuthManager } from '@/utils/auth';
+import { resolveCourseTitle } from '@/utils/courseTitle';
 import { isCurrentTimeSlot } from '@/utils/currentSlotUtils';
 import { GradeCache } from '@/utils/gradeCache';
 import { CmsUnseenSummary, fetchCmsUnseenSummary, getCachedCmsUnseenSummary } from '@/utils/handlers/cmsHandler';
 import { GUCAPIProxy } from '@/utils/gucApiProxy';
+import { syncScheduleWidget } from '@/utils/scheduleWidget';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -113,6 +115,8 @@ export default function DashboardScreen() {
         
         if (mapping) {
           setCourseNameMapping(mapping);
+          // Course titles may have changed; refresh the home-screen widget
+          void syncScheduleWidget();
         }
       } catch {
       }
@@ -144,83 +148,6 @@ export default function DashboardScreen() {
       }
     }
   }, []);
-
-  // Utility function to get course name by matching course names
-  const getCourseNameByMatching = (scheduleCourseName: string): string | null => {
-    if (!scheduleCourseName || Object.keys(courseNameMapping).length === 0) {
-      return null;
-    }
-    
-    // Try to find a match in the course mapping
-    // First, try exact match
-    for (const [, courseName] of Object.entries(courseNameMapping)) {
-      if (courseName === scheduleCourseName) {
-        return courseName;
-      }
-    }
-    
-    // Try partial matching - look for course names that contain the schedule course name
-    for (const [, courseName] of Object.entries(courseNameMapping)) {
-      if (courseName.toLowerCase().includes(scheduleCourseName.toLowerCase()) ||
-          scheduleCourseName.toLowerCase().includes(courseName.toLowerCase())) {
-        return courseName;
-      }
-    }
-    
-    // Try to match by extracting course code from both
-    const scheduleCourseCode = extractCourseCode(scheduleCourseName);
-    if (scheduleCourseCode) {
-      for (const [, courseName] of Object.entries(courseNameMapping)) {
-        const mappedCourseCode = extractCourseCode(courseName);
-        if (mappedCourseCode && mappedCourseCode === scheduleCourseCode) {
-          return courseName;
-        }
-      }
-    }
-    
-    return null;
-  };
-
-  // Function to extract course title from full course name
-  // Example: "MET Computer Science 7th Semester - DMET502 Computer Graphics" -> "Computer Graphics"
-  const extractCourseTitle = (fullCourseName: string): string => {
-    if (!fullCourseName) return '';
-    
-    // Look for pattern: "something - COURSECODE Course Title"
-    const match = fullCourseName.match(/- ([A-Z]+\d+[A-Z]*)\s+(.+)$/);
-    if (match) {
-      return match[2].trim(); // Return the course title part
-    }
-    
-    // Look for pattern: "something - COURSECODE Course Title (Lab/Tutorial)"
-    const matchWithType = fullCourseName.match(/- ([A-Z]+\d+[A-Z]*)\s+(.+?)\s*\(?(lab|tutorial|tut|seminar|workshop|project|thesis|dissertation)\)?/i);
-    if (matchWithType) {
-      return matchWithType[2].trim();
-    }
-    
-    // Fallback: if no dash pattern, try to extract from end after course code
-    const courseCodeMatch = fullCourseName.match(/([A-Z]+\d+[A-Z]*)\s+(.+)$/);
-    if (courseCodeMatch) {
-      return courseCodeMatch[2].trim();
-    }
-    
-    // If no pattern matches, return the original name
-    return fullCourseName;
-  };
-  
-  // Function to extract course code from course name (e.g., "CSEN 701" -> "CSEN701")
-  const extractCourseCode = (courseName: string): string => {
-    if (!courseName) return '';
-    
-    // Remove spaces and extract course code pattern
-    const match = courseName.match(/([A-Z]{2,4}[a-z]?)\s*(\d{3,4})/);
-    if (match) {
-      return match[1] + match[2]; // e.g., "CSEN" + "701" = "CSEN701"
-    }
-    
-    // Fallback: remove all spaces
-    return courseName.replace(/\s+/g, '');
-  };
 
   // Get today's schedule and day name
   const getTodaysSchedule = () => {
@@ -272,15 +199,8 @@ export default function DashboardScreen() {
   };
 
   // Resolve a displayable course title (same mapping used by the schedule rows)
-  const resolveClassName = (classData: any): string => {
-    const mapped = getCourseNameByMatching(classData.courseName);
-    if (mapped) {
-      const t = extractCourseTitle(mapped);
-      return t !== mapped ? t : mapped;
-    }
-    const orig = extractCourseTitle(classData.courseName);
-    return orig !== classData.courseName ? orig : classData.courseName;
-  };
+  const resolveClassName = (classData: any): string =>
+    resolveCourseTitle(classData.courseName, courseNameMapping);
 
   // Start time (in minutes since midnight) for each period, for "next class" logic
   const getPeriodStartMinutes = (periodKey: string): number => {
@@ -747,30 +667,7 @@ export default function DashboardScreen() {
                         <View style={styles.periodContentRow}>
                           <View style={styles.periodContentLeft}>
                             <Text style={[styles.courseName, { color: colors.mainFont }]} numberOfLines={2}>
-                              {(() => {
-                                // Try to get course name from mapping using matching
-                                const mappedCourseName = getCourseNameByMatching(classData.courseName);
-                                
-                                if (mappedCourseName) {
-                                  // Extract the course title from the mapped course name
-                                  const extractedTitle = extractCourseTitle(mappedCourseName);
-                                  // If extraction worked (title is different from full name), use it
-                                  if (extractedTitle !== mappedCourseName) {
-                                    return extractedTitle;
-                                  }
-                                  // Otherwise, use the mapped course name as is
-                                  return mappedCourseName;
-                                }
-                                
-                                // Fallback: try to extract course title from original course name
-                                const originalTitle = extractCourseTitle(classData.courseName);
-                                if (originalTitle !== classData.courseName) {
-                                  return originalTitle;
-                                }
-                                
-                                // Final fallback to original course name
-                                return classData.courseName;
-                              })()}
+                              {resolveClassName(classData)}
                             </Text>
                             
                             {/* Course Code (with group identifier) */}
