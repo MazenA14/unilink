@@ -494,6 +494,19 @@ export class GradeCache {
   }
 
   /**
+   * Set cached grades for several current courses in one write (avoids the
+   * read-modify-write race of calling setCachedCurrentCourseGrades in parallel)
+   */
+  static async setCachedCurrentCourseGradesBatch(gradesByCourse: { [courseId: string]: GradeData[] }): Promise<void> {
+    const cachedData = await this.getCachedData<CachedCurrentCourseGradesData>(CACHE_KEYS.CURRENT_COURSE_GRADES) || {};
+    const timestamp = Date.now();
+    for (const [courseId, grades] of Object.entries(gradesByCourse)) {
+      cachedData[courseId] = { grades, timestamp };
+    }
+    await this.setCachedData(CACHE_KEYS.CURRENT_COURSE_GRADES, cachedData);
+  }
+
+  /**
    * Clear current course grades cache
    */
   static async clearCurrentCourseGradesCache(): Promise<void> {

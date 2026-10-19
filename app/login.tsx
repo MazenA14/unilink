@@ -80,11 +80,8 @@ const LoginScreen = () => {
           // Don't show error to user - preloading is optional
         });
 
-        // Start preloading grades data in the background
-        const { GradesPreloader } = await import('@/utils/gradesPreloader');
-        GradesPreloader.preloadCurrentGrades().catch(error => {
-          // Don't show error to user - preloading is optional
-        });
+        // Attendance and grades are preloaded by the dashboard on mount
+        // (attendance first, then grades).
 
         // Clear any existing grade tracking data for fresh start
         try {

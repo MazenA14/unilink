@@ -7,6 +7,8 @@ import { GUCAPIProxy, GradeData } from '@/utils/gucApiProxy';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import ExpandableCourseCard from './ExpandableCourseCard';
+import { matchMidtermGradeToCourse as matchMidtermGrade } from '@/utils/gradeMatching';
+import { GradesPreloader } from '@/utils/gradesPreloader';
 
 interface Course {
   value: string;
@@ -108,25 +110,8 @@ export default function CurrentGradesSection({
       }
       
       // Helper function to match midterm grades to courses
-      const matchMidtermGradeToCourse = (course: Course): GradeData | undefined => {
-        const extractCourseCode = (text: string) => {
-          const match = text.match(/([A-Z]{2,4}[a-z]?\d{3,4})/);
-          return match ? match[1] : '';
-        };
-        
-        const courseCode = extractCourseCode(course.text);
-        
-        return midtermGrades.find(grade => {
-          const gradeCode = extractCourseCode(grade.course);
-          
-          const exactMatch = grade.course === course.text;
-          const containsMatch1 = grade.course.toLowerCase().includes(course.text.toLowerCase());
-          const containsMatch2 = course.text.toLowerCase().includes(grade.course.toLowerCase());
-          const codeMatch = courseCode && gradeCode && courseCode === gradeCode;
-          
-          return exactMatch || containsMatch1 || containsMatch2 || codeMatch;
-        });
-      };
+      const matchMidtermGradeToCourse = (course: Course): GradeData | undefined =>
+        matchMidtermGrade(course, midtermGrades);
       
       // Load course-specific grades (quizzes, assignments) for each course
       const gradePromises = courseList.map(async (course) => {
@@ -196,6 +181,9 @@ export default function CurrentGradesSection({
       
       // Try to load from cache first (unless forced refresh)
       if (!forceRefresh) {
+        // A startup preload may be filling the cache right now; wait for it
+        // instead of firing the same requests again.
+        await GradesPreloader.waitForPreload();
         const cachedCourses = await GradeCache.getCachedCurrentCourses();
         if (cachedCourses) {
           setCourses(cachedCourses);

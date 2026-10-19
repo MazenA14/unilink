@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GradeCache } from './gradeCache';
+import { matchMidtermGradeToCourse } from './gradeMatching';
 
 const SEEN_GRADES_KEY = 'seen_grades';
 const GRADE_TIMESTAMPS_KEY = 'grade_timestamps';
@@ -121,6 +123,33 @@ export class GradeTracking {
     } catch (error) {
       console.error('Error getting unseen grades count:', error);
       return 0;
+    }
+  }
+
+  /**
+   * Total unseen grades across all current courses, computed from the cached
+   * current grades (same counting as the per-course badges on the Grades
+   * screen). Returns null when nothing is cached yet.
+   */
+  static async getTotalUnseenCurrentGrades(): Promise<number | null> {
+    try {
+      const courses = await GradeCache.getCachedCurrentCourses();
+      if (!courses) return null;
+      const midtermGrades = (await GradeCache.getCachedCurrentGrades()) || [];
+
+      let total = 0;
+      for (const course of courses) {
+        const midtermGrade = matchMidtermGradeToCourse(course, midtermGrades);
+        const detailedGrades = (await GradeCache.getCachedCurrentCourseGrades(course.value)) || [];
+        total += await this.getUnseenGradesCount(course.value, [
+          ...(midtermGrade ? [midtermGrade] : []),
+          ...detailedGrades,
+        ]);
+      }
+      return total;
+    } catch (error) {
+      console.error('Error getting total unseen grades:', error);
+      return null;
     }
   }
 

@@ -11,6 +11,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { perfAsync, perfNow } from '@/utils/perfLog';
+import { AttendancePreloader } from '@/utils/attendancePreloader';
 
 // Use shared attendance types from GradeCache to avoid duplicate/conflicting types
 
@@ -41,6 +43,9 @@ export default function AttendanceScreen() {
 
       // Try to load from cache first (unless forced refresh)
       if (!forceRefresh) {
+        // A startup preload may be filling the cache right now; wait for it
+        // instead of firing the same requests again.
+        await AttendancePreloader.waitForPreload();
         const cachedData = await GradeCache.getCachedAttendanceData();
         if (cachedData) {
           // Check if we have cached course attendance data to populate session counts
@@ -62,13 +67,14 @@ export default function AttendanceScreen() {
         }
       }
 
-      const data = await GUCAPIProxy.getAttendanceData();
+      const attendanceStart = perfNow();
+      const data = await perfAsync('Attendance screen: summary', () => GUCAPIProxy.getAttendanceData());
       
       // Load course attendance data for all courses to get session counts
       const updatedData = { ...data };
       const courseAttendancePromises = updatedData.courses.map(async (course) => {
         try {
-          const courseDetails = await GUCAPIProxy.getCourseAttendance(course.courseId);
+          const courseDetails = await perfAsync(`Attendance screen: course ${course.courseId}`, () => GUCAPIProxy.getCourseAttendance(course.courseId));
           // Cache individual course data
           await GradeCache.setCachedCourseAttendance(course.courseId, courseDetails);
           return courseDetails;
@@ -79,6 +85,7 @@ export default function AttendanceScreen() {
       });
 
       updatedData.courses = await Promise.all(courseAttendancePromises);
+      console.log(`[PERF] total  Attendance screen: everything (${updatedData.courses.length} courses): ${(perfNow() - attendanceStart).toFixed(1)}ms`);
       
       setAttendanceData(updatedData);
       

@@ -1,4 +1,6 @@
+import { AttendancePreloader } from '@/utils/attendancePreloader';
 import { AuthManager } from '@/utils/auth';
+import { GradesPreloader } from '@/utils/gradesPreloader';
 import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 
@@ -22,23 +24,12 @@ export default function Index() {
           const isAuthenticated = await AuthManager.isAuthenticated();
           setAuthed(isAuthenticated);
           
-          // If user is already authenticated, preload schedule and grades data
-          // if (isAuthenticated) {
-          //   const { SchedulePreloader } = await import('@/utils/schedulePreloader');
-          //   SchedulePreloader.preloadSchedule().catch(error => {
-          //     // Don't show error to user - preloading is optional
-          //   });
-            
-          //   const { GradesPreloader } = await import('@/utils/gradesPreloader');
-          //   GradesPreloader.preloadCurrentGrades().catch(error => {
-          //     // Don't show error to user - preloading is optional
-          //   });
-            
-          //   const { AttendancePreloader } = await import('@/utils/attendancePreloader');
-          //   AttendancePreloader.preloadAttendance().catch(error => {
-          //     // Don't show error to user - preloading is optional
-          //   });
-          // }
+          // Warm the attendance and grades caches on every cold start so those
+          // screens open instantly (the dashboard joins these same runs).
+          if (isAuthenticated) {
+            AttendancePreloader.preloadAttendance().catch(() => {});
+            GradesPreloader.preloadCurrentGrades().catch(() => {});
+          }
         }
       } finally {
         setReady(true);

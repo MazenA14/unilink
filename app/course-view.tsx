@@ -10,6 +10,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, ScrollView, StyleSheet, Text, ToastAndroid, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { perfAsync } from '@/utils/perfLog';
 
 export default function CMSCourseViewScreen() {
   const { id, sid } = useLocalSearchParams<{ id: string; sid: string }>();
@@ -35,7 +36,7 @@ export default function CMSCourseViewScreen() {
         setLoading(true);
       }
       if (!id || !sid) throw new Error('Missing course parameters');
-      const data = await getCmsCourseView(String(id), String(sid), bypassCache);
+      const data = await perfAsync(`CMS course view ${id}${bypassCache ? ' (refresh)' : ''}`, () => getCmsCourseView(String(id), String(sid), bypassCache));
       setCourseData(data);
     } catch (e: any) {
       console.error('Error loading course view:', e);

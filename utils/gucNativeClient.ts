@@ -1,4 +1,5 @@
 import { NativeModules } from 'react-native';
+import { resetSharedRequests } from './sharedRequest';
 
 /**
  * Thin wrapper around the native `GucAuth` Android module which performs NTLM
@@ -67,6 +68,7 @@ export async function gucSetCredentials(username: string, password: string): Pro
 
 /** Clear stored GUC credentials natively. */
 export async function gucClearCredentials(): Promise<void> {
+  resetSharedRequests();
   try {
     await ensureModule().clearCredentials();
   } catch {
@@ -76,6 +78,7 @@ export async function gucClearCredentials(): Promise<void> {
 
 /** Clear the persistent session cookie jar (forces a fresh NTLM handshake). */
 export async function gucClearSession(): Promise<void> {
+  resetSharedRequests();
   try {
     await ensureModule().clearCookies();
   } catch {

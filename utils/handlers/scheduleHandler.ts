@@ -1,6 +1,7 @@
 import { AuthManager } from '../auth';
 import { makeGucRequest as makeProxyRequest } from '../gucRequest';
 import { parsePersonalScheduleHtml } from '../parsers/scheduleHtmlParser';
+import { sharedRequest } from '../sharedRequest';
 import { ScheduleData } from '../types/gucTypes';
 
 /**
@@ -263,7 +264,13 @@ function createFreeSchedule(): ScheduleData {
 /**
  * Get schedule data from GUC scheduling page
  */
-export async function getScheduleData(): Promise<ScheduleData> {
+export function getScheduleData(): Promise<ScheduleData> {
+  // The dashboard, schedule widget and schedule screen can all ask at once;
+  // share one fetch while it's in flight.
+  return sharedRequest('scheduleData', fetchScheduleData);
+}
+
+async function fetchScheduleData(): Promise<ScheduleData> {
   let attempt = 0;
   const maxAttempts = 3;
   const maxRedirects = 5;

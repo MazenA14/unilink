@@ -1,6 +1,8 @@
 import { extractCourseGradeData, extractCourses, extractGradeData, extractViewState } from './extractors/gradeExtractor';
 import { GradeCache } from './gradeCache';
 import { makeGucRequest } from './gucRequest';
+import { perfAsync, perfSync } from './perfLog';
+import { invalidateShared, isOptionSelected, sharedRequest } from './sharedRequest';
 import { getOutstandingPayments, payOutstanding } from './handlers/paymentHandler';
 import { getScheduleData } from './handlers/scheduleHandler';
 import { getAvailableStudyYears, getTranscriptData, resetSession } from './handlers/transcriptHandler';
@@ -10,6 +12,14 @@ import { syncSlotReminders } from './slotReminders';
 import { GradeData, Instructor, ScheduleData } from './types/gucTypes';
 
 export { GradeData, Instructor, PaymentItem, ScheduleClass, ScheduleData, ScheduleDay, ViewStateData } from './types/gucTypes';
+
+const CURRENT_GRADES_URL = 'https://apps.guc.edu.eg/student_ext/Grade/CheckGrade_01.aspx';
+const ATTENDANCE_URL = 'https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx';
+const CURRENT_GRADES_PAGE_KEY = 'currentGradesPage';
+const ATTENDANCE_PAGE_KEY = 'attendancePage';
+const INDEX_PAGE_KEY = 'indexPage';
+/** How long a fetched page's view state is reused by follow-up course POSTs. */
+const SHARED_PAGE_TTL_MS = 60_000;
 
 export class GUCAPIProxy {
   /**
@@ -95,10 +105,10 @@ export class GUCAPIProxy {
       const html = responseData.html || responseData.body;
       
       // Step 3: Extract courses from dropdown
-      const courses = extractCourses(html);
+      const courses = perfSync(`extractCourses (season ${seasonId})`, () => extractCourses(html));
       
       // Step 4: Extract midterm grades from the midterm table
-      const midtermGrades = extractGradeData(html);
+      const midtermGrades = perfSync(`extractGradeData (season ${seasonId})`, () => extractGradeData(html));
       
       // If no courses found but have midterm grades, create courses from grades
       let finalCourses = courses;
@@ -153,7 +163,7 @@ export class GUCAPIProxy {
         return null;
       });
 
-      const results = await Promise.all(seasonPromises);
+      const results = await perfAsync(`getAllSeasonsWithData (${allSeasons.length} seasons)`, () => Promise.all(seasonPromises));
 
       const seasonsWithData = results.filter(
         (data): data is {
@@ -289,7 +299,7 @@ export class GUCAPIProxy {
       const courseHtml = courseResponse.html || courseResponse.body;
       
       // Step 4: Extract detailed course grades from Quiz/Assignment table
-      const detailedGrades = extractCourseGradeData(courseHtml);
+      const detailedGrades = perfSync(`extractCourseGradeData (season ${seasonId}, course ${courseId})`, () => extractCourseGradeData(courseHtml));
       
       return detailedGrades;
     } catch {
@@ -374,138 +384,122 @@ export class GUCAPIProxy {
    * Get available courses for current semester
    */
   static async getAvailableCourses(): Promise<{value: string, text: string}[]> {
-    try {
-      
-      const data = await this.makeProxyRequest(
-        'https://apps.guc.edu.eg/student_ext/Grade/CheckGrade_01.aspx'
-      );
+    // Same page as getCurrentGrades(); reuse it when it was just fetched.
+    const html = await this.getCurrentGradesPage();
+    return extractCourses(html);
+  }
 
-      const html = data.html || data.body;
-      
+  /**
+   * The current-grades page (CheckGrade_01.aspx). Shared for a short window so
+   * the summary load and every per-course POST reuse one GET instead of
+   * re-downloading the same page per course.
+   */
+  private static getCurrentGradesPage(fresh: boolean = false): Promise<string> {
+    if (fresh) invalidateShared(CURRENT_GRADES_PAGE_KEY);
+    return sharedRequest(CURRENT_GRADES_PAGE_KEY, async () => {
+      const data = await this.makeProxyRequest(CURRENT_GRADES_URL);
+      const html: string = data.html || data.body;
       if (!html) {
         throw new Error('No HTML content received from proxy');
       }
-
-      
-      const courses = extractCourses(html);
-      
-      return courses;
-    } catch (err) {
-      throw err;
-    }
+      return html;
+    }, SHARED_PAGE_TTL_MS);
   }
 
   /**
    * Get grades for a specific course
    */
   static async getCourseGrades(courseId: string): Promise<GradeData[]> {
-    try {
-      
-      // First get the initial page to extract view state
-      const initialData = await this.makeProxyRequest(
-        'https://apps.guc.edu.eg/student_ext/Grade/CheckGrade_01.aspx'
-      );
-      
-      const initialHtml = initialData.html || initialData.body;
-      if (!initialHtml) {
-        throw new Error('No HTML content received from proxy');
-      }
-      
-      const viewState = extractViewState(initialHtml);
-      
-      // Extract hidden fields from the initial page
-      const studentIdMatch = initialHtml.match(/<input[^>]*name="ctl00\$ctl00\$ContentPlaceHolderright\$ContentPlaceHoldercontent\$HiddenFieldstudent"[^>]*value="([^"]*)"[^>]*>/i);
-      const seasonIdMatch = initialHtml.match(/<input[^>]*name="ctl00\$ctl00\$ContentPlaceHolderright\$ContentPlaceHoldercontent\$HiddenFieldseason"[^>]*value="([^"]*)"[^>]*>/i);
-      
-      const studentId = studentIdMatch ? studentIdMatch[1] : '';
-      const seasonId = seasonIdMatch ? seasonIdMatch[1] : '';
-      
-      
-      // Create form data to select the course
-      const formData = new URLSearchParams();
-      formData.append('__EVENTTARGET', 'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$smCrsLst');
-      formData.append('__EVENTARGUMENT', '');
-      formData.append('__LASTFOCUS', '');
-      formData.append('__VIEWSTATE', viewState.__VIEWSTATE);
-      formData.append('__VIEWSTATEGENERATOR', viewState.__VIEWSTATEGENERATOR);
-      formData.append('__EVENTVALIDATION', viewState.__EVENTVALIDATION);
-      formData.append('ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$smCrsLst', courseId);
-      
-      // Add hidden fields if found
-      if (studentId) {
-        formData.append('ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$HiddenFieldstudent', studentId);
-      }
-      if (seasonId) {
-        formData.append('ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$HiddenFieldseason', seasonId);
-      }
-      
-      
-      // Submit the form to select the course
-      const courseData = await this.makeProxyRequest(
-        'https://apps.guc.edu.eg/student_ext/Grade/CheckGrade_01.aspx',
-        'POST',
-        formData.toString(),
-        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-      );
-      
-      const courseHtml = courseData.html || courseData.body;
-      if (!courseHtml) {
-        throw new Error('No HTML content received after course selection');
-      }
-      
-      
-      // Check if the course was actually selected by looking for the selected option
-      const selectedCourseMatch = courseHtml.match(/<option[^>]*selected="selected"[^>]*value="([^"]*)"[^>]*>([^<]*)<\/option>/i);
-      if (selectedCourseMatch) {
-      } else {
-      }
-      
-      // Check if we're on the course-specific page (indicated by the course dropdown smCrsLst)
-      // On this page, the midterm table shows ALL courses' midterms, not just the selected course
-      // So we should NOT include midterm grades here - they should only come from the season-level view
-      const hasCourseDropdown = courseHtml.includes('smCrsLst') || courseHtml.includes('ContentPlaceHolderright_ContentPlaceHoldercontent_smCrsLst');
-      
-      // Extract course-specific grade items (Quiz/Assignment table)
-      const courseGrades = extractCourseGradeData(courseHtml);
-      
-      // Only extract midterm grades if we're NOT on the course-specific page
-      // (i.e., if there's no course dropdown, we're on the season-level view)
-      if (!hasCourseDropdown) {
-        const midtermGrades = extractGradeData(courseHtml);
-        return [...midtermGrades, ...courseGrades];
-      }
-      
-      // On course-specific page, only return course-specific grades
-      // Midterm grades should come from the season-level data, not from individual course views
-      return courseGrades;
-    } catch (err) {
-      throw err;
+    const initialHtml = await this.getCurrentGradesPage();
+    const result = await this.postCourseGrades(initialHtml, courseId);
+    if (result.courseSelected) return result.grades;
+
+    // The shared page's view state didn't take; retry with a fresh page.
+    console.log(`[PERF] retry  getCourseGrades (${courseId}) with a fresh page`);
+    const freshHtml = await this.getCurrentGradesPage(true);
+    return (await this.postCourseGrades(freshHtml, courseId)).grades;
+  }
+
+  private static async postCourseGrades(initialHtml: string, courseId: string): Promise<{ grades: GradeData[]; courseSelected: boolean }> {
+    const viewState = extractViewState(initialHtml);
+
+    // Extract hidden fields from the initial page
+    const studentIdMatch = initialHtml.match(/<input[^>]*name="ctl00\$ctl00\$ContentPlaceHolderright\$ContentPlaceHoldercontent\$HiddenFieldstudent"[^>]*value="([^"]*)"[^>]*>/i);
+    const seasonIdMatch = initialHtml.match(/<input[^>]*name="ctl00\$ctl00\$ContentPlaceHolderright\$ContentPlaceHoldercontent\$HiddenFieldseason"[^>]*value="([^"]*)"[^>]*>/i);
+
+    const studentId = studentIdMatch ? studentIdMatch[1] : '';
+    const seasonId = seasonIdMatch ? seasonIdMatch[1] : '';
+
+    // Create form data to select the course
+    const formData = new URLSearchParams();
+    formData.append('__EVENTTARGET', 'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$smCrsLst');
+    formData.append('__EVENTARGUMENT', '');
+    formData.append('__LASTFOCUS', '');
+    formData.append('__VIEWSTATE', viewState.__VIEWSTATE);
+    formData.append('__VIEWSTATEGENERATOR', viewState.__VIEWSTATEGENERATOR);
+    formData.append('__EVENTVALIDATION', viewState.__EVENTVALIDATION);
+    formData.append('ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$smCrsLst', courseId);
+
+    // Add hidden fields if found
+    if (studentId) {
+      formData.append('ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$HiddenFieldstudent', studentId);
     }
+    if (seasonId) {
+      formData.append('ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$HiddenFieldseason', seasonId);
+    }
+
+    // Submit the form to select the course
+    const courseData = await this.makeProxyRequest(
+      CURRENT_GRADES_URL,
+      'POST',
+      formData.toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+
+    const courseHtml = courseData.html || courseData.body;
+    if (!courseHtml) {
+      throw new Error('No HTML content received after course selection');
+    }
+
+    const courseSelected = isOptionSelected(courseHtml, courseId);
+
+    // Check if we're on the course-specific page (indicated by the course dropdown smCrsLst)
+    // On this page, the midterm table shows ALL courses' midterms, not just the selected course
+    // So we should NOT include midterm grades here - they should only come from the season-level view
+    const hasCourseDropdown = courseHtml.includes('smCrsLst') || courseHtml.includes('ContentPlaceHolderright_ContentPlaceHoldercontent_smCrsLst');
+
+    // Extract course-specific grade items (Quiz/Assignment table)
+    const courseGrades = perfSync(`extractCourseGradeData (current, ${courseId})`, () => extractCourseGradeData(courseHtml));
+
+    // Only extract midterm grades if we're NOT on the course-specific page
+    // (i.e., if there's no course dropdown, we're on the season-level view)
+    if (!hasCourseDropdown) {
+      const midtermGrades = extractGradeData(courseHtml);
+      return { grades: [...midtermGrades, ...courseGrades], courseSelected };
+    }
+
+    // On course-specific page, only return course-specific grades
+    // Midterm grades should come from the season-level data, not from individual course views
+    return { grades: courseGrades, courseSelected };
   }
 
   /**
    * Get current semester grades
    */
   static async getCurrentGrades(): Promise<GradeData[]> {
-    try {
-      
-      const data = await this.makeProxyRequest(
-        'https://apps.guc.edu.eg/student_ext/Grade/CheckGrade_01.aspx'
-      );
-
-      const html = data.html || data.body;
-      
-      if (!html) {
-        throw new Error('No HTML content received from proxy');
-      }
-
-      
-      const grades = extractGradeData(html);
-      
-      return grades;
-    } catch (err) {
-      throw err;
-    }
+    // Always fetch fresh here; the per-course calls that follow reuse this page.
+    const html = await this.getCurrentGradesPage(true);
+    return perfSync('extractGradeData (current)', () => extractGradeData(html));
+  }
+  /**
+   * The student index/profile page. Login, the dashboard and user tracking all
+   * read it around the same time, so one fetch is shared for a short window.
+   */
+  private static getIndexPage(): Promise<string> {
+    return sharedRequest(INDEX_PAGE_KEY, async () => {
+      const data = await this.makeProxyRequest('https://apps.guc.edu.eg/student_ext/index.aspx');
+      return data.html || data.body || '';
+    }, SHARED_PAGE_TTL_MS);
   }
 
   /**
@@ -513,8 +507,7 @@ export class GUCAPIProxy {
    */
   static async getUserId(): Promise<string | null> {
     try {
-      const data = await this.makeProxyRequest('https://apps.guc.edu.eg/student_ext/index.aspx');
-      const html = data.html || data.body || '';
+      const html = await this.getIndexPage();
 
       // Look for the span with the specific id
       const idMatch = html.match(/<span[^>]*id="ContentPlaceHolderright_ContentPlaceHoldercontent_LabelUniqAppNo"[^>]*>([^<]+)<\/span>/i);
@@ -539,8 +532,7 @@ export class GUCAPIProxy {
    */
   static async getUserInfo(): Promise<{ userId: string | null; faculty: string | null }> {
     try {
-      const data = await this.makeProxyRequest('https://apps.guc.edu.eg/student_ext/index.aspx');
-      const html = data.html || data.body || '';
+      const html = await this.getIndexPage();
 
       // Extract user ID
       let userId: string | null = null;
@@ -1109,6 +1101,44 @@ export class GUCAPIProxy {
   }
 
   /**
+   * The attendance page (following GUC's JS `sTo()` redirect). Shared for a
+   * short window so the summary load and every per-course POST reuse one
+   * page instead of each re-fetching the redirect stub + page.
+   */
+  private static getAttendancePage(fresh: boolean = false): Promise<{ html: string; baseUrl: string }> {
+    if (fresh) invalidateShared(ATTENDANCE_PAGE_KEY);
+    return sharedRequest(ATTENDANCE_PAGE_KEY, async () => {
+      const initialData = await this.makeProxyRequest(ATTENDANCE_URL);
+
+      let html = initialData.html || initialData.body;
+      let baseUrl = ATTENDANCE_URL;
+
+      // Check if we got a redirect response
+      if (initialData.status === 302 || html.includes('Object moved') || html.includes('sTo(')) {
+        try {
+          // Extract redirect parameter from JavaScript
+          const redirectParam = GUCAPIProxy.extractRedirectParam(html);
+
+          // Update URL with redirect parameter
+          baseUrl = `${ATTENDANCE_URL}?v=${redirectParam}`;
+
+          // Make request to redirected URL
+          const redirectData = await this.makeProxyRequest(baseUrl);
+          html = redirectData.html || redirectData.body;
+
+          if (!html) {
+            throw new Error('No HTML content from redirect');
+          }
+        } catch (redirectError: any) {
+          throw new Error(`Failed to handle attendance page redirect: ${redirectError.message}`);
+        }
+      }
+
+      return { html, baseUrl };
+    }, SHARED_PAGE_TTL_MS);
+  }
+
+  /**
    * Get attendance data from GUC attendance page
    */
   static async getAttendanceData(): Promise<{
@@ -1130,42 +1160,9 @@ export class GUCAPIProxy {
       }[];
     }[];
   }> {
-    try {
-      // First, get the initial attendance page
-      const initialData = await this.makeProxyRequest(
-        'https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx'
-      );
-
-      let html = initialData.html || initialData.body;
-      
-      // Check if we got a redirect response
-      if (initialData.status === 302 || html.includes('Object moved') || html.includes('sTo(')) {
-        try {
-          // Extract redirect parameter from JavaScript
-          const redirectParam = GUCAPIProxy.extractRedirectParam(html);
-          
-          // Update URL with redirect parameter
-          const redirectUrl = `https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx?v=${redirectParam}`;
-          
-          // Make request to redirected URL
-          const redirectData = await this.makeProxyRequest(redirectUrl);
-          html = redirectData.html || redirectData.body;
-          
-          if (!html) {
-            throw new Error('No HTML content from redirect');
-          }
-        } catch (redirectError: any) {
-          throw new Error(`Failed to handle attendance page redirect: ${redirectError.message}`);
-        }
-      }
-
-      // Parse the attendance data from the final page
-      const attendanceData = this.parseAttendanceData(html);
-
-      return attendanceData;
-    } catch (error) {
-      throw error;
-    }
+    // Always fetch fresh here; the per-course calls that follow reuse this page.
+    const { html } = await this.getAttendancePage(true);
+    return perfSync('parseAttendanceData', () => this.parseAttendanceData(html));
   }
 
   /**
@@ -1180,65 +1177,41 @@ export class GUCAPIProxy {
       sessionDescription: string;
     }[];
   }> {
-    try {
-      // First, get the initial attendance page
-      const initialData = await this.makeProxyRequest(
-        'https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx'
-      );
+    const page = await this.getAttendancePage();
+    const result = await this.postCourseAttendance(page, courseId);
+    if (result.courseSelected) return result.data;
 
-      let html = initialData.html || initialData.body;
-      let baseUrl = 'https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx';
-      
-      // Check if we got a redirect response
-      if (initialData.status === 302 || html.includes('Object moved') || html.includes('sTo(')) {
-        try {
-          // Extract redirect parameter from JavaScript
-          const redirectParam = GUCAPIProxy.extractRedirectParam(html);
-          
-          // Update URL with redirect parameter
-          baseUrl = `https://apps.guc.edu.eg/student_ext/Attendance/ClassAttendance_ViewStudentAttendance_001.aspx?v=${redirectParam}`;
-          
-          // Make request to redirected URL
-          const redirectData = await this.makeProxyRequest(baseUrl);
-          html = redirectData.html || redirectData.body;
-          
-          if (!html) {
-            throw new Error('No HTML content from redirect');
-          }
-        } catch (redirectError: any) {
-          throw new Error(`Failed to handle course attendance page redirect: ${redirectError.message}`);
-        }
-      }
-
-      const viewStateData = extractViewState(html);
-
-      if (!viewStateData.__VIEWSTATE || !viewStateData.__VIEWSTATEGENERATOR || !viewStateData.__EVENTVALIDATION) {
-        throw new Error('Failed to extract required view state data');
-      }
-
-      // Select the specific course
-      const courseFormBody = new URLSearchParams({
-        ...viewStateData,
-        'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$DDL_Courses': courseId,
-        '__EVENTTARGET': 'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$DDL_Courses',
-        '__EVENTARGUMENT': '',
-      });
-
-      const courseResponse = await this.makeProxyRequest(
-        baseUrl,
-        'POST',
-        courseFormBody.toString()
-      );
-
-      const courseHtml = courseResponse.html || courseResponse.body;
-      const courseData = this.parseCourseAttendanceData(courseHtml, courseId);
-
-      return courseData;
-    } catch (error) {
-      throw error;
-    }
+    // The shared page's view state didn't take; retry with a fresh page.
+    console.log(`[PERF] retry  getCourseAttendance (${courseId}) with a fresh page`);
+    const freshPage = await this.getAttendancePage(true);
+    return (await this.postCourseAttendance(freshPage, courseId)).data;
   }
 
+  private static async postCourseAttendance(page: { html: string; baseUrl: string }, courseId: string) {
+    const viewStateData = extractViewState(page.html);
+
+    if (!viewStateData.__VIEWSTATE || !viewStateData.__VIEWSTATEGENERATOR || !viewStateData.__EVENTVALIDATION) {
+      throw new Error('Failed to extract required view state data');
+    }
+
+    // Select the specific course
+    const courseFormBody = new URLSearchParams({
+      ...viewStateData,
+      'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$DDL_Courses': courseId,
+      '__EVENTTARGET': 'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$DDL_Courses',
+      '__EVENTARGUMENT': '',
+    });
+
+    const courseResponse = await this.makeProxyRequest(
+      page.baseUrl,
+      'POST',
+      courseFormBody.toString()
+    );
+
+    const courseHtml = courseResponse.html || courseResponse.body;
+    const data = perfSync(`parseCourseAttendanceData (${courseId})`, () => this.parseCourseAttendanceData(courseHtml, courseId));
+    return { data, courseSelected: isOptionSelected(courseHtml, courseId) };
+  }
   /**
    * Parse attendance data from HTML
    */

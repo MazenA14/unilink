@@ -1,9 +1,14 @@
 import { GradeData, ViewStateData } from '../types/gucTypes';
+import { perfSync } from '../perfLog';
 
 /**
  * Extract ASP.NET WebForms hidden field values from HTML response
  */
 export function extractViewState(html: string): ViewStateData {
+  return perfSync(`extractViewState (${((html || '').length / 1024).toFixed(0)}KB)`, () => extractViewStateImpl(html));
+}
+
+function extractViewStateImpl(html: string): ViewStateData {
   try {
     const patterns = {
       __VIEWSTATE: /<input[^>]*name="__VIEWSTATE"[^>]*value="([^"]*)"[^>]*>/i,

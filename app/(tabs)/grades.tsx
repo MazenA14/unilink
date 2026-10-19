@@ -19,6 +19,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { perfAsync } from '@/utils/perfLog';
+import { GradesPreloader } from '@/utils/gradesPreloader';
 
 const GRADE_TYPE_OPTIONS: SegmentOption<GradeType>[] = [
   { value: 'current', label: 'Current', icon: 'today-outline' },
@@ -74,6 +76,9 @@ export default function GradesScreen() {
       
       // Try to load from cache first (unless forced refresh)
       if (!forceRefresh) {
+        // A startup preload may be filling the cache right now; wait for it
+        // instead of firing the same requests again.
+        await GradesPreloader.waitForPreload();
         const cachedGrades = await GradeCache.getCachedCurrentGrades();
         if (cachedGrades) {
           setGrades(cachedGrades);
@@ -82,7 +87,7 @@ export default function GradesScreen() {
         }
       }
 
-      const fetchedGrades = await GUCAPI.getCurrentGrades();
+      const fetchedGrades = await perfAsync('Grades screen: current grades', () => GUCAPI.getCurrentGrades());
       
       setGrades(fetchedGrades);
       
@@ -148,7 +153,7 @@ export default function GradesScreen() {
       }
 
       // Use new efficient method to get all seasons with their data
-      const seasonsWithData = await GUCAPI.getAllSeasonsWithData();
+      const seasonsWithData = await perfAsync('Grades screen: previous seasons', () => GUCAPI.getAllSeasonsWithData());
       
       // Convert to the format expected by the UI
       const seasonsWithGrades = seasonsWithData.map(seasonData => {
@@ -377,7 +382,7 @@ export default function GradesScreen() {
       }
       
       // Use the new detailed grades API method
-      const detailedGrades = await GUCAPI.getDetailedCourseGrades(seasonId, courseId);
+      const detailedGrades = await perfAsync(`Grades screen: detailed grades ${courseName}`, () => GUCAPI.getDetailedCourseGrades(seasonId, courseId));
       
       // Cache the results
       await GradeCache.setCachedDetailedGrades(seasonId, courseId, detailedGrades);

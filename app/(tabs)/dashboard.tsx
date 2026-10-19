@@ -18,13 +18,17 @@ import { resolveCourseTitle } from '@/utils/courseTitle';
 import { getTimeSlots, isCurrentTimeSlot } from '@/utils/currentSlotUtils';
 import { GradeCache } from '@/utils/gradeCache';
 import { CmsUnseenSummary, fetchCmsUnseenSummary, getCachedCmsUnseenSummary } from '@/utils/handlers/cmsHandler';
+import { AttendancePreloader } from '@/utils/attendancePreloader';
 import { GUCAPIProxy } from '@/utils/gucApiProxy';
+import { GradesPreloader } from '@/utils/gradesPreloader';
+import { GradeTracking } from '@/utils/gradeTracking';
 import { syncScheduleWidget } from '@/utils/scheduleWidget';
 import { EXACT_ALARM_PROMPT, openExactAlarmSettings, shouldPromptExactAlarms, syncSlotReminders } from '@/utils/slotReminders';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+    ActivityIndicator,
     Animated,
     ScrollView,
     StyleSheet,
@@ -32,6 +36,16 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+
+/** Highest absence warning level (0 = none) in the cached attendance, or null if nothing is cached. */
+const getMaxAbsenceLevel = async (): Promise<number | null> => {
+  const data = await GradeCache.getCachedAttendanceData();
+  if (!data) return null;
+  return (data.summary?.absenceReport || []).reduce(
+    (max, report) => Math.max(max, parseInt(report.absenceLevel, 10) || 0),
+    0
+  );
+};
 
 const sumUnseen = (summary: CmsUnseenSummary) =>
   Object.values(summary).reduce((total, course) => total + course.unseen, 0);
@@ -47,6 +61,12 @@ export default function DashboardScreen() {
   const { isShiftedScheduleEnabled } = useShiftedSchedule();
   const { refreshNotifications } = useNotifications();
   const [cmsUnseen, setCmsUnseen] = useState<number | null>(null);
+  const [gradesUnseen, setGradesUnseen] = useState<number | null>(null);
+  const [absenceLevel, setAbsenceLevel] = useState<number | null>(null);
+  // Overview tiles show a spinner until their first fresh fetch settles
+  const [cmsLoading, setCmsLoading] = useState(true);
+  const [gradesLoading, setGradesLoading] = useState(true);
+  const [attendanceLoading, setAttendanceLoading] = useState(true);
   const refreshRotation = useRef(new Animated.Value(0)).current;
   
   // Multiple lectures modal state
@@ -320,7 +340,19 @@ export default function DashboardScreen() {
     // Refresh unseen CMS content count for the overview tile
     fetchCmsUnseenSummary()
       .then((summary) => { if (summary) setCmsUnseen(sumUnseen(summary)); })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setCmsLoading(false));
+    // Warm the attendance and grades caches so those screens open instantly
+    AttendancePreloader.preloadAttendance()
+      .then(() => getMaxAbsenceLevel())
+      .then((level) => { if (level !== null) setAbsenceLevel(level); })
+      .catch(() => {})
+      .finally(() => setAttendanceLoading(false));
+    GradesPreloader.preloadCurrentGrades()
+      .then(() => GradeTracking.getTotalUnseenCurrentGrades())
+      .then((count) => { if (count !== null) setGradesUnseen(count); })
+      .catch(() => {})
+      .finally(() => setGradesLoading(false));
   }, [loadNickname, refreshNotifications, checkForUpdates, checkWhatsNew]);
 
   // Update current time every minute for slot indicator
@@ -345,6 +377,9 @@ export default function DashboardScreen() {
       loadNickname();
       // Reflect items opened inside CMS since the last fetch
       getCachedCmsUnseenSummary().then((cached) => { if (cached) setCmsUnseen(sumUnseen(cached)); });
+      // Reflect grades viewed on the Grades screen since the last check
+      GradeTracking.getTotalUnseenCurrentGrades().then((count) => { if (count !== null) setGradesUnseen(count); });
+      getMaxAbsenceLevel().then((level) => { if (level !== null) setAbsenceLevel(level); }).catch(() => {});
       const newTime = new Date();
       setCurrentTime(newTime); // Update current time for slot indicator
       
@@ -518,7 +553,9 @@ export default function DashboardScreen() {
                 <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.secondary, 0.16) }]}>
                   <Ionicons name="document-attach" size={18} color={colors.secondary} />
                 </View>
-                {cmsUnseen !== null ? (
+                {cmsLoading ? (
+                  <ActivityIndicator size="small" color={colors.secondary} />
+                ) : cmsUnseen !== null ? (
                   <Text style={[styles.statValue, { color: cmsUnseen > 0 ? colors.secondary : colors.textPrimary }]}>{cmsUnseen}</Text>
                 ) : (
                   <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
@@ -526,7 +563,7 @@ export default function DashboardScreen() {
               </View>
               <Text style={[styles.statLabel, { color: colors.textPrimary }]}>CMS</Text>
               <Text style={[styles.statCaption, { color: colors.textSecondary }]}>
-                {cmsUnseen === null ? 'Course content' : cmsUnseen > 0 ? `${cmsUnseen} unseen item${cmsUnseen !== 1 ? 's' : ''}` : 'All caught up'}
+                {cmsLoading || cmsUnseen === null ? 'Course content' : cmsUnseen > 0 ? `${cmsUnseen} unseen item${cmsUnseen !== 1 ? 's' : ''}` : 'All caught up'}
               </Text>
             </TouchableOpacity>
 
@@ -539,10 +576,18 @@ export default function DashboardScreen() {
                 <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.secondary, 0.16) }]}>
                   <Ionicons name="checkmark-circle" size={18} color={colors.secondary} />
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                {attendanceLoading ? (
+                  <ActivityIndicator size="small" color={colors.secondary} />
+                ) : absenceLevel ? (
+                  <Ionicons name="alert-circle" size={22} color={absenceLevel >= 3 ? colors.danger : colors.warning} />
+                ) : (
+                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                )}
               </View>
               <Text style={[styles.statLabel, { color: colors.textPrimary }]}>Attendance</Text>
-              <Text style={[styles.statCaption, { color: colors.textSecondary }]}>Warnings & log</Text>
+              <Text style={[styles.statCaption, { color: !attendanceLoading && absenceLevel ? (absenceLevel >= 3 ? colors.danger : colors.warning) : colors.textSecondary }]}>
+                {!attendanceLoading && absenceLevel ? `Level ${absenceLevel} warning` : 'Warnings & log'}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -554,10 +599,18 @@ export default function DashboardScreen() {
                 <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.secondary, 0.16) }]}>
                   <Ionicons name="school" size={18} color={colors.secondary} />
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                {gradesLoading ? (
+                  <ActivityIndicator size="small" color={colors.secondary} />
+                ) : gradesUnseen !== null ? (
+                  <Text style={[styles.statValue, { color: gradesUnseen > 0 ? colors.secondary : colors.textPrimary }]}>{gradesUnseen}</Text>
+                ) : (
+                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                )}
               </View>
               <Text style={[styles.statLabel, { color: colors.textPrimary }]}>Grades</Text>
-              <Text style={[styles.statCaption, { color: colors.textSecondary }]}>Current & previous</Text>
+              <Text style={[styles.statCaption, { color: colors.textSecondary }]}>
+                {gradesLoading || gradesUnseen === null ? 'Current & previous' : gradesUnseen > 0 ? `${gradesUnseen} new grade${gradesUnseen !== 1 ? 's' : ''}` : 'All caught up'}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity

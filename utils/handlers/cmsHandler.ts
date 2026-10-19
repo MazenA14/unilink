@@ -1,4 +1,6 @@
 import { makeGucRequest as makeProxyRequest } from '@/utils/gucRequest';
+import { perfSync } from '@/utils/perfLog';
+import { sharedRequest } from '@/utils/sharedRequest';
 import { gucDownloadFile, gucOpenFile, gucSaveToDownloads } from '@/utils/gucNativeClient';
 import { extractViewState } from '@/utils/extractors/gradeExtractor';
 import { CMSCourseRow, CMSUnseenCount, parseCmsCourses, parseCmsUnseenSummary } from '@/utils/parsers/cmsCoursesParser';
@@ -44,7 +46,7 @@ export async function getCmsCourses(bypassCache: boolean = false): Promise<CMSCo
 
   const initial = await makeProxyRequest(CMS_HOME_ENDPOINT, 'GET');
   const html: string = initial.html || initial.body || '';
-  const rows = parseCmsCourses(html);
+  const rows = perfSync(`parseCmsCourses (${(html.length / 1024).toFixed(0)}KB)`, () => parseCmsCourses(html));
 
   try {
     const entry: CmsCoursesCacheEntry = { data: rows, cachedAt: Date.now(), expiry: Date.now() + THIRTY_DAYS_MS };
@@ -70,12 +72,17 @@ export async function getCachedCmsUnseenSummary(): Promise<CmsUnseenSummary | nu
  * Fetches per-course unseen content counts from the CMS student home page
  * (falls back to the courses page if the grid isn't there) and caches them.
  */
-export async function fetchCmsUnseenSummary(): Promise<CmsUnseenSummary | null> {
+export function fetchCmsUnseenSummary(): Promise<CmsUnseenSummary | null> {
+  // Dashboard and CMS home both call this; share one request while it's in flight.
+  return sharedRequest('cmsUnseenSummary', fetchCmsUnseenSummaryUncached);
+}
+
+async function fetchCmsUnseenSummaryUncached(): Promise<CmsUnseenSummary | null> {
   let summary: CmsUnseenSummary | null = null;
   for (const url of [CMS_STUDENT_HOME_ENDPOINT, CMS_HOME_ENDPOINT]) {
     try {
       const res = await makeProxyRequest(url, 'GET');
-      summary = parseCmsUnseenSummary(res.html || res.body || '');
+      summary = perfSync('parseCmsUnseenSummary', () => parseCmsUnseenSummary(res.html || res.body || ''));
       if (summary) break;
     } catch {}
   }
@@ -165,7 +172,7 @@ export async function getCmsCourseView(courseId: string, seasonId: string, bypas
   const url = `https://cms.guc.edu.eg/apps/student/CourseViewStn.aspx?id=${encodeURIComponent(courseId)}&sid=${encodeURIComponent(seasonId)}`;
   const res = await makeProxyRequest(url, 'GET');
   const html: string = res.html || res.body || '';
-  const data = parseCmsCourseView(html);
+  const data = perfSync(`parseCmsCourseView (${courseId}, ${(html.length / 1024).toFixed(0)}KB)`, () => parseCmsCourseView(html));
 
   // Cache for one day
   try {
