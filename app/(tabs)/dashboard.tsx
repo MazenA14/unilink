@@ -3,6 +3,7 @@ import { AppBar } from '@/components/navigation/AppBar';
 import { MultipleLecturesModal } from '@/components/schedule/MultipleLecturesModal';
 import UpdateModal from '@/components/UpdateModal';
 import WhatsNewModal from '@/components/WhatsNewModal';
+import { useCustomAlert } from '@/components/CustomAlert';
 import { Colors, ScheduleTypeColors } from '@/constants/Colors';
 import { Radius, Shadow, Spacing, withAlpha } from '@/constants/Theme';
 
@@ -19,6 +20,7 @@ import { GradeCache } from '@/utils/gradeCache';
 import { CmsUnseenSummary, fetchCmsUnseenSummary, getCachedCmsUnseenSummary } from '@/utils/handlers/cmsHandler';
 import { GUCAPIProxy } from '@/utils/gucApiProxy';
 import { syncScheduleWidget } from '@/utils/scheduleWidget';
+import { EXACT_ALARM_PROMPT, openExactAlarmSettings, shouldPromptExactAlarms, syncSlotReminders } from '@/utils/slotReminders';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -64,11 +66,33 @@ export default function DashboardScreen() {
   // What's New modal hook
   const {
     showModal: showWhatsNewModal,
+    isLoading: whatsNewLoading,
     features: whatsNewFeatures,
     version: whatsNewVersion,
     checkAndShowModal: checkWhatsNew,
     handleCloseModal: handleWhatsNewClose,
   } = useWhatsNew();
+
+  const { showAlert, AlertComponent } = useCustomAlert();
+
+  // Ask once for exact alarms so class reminders aren't delivered late.
+  // Waits for What's New so the two don't stack.
+  const exactPromptCheckedRef = useRef(false);
+  useEffect(() => {
+    if (whatsNewLoading || showWhatsNewModal || exactPromptCheckedRef.current) return;
+    exactPromptCheckedRef.current = true;
+    shouldPromptExactAlarms().then(shouldPrompt => {
+      if (!shouldPrompt) return;
+      showAlert({
+        ...EXACT_ALARM_PROMPT,
+        type: 'info',
+        buttons: [
+          { text: 'Not Now', style: 'cancel' },
+          { text: 'Allow', onPress: () => { void openExactAlarmSettings(); } },
+        ],
+      });
+    });
+  }, [whatsNewLoading, showWhatsNewModal, showAlert]);
   
   // State for course name mapping
   const [courseNameMapping, setCourseNameMapping] = useState<{ [courseId: string]: string }>({});
@@ -117,6 +141,7 @@ export default function DashboardScreen() {
           setCourseNameMapping(mapping);
           // Course titles may have changed; refresh the home-screen widget
           void syncScheduleWidget();
+          void syncSlotReminders();
         }
       } catch {
       }
@@ -389,6 +414,8 @@ export default function DashboardScreen() {
         features={whatsNewFeatures}
         version={whatsNewVersion}
       />
+
+      {AlertComponent()}
       
       {/* Top app bar */}
       <AppBar

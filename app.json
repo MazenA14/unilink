@@ -22,7 +22,10 @@
         "backgroundColor": "#1a1a1a"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.unilink"
+      "package": "com.anonymous.unilink",
+      "permissions": [
+        "android.permission.SCHEDULE_EXACT_ALARM"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -30,8 +33,8 @@
       "favicon": "./assets/images/favicon.png"
     },
     "notification": {
-      "icon": "./assets/images/app-icons/icon-original.png",
-      "color": "#007AFF",
+      "icon": "./assets/images/app-icons/notification-icon.png",
+      "color": "#FF6D5D",
       "androidMode": "default",
       "androidCollapsedTitle": "#{unread_notifications} new notifications"
     },
@@ -60,6 +63,13 @@
       ],
       "./plugins/withGucAuth",
       "./plugins/withScheduleWidget",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/app-icons/notification-icon.png",
+          "color": "#FF6D5D"
+        }
+      ],
       [
         "expo-dynamic-app-icon",
         {

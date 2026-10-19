@@ -3,7 +3,7 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { AppState, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { GlobalBackHandler } from '@/components/navigation/GlobalBackHandler';
@@ -16,6 +16,9 @@ import { ScheduleProvider } from '@/contexts/ScheduleContext';
 import { ShiftedScheduleProvider } from '@/contexts/ShiftedScheduleContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { configureSlotReminderHandler, syncSlotReminders } from '@/utils/slotReminders';
+
+configureSlotReminderHandler();
 
 function GlobalQuickAccess() {
   const { quickAccessOpen, closeQuickAccess } = useNavigationUI();
@@ -37,6 +40,16 @@ function AppContent() {
     };
     
     trackAppOpen();
+  }, []);
+
+  // Register class reminders for an already cached schedule if they're missing
+  // (also on resume, to pick up a changed notification or alarm permission)
+  useEffect(() => {
+    void syncSlotReminders();
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') void syncSlotReminders();
+    });
+    return () => sub.remove();
   }, []);
   
   // Attendance background fetching removed

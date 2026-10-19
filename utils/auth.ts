@@ -312,6 +312,10 @@ export class AuthManager {
       const { clearScheduleWidget } = await import('./scheduleWidget');
       await clearScheduleWidget();
 
+      // Cancel class reminders
+      const { clearSlotReminders } = await import('./slotReminders');
+      await clearSlotReminders();
+
       // Clear any other potential cache keys
       await Promise.all([
         AsyncStorage.removeItem('shiftedScheduleEnabled'),

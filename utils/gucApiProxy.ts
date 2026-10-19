@@ -6,6 +6,7 @@ import { getScheduleData } from './handlers/scheduleHandler';
 import { getAvailableStudyYears, getTranscriptData, resetSession } from './handlers/transcriptHandler';
 import { ExamSeat } from './parsers/examSeatsParser';
 import { syncScheduleWidget } from './scheduleWidget';
+import { syncSlotReminders } from './slotReminders';
 import { GradeData, Instructor, ScheduleData } from './types/gucTypes';
 
 export { GradeData, Instructor, PaymentItem, ScheduleClass, ScheduleData, ScheduleDay, ViewStateData } from './types/gucTypes';
@@ -576,6 +577,7 @@ export class GUCAPIProxy {
       const cachedData = await GradeCache.getCachedScheduleData();
       if (cachedData) {
         void syncScheduleWidget(cachedData);
+        void syncSlotReminders({ scheduleData: cachedData });
         return cachedData;
       }
     }
@@ -587,6 +589,9 @@ export class GUCAPIProxy {
 
     // Keep the Android home-screen widget in sync
     void syncScheduleWidget(freshData);
+
+    // Rebuild class reminders from the new schedule
+    void syncSlotReminders({ scheduleData: freshData, force: true });
     
     return freshData;
   }
