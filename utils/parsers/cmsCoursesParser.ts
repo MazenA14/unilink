@@ -95,3 +95,35 @@ export function parseCmsCourseHeader(html: string): CMSCourseHeader {
 }
 
 
+
+export interface CMSUnseenCount {
+  unseen: number;
+  total: number;
+}
+
+/**
+ * Parses the "by Courses" unseen-content grid (GridViewunseen) into a map of
+ * courseId -> counts. Course names look like "(|CSEN901|) Artificial Intelligence (572)",
+ * where the trailing number is the course id. Returns null when the grid isn't on the page.
+ */
+export function parseCmsUnseenSummary(html: string): Record<string, CMSUnseenCount> | null {
+  try {
+    const tableMatch = html.match(/<table[^>]*id="[^"]*GridViewunseen"[^>]*>([\s\S]*?)<\/table>/i);
+    if (!tableMatch) return null;
+
+    const result: Record<string, CMSUnseenCount> = {};
+    const rows = tableMatch[1].match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
+    for (const row of rows) {
+      const tds = row.match(/<td[^>]*>[\s\S]*?<\/td>/gi) || [];
+      if (tds.length < 2) continue; // header row uses <th>
+      const name = cleanHtml(tds[0] ?? '');
+      const idMatch = name.match(/\((\d+)\)\s*$/);
+      const countMatch = cleanHtml(tds[1] ?? '').match(/(\d+)\s*\/\s*(\d+)/);
+      if (!idMatch || !countMatch) continue;
+      result[idMatch[1]] = { unseen: parseInt(countMatch[1], 10), total: parseInt(countMatch[2], 10) };
+    }
+    return result;
+  } catch {
+    return null;
+  }
+}

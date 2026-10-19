@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { GlobalBackHandler } from '@/components/navigation/GlobalBackHandler';
 import { Sidebar } from '@/components/navigation/Sidebar';
@@ -81,6 +82,7 @@ export default function RootLayout() {
   }
 
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <ThemeProvider>
       <ShiftedScheduleProvider>
         <ScheduleProvider>
@@ -94,5 +96,6 @@ export default function RootLayout() {
         </ScheduleProvider>
       </ShiftedScheduleProvider>
     </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

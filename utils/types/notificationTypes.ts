@@ -44,6 +44,8 @@ export interface NotificationActions {
   fetchNotifications: () => Promise<void>;
   /** Mark a notification as read */
   markAsRead: (notificationId: string) => void;
+  /** Mark a notification as unread */
+  markAsUnread: (notificationId: string) => void;
   /** Mark all notifications as read */
   markAllAsRead: () => void;
   /** Refresh notifications */

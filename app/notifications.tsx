@@ -1,137 +1,207 @@
 import { AppBar } from '@/components/navigation/AppBar';
+import BottomSheet from '@/components/ui/BottomSheet';
+import LinkifiedText from '@/components/ui/LinkifiedText';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/Theme';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { formatRelativeDay } from '@/utils/formatRelativeTime';
 import { Notification } from '@/utils/types/notificationTypes';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState } from 'react';
+import * as Haptics from 'expo-haptics';
+import { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Animated,
-  Dimensions,
   FlatList,
-  Modal,
-  PanResponder,
+  Platform,
+  Pressable,
   RefreshControl,
-  ScrollView,
+  Share,
   StyleSheet,
   Text,
+  TextInput,
+  ToastAndroid,
   TouchableOpacity,
   View,
 } from 'react-native';
+import ReanimatedSwipeable, { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
+
+function formatDate(dateString: string) {
+  try {
+    // Handle M/D/YYYY format (e.g., "6/12/2025")
+    const dateMatch = dateString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    let date: Date;
+    
+    if (dateMatch) {
+      const [, month, day, year] = dateMatch;
+      // Create date with explicit month/day/year (month is 0-indexed in Date constructor)
+      date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    } else {
+      // Fallback to default Date parsing
+      date = new Date(dateString);
+    }
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return dateString; // Return original string if invalid
+    }
+    
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch {
+    return dateString;
+  }
+}
+
+function notificationToText(n: Notification) {
+  return [n.title, n.body, n.staff ? `— ${n.staff}, ${formatDate(n.date)}` : formatDate(n.date)]
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+/**
+ * Copies to the clipboard. expo-clipboard is a native module, so builds that
+ * predate it fall back to the share sheet (which also offers "Copy").
+ */
+async function copyToClipboard(text: string): Promise<'copied' | 'shared' | 'failed'> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy so older native builds can fall back
+    const Clipboard = require('expo-clipboard') as typeof import('expo-clipboard');
+    await Clipboard.setStringAsync(text);
+    return 'copied';
+  } catch {
+    try {
+      await Share.share({ message: text });
+      return 'shared';
+    } catch {
+      return 'failed';
+    }
+  }
+}
+
+interface SwipeableRowProps {
+  isRead: boolean;
+  onToggleRead: () => void;
+  children: React.ReactNode;
+}
+
+/** Swiping a card either way toggles its read state, then springs back. */
+function SwipeableNotificationRow({ isRead, onToggleRead, children }: SwipeableRowProps) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  const ref = useRef<SwipeableMethods>(null);
+  const accent = isRead ? colors.tint : colors.gradeGood;
+
+  const renderAction = (align: 'left' | 'right') => (
+    <View
+      style={[
+        styles.swipeAction,
+        { backgroundColor: accent + '22', justifyContent: align === 'left' ? 'flex-start' : 'flex-end' },
+      ]}
+    >
+      <View style={styles.swipeActionInner}>
+        <Ionicons name={isRead ? 'mail-unread-outline' : 'mail-open-outline'} size={22} color={accent} />
+        <Text style={[styles.swipeActionText, { color: accent }]}>{isRead ? 'Unread' : 'Read'}</Text>
+      </View>
+    </View>
+  );
+
+  return (
+    <ReanimatedSwipeable
+      ref={ref}
+      containerStyle={styles.swipeContainer}
+      friction={1.6}
+      leftThreshold={70}
+      rightThreshold={70}
+      overshootLeft={false}
+      overshootRight={false}
+      renderLeftActions={() => renderAction('left')}
+      renderRightActions={() => renderAction('right')}
+      onSwipeableWillOpen={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      }}
+      onSwipeableOpen={() => {
+        onToggleRead();
+        ref.current?.close();
+      }}
+    >
+      {children}
+    </ReanimatedSwipeable>
+  );
+}
 
 export default function NotificationsScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { 
-    notifications, 
+    notifications,
     loading, 
     error, 
     unreadCount,
     fetchNotifications, 
-    markAsRead, 
+    markAsRead,
+    markAsUnread,
     markAllAsRead,
     refreshNotifications, 
     clearError
   } = useNotifications();
 
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Modal state
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   
-  // Animation values
-  const translateY = useState(new Animated.Value(0))[0];
-  const opacity = useState(new Animated.Value(0))[0];
-  const { height: screenHeight } = Dimensions.get('window');
-  
-  // Header pan responder for swipe down gesture
-  const dragHandlePanResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: (evt, gestureState) => {
-      // Only respond to downward swipes
-      const isDownwardSwipe = gestureState.dy > 0;
-      const isVerticalSwipe = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
-      
-      return isDownwardSwipe && isVerticalSwipe;
-    },
-    onPanResponderGrant: () => {
-      // Don't set offset - start from current position
-      translateY.setValue(0);
-    },
-    onPanResponderMove: (evt, gestureState) => {
-      if (gestureState.dy > 0) {
-        translateY.setValue(gestureState.dy);
-        const progress = Math.min(gestureState.dy / 200, 1);
-        opacity.setValue(1 - progress);
-      }
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      if (gestureState.dy > 100) {
-        closeModal();
-      } else {
-        Animated.parallel([
-          Animated.spring(translateY, {
-            toValue: 0,
-            useNativeDriver: true,
-          }),
-          Animated.spring(opacity, {
-            toValue: 1,
-            useNativeDriver: true,
-          }),
-        ]).start();
-      }
-    },
-  });
+  // Local search: every whitespace-separated word must appear somewhere in the notification
+  const filteredNotifications = useMemo(() => {
+    const words = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return notifications;
+    return notifications.filter((n) => {
+      const haystack = [n.title, n.body, n.staff, n.date, n.importance, formatDate(n.date), formatRelativeDay(n.date)]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return words.every((w) => haystack.includes(w));
+    });
+  }, [notifications, searchQuery]);
+
+  // Highlight only single-word queries so multi-word searches don't look noisy
+  const highlightTerm = searchQuery.trim().includes(' ') ? undefined : searchQuery.trim();
+
+  const showToast = (message: string) => {
+    if (Platform.OS === 'android') ToastAndroid.show(message, ToastAndroid.SHORT);
+  };
+
+  const handleCopy = async (notification: Notification) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    const result = await copyToClipboard(notificationToText(notification));
+    if (result === 'copied') showToast('Notification copied');
+    else if (result === 'failed') showToast('Could not copy notification');
+  };
+
+  const toggleRead = (notification: Notification) => {
+    if (notification.isRead) markAsUnread(notification.id);
+    else markAsRead(notification.id);
+  };
 
   const onRefresh = async () => {
     await refreshNotifications();
   };
 
 
-  // Modal functions
+  // Sheet functions: the sheet animates itself in/out from `modalVisible`
   const openModal = (notification: Notification) => {
     setSelectedNotification(notification);
     setModalVisible(true);
     // Mark as read when opened
     markAsRead(notification.id);
-    
-    // Animate modal in
-    translateY.setValue(screenHeight);
-    opacity.setValue(0);
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
   };
 
   const closeModal = () => {
-    // Animate modal out
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: screenHeight,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setModalVisible(false);
-      setSelectedNotification(null);
-      // Reset values for next time
-      translateY.setValue(0);
-      opacity.setValue(0);
-    });
+    setModalVisible(false);
   };
 
   // Removed auto-fetch on entering the notifications page. Pull to refresh is still available.
@@ -149,38 +219,15 @@ export default function NotificationsScreen() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    try {
-      // Handle M/D/YYYY format (e.g., "6/12/2025")
-      const dateMatch = dateString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-      let date: Date;
-      
-      if (dateMatch) {
-        const [, month, day, year] = dateMatch;
-        // Create date with explicit month/day/year (month is 0-indexed in Date constructor)
-        date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      } else {
-        // Fallback to default Date parsing
-        date = new Date(dateString);
-      }
-      
-      // Check if date is valid
-      if (isNaN(date.getTime())) {
-        return dateString; // Return original string if invalid
-      }
-      
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      });
-    } catch {
-      return dateString;
-    }
-  };
-
   const renderNotification = ({ item }: { item: Notification }) => (
-    <TouchableOpacity
+    <SwipeableNotificationRow isRead={item.isRead} onToggleRead={() => toggleRead(item)}>
+    <Pressable
+      // No opacity change on press: it made the card see-through when a swipe began.
+      // The short press delay keeps the ripple from flashing at the start of a swipe.
+      unstable_pressDelay={120}
+      android_ripple={{ color: colors.tint + '1A' }}
+      delayLongPress={350}
+      onLongPress={() => handleCopy(item)}
       style={[
         styles.notificationCard,
         {
@@ -207,7 +254,11 @@ export default function NotificationsScreen() {
             ]}
             numberOfLines={2}
           >
-            {item.title}
+            {highlightTerm ? (
+              <LinkifiedText highlight={highlightTerm}>{item.title}</LinkifiedText>
+            ) : (
+              item.title
+            )}
           </Text>
           {!item.isRead && (
             <View style={[styles.unreadDot, { backgroundColor: colors.tint }]} />
@@ -215,7 +266,7 @@ export default function NotificationsScreen() {
         </View>
         <View style={styles.notificationMeta}>
           <Text style={[styles.notificationDate, { color: colors.secondaryFont }]}>
-            {formatDate(item.date)}
+            {formatRelativeDay(item.date)}
           </Text>
           {item.importance && (
             <View
@@ -238,17 +289,19 @@ export default function NotificationsScreen() {
       </View>
       
       <View style={styles.notificationContent}>
-        <Text
+        <LinkifiedText
           style={[styles.notificationBody, { color: colors.secondaryFont }]}
           numberOfLines={3}
+          highlight={highlightTerm}
         >
           {item.body}
-        </Text>
+        </LinkifiedText>
         <Text style={[styles.notificationStaff, { color: colors.secondaryFont }]}>
           From: {item.staff}
         </Text>
       </View>
-    </TouchableOpacity>
+    </Pressable>
+    </SwipeableNotificationRow>
   );
 
 
@@ -313,8 +366,43 @@ export default function NotificationsScreen() {
         </View>
       )}
 
+      {notifications.length > 0 && (
+        <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Ionicons name="search" size={18} color={colors.textTertiary} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.textPrimary }]}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search notifications"
+            placeholderTextColor={colors.textTertiary}
+            returnKeyType="search"
+            autoCorrect={false}
+            autoCapitalize="none"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={10} accessibilityLabel="Clear search">
+              <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {notifications.length > 0 && !searchQuery.trim() && (
+        <Text style={[styles.resultCount, { color: colors.textTertiary }]}>
+          Swipe to mark read/unread · Long-press to copy
+        </Text>
+      )}
+
+      {searchQuery.trim().length > 0 && (
+        <Text style={[styles.resultCount, { color: colors.textSecondary }]}>
+          {filteredNotifications.length} result{filteredNotifications.length !== 1 ? 's' : ''}
+        </Text>
+      )}
+
       <FlatList
-        data={notifications}
+        data={filteredNotifications}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         renderItem={renderNotification}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
@@ -328,6 +416,15 @@ export default function NotificationsScreen() {
           />
         }
         ListEmptyComponent={
+          searchQuery.trim() ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="search-outline" size={56} color={colors.secondaryFont} />
+              <Text style={[styles.emptyText, { color: colors.secondaryFont }]}>No matches</Text>
+              <Text style={[styles.emptySubtext, { color: colors.secondaryFont }]}>
+                Nothing matches &quot;{searchQuery.trim()}&quot;
+              </Text>
+            </View>
+          ) : (
           <View style={styles.emptyContainer}>
             <Ionicons name="notifications-outline" size={64} color={colors.secondaryFont} />
             <Text style={[styles.emptyText, { color: colors.secondaryFont }]}>
@@ -337,76 +434,81 @@ export default function NotificationsScreen() {
               You&apos;ll see important updates here
             </Text>
           </View>
+          )
         }
       />
 
-      {/* Notification Detail Modal */}
-      <Modal
-        animationType="none"
-        transparent={true}
+      {/* Notification Detail Sheet */}
+      <BottomSheet
         visible={modalVisible}
         onRequestClose={closeModal}
-      >
-        <Animated.View style={[styles.modalOverlay, { opacity }]}> 
-          <Animated.View 
-            style={[
-              styles.modalContainer, 
-              { 
-                backgroundColor: colors.cardBackground,
-                transform: [{ translateY }]
-              }
-            ]}
-          >
-            {/* Modal Header */}
-            <View 
-              style={[styles.modalHeader, { borderBottomColor: colors.border }]}
-              {...dragHandlePanResponder.panHandlers}
-            >
-              {/* Drag Handle */}
-              <View style={[styles.dragHandle, { backgroundColor: colors.border }]} />
-              
+        onDismissed={() => setSelectedNotification(null)}
+        header={
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <View style={styles.headerContent}>
-                <Text style={[styles.modalTitle, { color: colors.mainFont }]}>
+                <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
                   Notification Details
                 </Text>
                 <View style={styles.modalHeaderActions}>
-                  <TouchableOpacity
-                    style={styles.closeButton}
-                    onPress={closeModal}
-                  >
-                  </TouchableOpacity>
+                  {selectedNotification && (
+                    <TouchableOpacity
+                      style={[styles.headerIconButton, { backgroundColor: colors.surfaceAlt }]}
+                      onPress={() => handleCopy(selectedNotification)}
+                      accessibilityLabel="Copy notification"
+                      hitSlop={6}
+                    >
+                      <Ionicons name="copy-outline" size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  )}
+                  {selectedNotification && (
+                    <TouchableOpacity
+                      style={[styles.headerIconButton, { backgroundColor: colors.surfaceAlt }]}
+                      onPress={() => {
+                        markAsUnread(selectedNotification.id);
+                        closeModal();
+                        showToast('Marked as unread');
+                      }}
+                      accessibilityLabel="Mark as unread"
+                      hitSlop={6}
+                    >
+                      <Ionicons name="mail-unread-outline" size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
-            </View>
-
-            {/* Modal Content */}
-            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+          </View>
+        }
+      >
+            <View style={styles.modalContent}>
               {selectedNotification && (
                 <>
                   {/* Title */}
-                  <Text 
-                    style={[styles.modalNotificationTitle, { color: colors.mainFont }]}
+                  <LinkifiedText
+                    style={[styles.modalNotificationTitle, { color: colors.textPrimary }]}
                     selectable={true}
                   >
                     {selectedNotification.title}
-                  </Text>
+                  </LinkifiedText>
 
                   {/* Meta Information */}
                   <View style={styles.modalMetaContainer}>
                     <View style={styles.modalMetaRow}>
-                      <Ionicons name="calendar-outline" size={16} color={colors.secondaryFont} />
-                        <Text 
-                          style={[styles.modalMetaText, { color: colors.secondaryFont, opacity: 1 }]}
+                      <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
+                        <Text
+                          style={[styles.modalMetaText, { color: colors.textSecondary }]}
                           selectable={true}
                         >
                           {formatDate(selectedNotification.date)}
+                          {/^(Today|Yesterday|Last week|\d+ days ago)$/.test(formatRelativeDay(selectedNotification.date))
+                            ? `  ·  ${formatRelativeDay(selectedNotification.date)}`
+                            : ''}
                         </Text>
                     </View>
                     
                     <View style={styles.modalMetaRow}>
-                      <Ionicons name="person-outline" size={16} color={colors.secondaryFont} />
-                        <Text 
-                          style={[styles.modalMetaText, { color: colors.secondaryFont, opacity: 1 }]}
+                      <Ionicons name="person-outline" size={16} color={colors.textSecondary} />
+                        <Text
+                          style={[styles.modalMetaText, { color: colors.textSecondary }]}
                           selectable={true}
                         >
                           {selectedNotification.staff}
@@ -415,7 +517,7 @@ export default function NotificationsScreen() {
 
                     {selectedNotification.importance && (
                       <View style={styles.modalMetaRow}>
-                        <Ionicons name="flag-outline" size={16} color={colors.secondaryFont} />
+                        <Ionicons name="flag-outline" size={16} color={colors.textSecondary} />
                         <View
                           style={[
                             styles.modalImportanceBadge,
@@ -438,19 +540,17 @@ export default function NotificationsScreen() {
 
                   {/* Body Content */}
                   <View style={[styles.modalBodyContainer, { borderTopColor: colors.border }]}>
-                      <Text 
-                        style={[styles.modalBodyText, { color: colors.secondaryFont, opacity: 1 }]}
+                      <LinkifiedText
+                        style={[styles.modalBodyText, { color: colors.textPrimary }]}
                         selectable={true}
                       >
                         {selectedNotification.body}
-                      </Text>
+                      </LinkifiedText>
                   </View>
                 </>
               )}
-            </ScrollView>
-          </Animated.View>
-        </Animated.View>
-      </Modal>
+            </View>
+      </BottomSheet>
     </View>
   );
 }
@@ -491,14 +591,62 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: 11,
+  },
+  resultCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginHorizontal: 20,
+    marginBottom: 8,
+  },
   listContainer: {
     paddingHorizontal: 16,
     paddingBottom: 20,
   },
+  swipeContainer: {
+    marginBottom: 12,
+    borderRadius: 16,
+  },
+  swipeAction: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 16,
+    paddingHorizontal: 24,
+  },
+  swipeActionInner: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  swipeActionText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  headerIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
   notificationCard: {
     padding: 16,
     borderRadius: 16,
-    marginBottom: 12,
+    overflow: 'hidden',
     borderWidth: 1,
     elevation: 2,
     shadowColor: '#000',
@@ -605,33 +753,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     opacity: 0.7,
   },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContainer: {
-    height: '95%',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
+  // Detail sheet styles
   modalHeader: {
-    paddingTop: 12,
-    paddingBottom: 16,
+    paddingTop: 4,
+    paddingBottom: 14,
     borderBottomWidth: 1,
-  },
-  dragHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
   },
   headerContent: {
     flexDirection: 'row',
@@ -652,7 +778,6 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   modalContent: {
-    flex: 1,
     paddingHorizontal: 20,
   },
   modalNotificationTitle: {
@@ -695,9 +820,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   modalBodyText: {
-    fontSize: 14,
-    lineHeight: 20,
-    bottom: 10,
+    fontSize: 15,
+    lineHeight: 23,
+    paddingBottom: 32,
   },
 });
 

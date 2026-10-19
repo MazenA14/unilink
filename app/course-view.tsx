@@ -3,7 +3,7 @@ import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { Radius, Shadow, Spacing, Type, withAlpha } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { getCmsCourseView, previewCmsContent, saveCmsContent } from '@/utils/handlers/cmsHandler';
+import { getCmsCourseView, markCmsContentSeen, previewCmsContent, saveCmsContent } from '@/utils/handlers/cmsHandler';
 import type { CMSCourseView } from '@/utils/parsers/cmsCourseViewParser';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
@@ -54,18 +54,38 @@ export default function CMSCourseViewScreen() {
     load();
   }, [load]);
 
+  // Opening an item on CMS marks it seen there; mirror that locally right away.
+  const markSeen = useCallback((contentId?: string) => {
+    if (!contentId || !id || !sid) return;
+    setCourseData(prev => {
+      if (!prev) return prev;
+      let changed = false;
+      const weeks = prev.weeks.map(week => ({
+        ...week,
+        contents: week.contents.map(item => {
+          if (item.contentId !== contentId || !item.unseen) return item;
+          changed = true;
+          return { ...item, unseen: false, seen: true };
+        }),
+      }));
+      return changed ? { ...prev, weeks } : prev;
+    });
+    markCmsContentSeen(String(id), String(sid), contentId).catch(() => {});
+  }, [id, sid]);
+
   const handlePreview = useCallback(async (key: string, url: string, title?: string) => {
     if (busyItem) return;
     try {
       setError(null);
       setBusyItem(`${key}:preview`);
       await previewCmsContent(url, title);
+      markSeen(key);
     } catch (e: any) {
       setError(e?.message || 'Failed to preview file');
     } finally {
       setBusyItem(null);
     }
-  }, [busyItem]);
+  }, [busyItem, markSeen]);
 
   const handleSave = useCallback(async (key: string, url: string, title?: string) => {
     if (busyItem) return;
@@ -73,6 +93,7 @@ export default function CMSCourseViewScreen() {
       setError(null);
       setBusyItem(`${key}:download`);
       const saved = await saveCmsContent(url, title);
+      markSeen(key);
       if (Platform.OS === 'android') {
         ToastAndroid.show(`Saved "${saved.fileName}" to Downloads`, ToastAndroid.LONG);
       }
@@ -81,7 +102,7 @@ export default function CMSCourseViewScreen() {
     } finally {
       setBusyItem(null);
     }
-  }, [busyItem]);
+  }, [busyItem, markSeen]);
 
   const handleWatchVideo = useCallback(async (url: string) => {
     try {
@@ -271,6 +292,11 @@ export default function CMSCourseViewScreen() {
     });
   }, []);
 
+  const totalUnseen = useMemo(
+    () => courseData?.weeks.reduce((sum, w) => sum + w.contents.filter(c => c.unseen).length, 0) ?? 0,
+    [courseData]
+  );
+
   const courseTitle = (() => {
     const courseName = courseData?.header.courseName || 'Course';
     const courseCodeMatch = courseName.match(/\(([^)]+)\)/);
@@ -299,12 +325,18 @@ export default function CMSCourseViewScreen() {
         variant="back"
       />
 
-      {(courseData?.header.totalWeeks || !!error) && (
+      {(courseData?.header.totalWeeks || totalUnseen > 0 || !!error) && (
         <View style={styles.metaRow}>
           {!!courseData?.header.totalWeeks && (
             <View style={[styles.metaPill, { backgroundColor: withAlpha(colors.cms, 0.12) }]}>
               <Ionicons name="calendar-outline" size={13} color={colors.cms} />
               <Text style={[styles.metaPillText, { color: colors.cms }]}>{courseData.header.totalWeeks} weeks</Text>
+            </View>
+          )}
+          {totalUnseen > 0 && (
+            <View style={[styles.metaPill, { backgroundColor: colors.dangerSoft }]}>
+              <View style={[styles.unseenDot, { backgroundColor: colors.danger }]} />
+              <Text style={[styles.metaPillText, { color: colors.danger }]}>{totalUnseen} new</Text>
             </View>
           )}
           {!!courseData?.header.contentCount && (
@@ -401,6 +433,7 @@ export default function CMSCourseViewScreen() {
               const hasContent = week.contents && week.contents.length > 0;
               const hasAnnouncement = week.announcement && week.announcement.trim() !== '';
               const hasDescription = week.description && week.description.trim() !== '';
+              const weekUnseen = week.contents.filter(c => c.unseen).length;
 
               return (
                 <View
@@ -420,9 +453,15 @@ export default function CMSCourseViewScreen() {
                       {hasContent && (
                         <Text style={[styles.weekContentCount, { color: colors.textSecondary }]}>
                           {week.contents!.length} item{week.contents!.length !== 1 ? 's' : ''}
+                          {weekUnseen > 0 && (
+                            <Text style={{ color: colors.danger, fontWeight: '700' }}>{`  ·  ${weekUnseen} new`}</Text>
+                          )}
                         </Text>
                       )}
                     </View>
+                    {weekUnseen > 0 && (
+                      <View style={[styles.unseenDot, { backgroundColor: colors.danger }]} />
+                    )}
                     <View style={[styles.chevronChip, { backgroundColor: colors.surfaceAlt }]}>
                       <Ionicons
                         name={isExpanded ? 'chevron-up' : 'chevron-down'}
@@ -453,12 +492,18 @@ export default function CMSCourseViewScreen() {
                           {week.contents!.map((content, contentIndex) => (
                             <View
                               key={contentIndex}
-                              style={[styles.contentItem, { backgroundColor: colors.surfaceAlt, borderColor: colors.divider }]}
+                              style={[
+                                styles.contentItem,
+                                { backgroundColor: colors.surfaceAlt, borderColor: content.unseen ? withAlpha(colors.danger, 0.35) : colors.divider },
+                              ]}
                             >
                               <View style={styles.contentItemHeader}>
                                 <Text style={[Type.bodyStrong, { color: colors.textPrimary, flex: 1 }]}>{content.title}</Text>
-                                {content.seen && (
-                                  <Ionicons name="eye" size={15} color={colors.textTertiary} style={styles.seenIcon} />
+                                {content.unseen && (
+                                  <View style={[styles.newBadge, { backgroundColor: colors.dangerSoft }]} accessibilityLabel="Not opened yet">
+                                    <View style={[styles.unseenDot, { backgroundColor: colors.danger }]} />
+                                    <Text style={[styles.newBadgeText, { color: colors.danger }]}>New</Text>
+                                  </View>
                                 )}
                               </View>
                               {content.type && (
@@ -596,7 +641,9 @@ const styles = StyleSheet.create({
   contentsContainer: { gap: Spacing.sm },
   contentItem: { padding: Spacing.md, borderRadius: Radius.lg, borderWidth: 1 },
   contentItemHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.xs },
-  seenIcon: { marginLeft: Spacing.sm },
+  unseenDot: { width: 7, height: 7, borderRadius: 4 },
+  newBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: Spacing.sm, paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: Radius.pill },
+  newBadgeText: { fontSize: 11, fontWeight: '800' },
   typeBadge: { alignSelf: 'flex-start', paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: Radius.pill, marginBottom: Spacing.xs },
   typeBadgeText: { fontSize: 11, fontWeight: '700' },
   contentDescription: { fontSize: 12, marginBottom: Spacing.sm, lineHeight: 17 },

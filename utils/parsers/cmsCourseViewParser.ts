@@ -13,6 +13,8 @@ export interface CMSCourseViewContentItem {
   downloadUrl?: string;
   watchUrl?: string;
   seen?: boolean;
+  /** CMS marks never-opened items with an eye-slash icon. */
+  unseen?: boolean;
 }
 
 export interface CMSCourseViewWeek {
@@ -169,7 +171,10 @@ export function parseCmsCourseView(html: string): CMSCourseView {
 
       // content cards inside the week
       const contents: CMSCourseViewContentItem[] = [];
-      const contentCards = block.match(/<div[^>]*class="card mb-4"[^>]*>[\s\S]*?<\/div>\s*<\/div>/gi) || [];
+      // Slice each card from its opening tag to the next card's opening tag so
+      // nested markup (e.g. the seen / eye-slash icons) stays inside the slice.
+      const cardStarts = Array.from(block.matchAll(/<div[^>]*class="card mb-4"[^>]*>/gi), m => m.index ?? 0);
+      const contentCards = cardStarts.map((start, i) => block.slice(start, cardStarts[i + 1] ?? block.length));
       
       for (const card of contentCards) {
         // Title like: <div id="content217866"><strong>1 - Final Exam Sample 2023</strong> (Exam)</div>
@@ -209,9 +214,18 @@ export function parseCmsCourseView(html: string): CMSCourseView {
                           card.match(/<input[^>]*class="btn btn-primary vodbutton contentbtn"[^>]*data-url=['"]([^'"]+)['"][^>]*>/i);
         const watchUrl = watchMatch ? watchMatch[1] : undefined;
 
-        // check if content has been seen (eye icon visible)
-        const seenMatch = card.match(/<i[^>]*class="fa fa-eye"[^>]*style=['"][^'"]*font-size: large[^'"]*['"][^>]*>/i);
-        const seen = !!seenMatch;
+        // Seen state. Every card renders BOTH an eye and an eye-slash icon and hides
+        // one with display:none, so only a visible icon counts. The download
+        // link's data-seen="yes|no" is the most direct signal; icons are the fallback.
+        const dataSeen = card.match(/\bdata-seen=['"](yes|no)['"]/i)?.[1]?.toLowerCase();
+        const isVisibleIcon = (iconClass: RegExp) =>
+          (card.match(/<i\b[^>]*>/gi) || []).some(tag => {
+            const cls = tag.match(/class=['"]([^'"]*)['"]/i)?.[1] ?? '';
+            const style = tag.match(/style=['"]([^'"]*)['"]/i)?.[1] ?? '';
+            return iconClass.test(cls) && !/display\s*:\s*none/i.test(style);
+          });
+        const unseen = dataSeen ? dataSeen === 'no' : isVisibleIcon(/(^|\s)fa-eye-slash(\s|$)/);
+        const seen = dataSeen ? dataSeen === 'yes' : isVisibleIcon(/(^|\s)fa-eye(\s|$)/);
 
         // Only add content if we have at least a title
         if (title) {
@@ -223,6 +237,7 @@ export function parseCmsCourseView(html: string): CMSCourseView {
             downloadUrl,
             watchUrl,
             seen,
+            unseen,
           });
         }
       }

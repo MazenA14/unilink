@@ -1,4 +1,5 @@
 import { useCustomAlert } from '@/components/CustomAlert';
+import EditNicknameModal from '@/components/EditNicknameModal';
 import { AppBar } from '@/components/navigation/AppBar';
 import FeedbackModal from '@/components/FeedbackModal';
  
@@ -23,7 +24,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { getAppIcon, setAppIcon } from 'expo-dynamic-app-icon';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 
 const APP_ICON_OPTIONS: { value: string; label: string; source: number }[] = [
   { value: 'DEFAULT', label: 'Default', source: require('@/assets/images/app-icons/icon-original.png') },
@@ -42,7 +43,6 @@ export default function SettingsScreen() {
   const { defaultScreen, setDefaultScreen } = useDefaultScreen();
   const [displayName, setDisplayName] = useState<string>('');
   const [editVisible, setEditVisible] = useState(false);
-  const [editValue, setEditValue] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
   const [payments, setPayments] = useState<PaymentItem[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
@@ -227,24 +227,7 @@ export default function SettingsScreen() {
   };
 
   const openEditNickname = () => {
-    setEditValue(displayName);
     setEditVisible(true);
-  };
-
-  const saveNickname = async () => {
-    const trimmed = editValue.trim();
-    if (!trimmed) {
-      showAlert({
-        title: 'Invalid Nickname',
-        message: 'Nickname cannot be empty.',
-        type: 'error',
-        buttons: [{ text: 'OK', style: 'cancel' }],
-      });
-      return;
-    }
-    await AuthManager.storeNickname(trimmed);
-    setDisplayName(trimmed);
-    setEditVisible(false);
   };
 
   const logout = async () => {
@@ -645,44 +628,12 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      <Modal
+      <EditNicknameModal
         visible={editVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setEditVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
-            <Text style={[styles.modalTitle, { color: colors.mainFont }]}>Edit Nickname</Text>
-            <TextInput
-              style={[styles.textInput, { 
-                backgroundColor: colors.background, 
-                color: colors.mainFont,
-                borderColor: colors.border 
-              }]}
-              value={editValue}
-              onChangeText={setEditValue}
-              placeholder="Enter nickname"
-              placeholderTextColor={colors.secondaryFont}
-              autoFocus
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.border }]}
-                onPress={() => setEditVisible(false)}
-              >
-                <Text style={[styles.modalButtonText, { color: colors.mainFont }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.tabColor }]}
-                onPress={saveNickname}
-              >
-                <Text style={[styles.modalButtonText, { color: colors.background }]}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        initialValue={displayName}
+        onClose={() => setEditVisible(false)}
+        onSaved={setDisplayName}
+      />
 
       {/* Default Screen Selection Dropdown */}
       <Modal
@@ -975,28 +926,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginBottom: 16,
     letterSpacing: -0.3,
-  },
-  textInput: {
-    borderWidth: 1,
-    borderRadius: Radius.md,
-    padding: 14,
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  modalButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginHorizontal: 4,
-  },
-  modalButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
   },
   pillContainer: {
     marginTop: 12,

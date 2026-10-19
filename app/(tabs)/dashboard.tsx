@@ -1,3 +1,4 @@
+import EditNicknameModal from '@/components/EditNicknameModal';
 import { AppBar } from '@/components/navigation/AppBar';
 import { MultipleLecturesModal } from '@/components/schedule/MultipleLecturesModal';
 import UpdateModal from '@/components/UpdateModal';
@@ -14,6 +15,7 @@ import { useWhatsNew } from '@/hooks/useWhatsNew';
 import { AuthManager } from '@/utils/auth';
 import { isCurrentTimeSlot } from '@/utils/currentSlotUtils';
 import { GradeCache } from '@/utils/gradeCache';
+import { CmsUnseenSummary, fetchCmsUnseenSummary, getCachedCmsUnseenSummary } from '@/utils/handlers/cmsHandler';
 import { GUCAPIProxy } from '@/utils/gucApiProxy';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
@@ -27,14 +29,19 @@ import {
     View,
 } from 'react-native';
 
+const sumUnseen = (summary: CmsUnseenSummary) =>
+  Object.values(summary).reduce((total, course) => total + course.unseen, 0);
+
 export default function DashboardScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [nickname, setNickname] = useState<string>('Student');
   const [username, setUsername] = useState<string>('');
+  const [nicknameModalVisible, setNicknameModalVisible] = useState(false);
   const { scheduleData, loading: scheduleLoading, refetch: refetchSchedule } = useSchedule();
   const { isShiftedScheduleEnabled } = useShiftedSchedule();
-  const { unreadCount, refreshNotifications } = useNotifications();
+  const { refreshNotifications } = useNotifications();
+  const [cmsUnseen, setCmsUnseen] = useState<number | null>(null);
   const refreshRotation = useRef(new Animated.Value(0)).current;
   
   // Multiple lectures modal state
@@ -370,6 +377,10 @@ export default function DashboardScreen() {
     checkForUpdates();
     // Check if we should show What's New modal
     checkWhatsNew();
+    // Refresh unseen CMS content count for the overview tile
+    fetchCmsUnseenSummary()
+      .then((summary) => { if (summary) setCmsUnseen(sumUnseen(summary)); })
+      .catch(() => {});
   }, [loadNickname, refreshNotifications, checkForUpdates, checkWhatsNew]);
 
   // Update current time every minute for slot indicator
@@ -392,6 +403,8 @@ export default function DashboardScreen() {
   useFocusEffect(
     useCallback(() => {
       loadNickname();
+      // Reflect items opened inside CMS since the last fetch
+      getCachedCmsUnseenSummary().then((cached) => { if (cached) setCmsUnseen(sumUnseen(cached)); });
       const newTime = new Date();
       setCurrentTime(newTime); // Update current time for slot indicator
       
@@ -480,7 +493,16 @@ export default function DashboardScreen() {
       <ScrollView style={styles.content} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 36 }} showsVerticalScrollIndicator={false}>
         {/* Greeting */}
         <Text style={[styles.greeting, { color: colors.textSecondary }]}>
-          Welcome back, <Text style={{ color: colors.textPrimary, fontWeight: '800' }}>{nickname}</Text>
+          Welcome back,{' '}
+          <Text
+            style={{ color: colors.textPrimary, fontWeight: '800' }}
+            onPress={() => setNicknameModalVisible(true)}
+            suppressHighlighting
+            accessibilityRole="button"
+            accessibilityHint="Edit your nickname"
+          >
+            {nickname}
+          </Text>
         </Text>
 
         {/* Next / current class hero */}
@@ -547,29 +569,33 @@ export default function DashboardScreen() {
           <View style={styles.gridContainer}>
             <TouchableOpacity
               activeOpacity={0.85}
-              style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, borderLeftColor: colors.warning }, Shadow.card(colors)]}
-              onPress={() => router.push('/notifications')}
+              style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}
+              onPress={() => router.push('/cms/home')}
             >
               <View style={styles.statTop}>
-                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.warning, 0.16) }]}>
-                  <Ionicons name="notifications" size={18} color={colors.warning} />
+                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.primary, 0.12) }]}>
+                  <Ionicons name="document-attach" size={18} color={colors.primary} />
                 </View>
-                <Text style={[styles.statValue, { color: unreadCount > 0 ? colors.warning : colors.textPrimary }]}>{unreadCount}</Text>
+                {cmsUnseen !== null ? (
+                  <Text style={[styles.statValue, { color: cmsUnseen > 0 ? colors.primary : colors.textPrimary }]}>{cmsUnseen}</Text>
+                ) : (
+                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                )}
               </View>
-              <Text style={[styles.statLabel, { color: colors.textPrimary }]}>Notifications</Text>
+              <Text style={[styles.statLabel, { color: colors.textPrimary }]}>CMS</Text>
               <Text style={[styles.statCaption, { color: colors.textSecondary }]}>
-                {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+                {cmsUnseen === null ? 'Course content' : cmsUnseen > 0 ? `${cmsUnseen} unseen item${cmsUnseen !== 1 ? 's' : ''}` : 'All caught up'}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               activeOpacity={0.85}
-              style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, borderLeftColor: colors.success }, Shadow.card(colors)]}
+              style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}
               onPress={() => router.push('/attendance')}
             >
               <View style={styles.statTop}>
-                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.success, 0.16) }]}>
-                  <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.primary, 0.12) }]}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
               </View>
@@ -579,12 +605,12 @@ export default function DashboardScreen() {
 
             <TouchableOpacity
               activeOpacity={0.85}
-              style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, borderLeftColor: colors.secondary }, Shadow.card(colors)]}
+              style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}
               onPress={() => router.replace('/(tabs)/grades')}
             >
               <View style={styles.statTop}>
-                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.secondary, 0.16) }]}>
-                  <Ionicons name="school" size={18} color={colors.secondary} />
+                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.primary, 0.12) }]}>
+                  <Ionicons name="school" size={18} color={colors.primary} />
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
               </View>
@@ -594,17 +620,17 @@ export default function DashboardScreen() {
 
             <TouchableOpacity
               activeOpacity={0.85}
-              style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, borderLeftColor: colors.info }, Shadow.card(colors)]}
-              onPress={() => router.replace('/(tabs)/transcript')}
+              style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.card(colors)]}
+              onPress={() => router.replace('/(tabs)/schedule')}
             >
               <View style={styles.statTop}>
-                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.info, 0.16) }]}>
-                  <Ionicons name="document-text" size={18} color={colors.info} />
+                <View style={[styles.statIconChip, { backgroundColor: withAlpha(colors.primary, 0.12) }]}>
+                  <Ionicons name="calendar" size={18} color={colors.primary} />
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
               </View>
-              <Text style={[styles.statLabel, { color: colors.textPrimary }]}>Transcript</Text>
-              <Text style={[styles.statCaption, { color: colors.textSecondary }]}>GPA & history</Text>
+              <Text style={[styles.statLabel, { color: colors.textPrimary }]}>Schedule</Text>
+              <Text style={[styles.statCaption, { color: colors.textSecondary }]}>Full week view</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -699,9 +725,6 @@ export default function DashboardScreen() {
                       borderTopLeftRadius: Radius.lg - 1,
                       borderBottomLeftRadius: Radius.lg - 1,
                     }]}>
-                      {isCurrentSlot && (
-                        <View style={[styles.nowDot, { backgroundColor: colors.tint }]} />
-                      )}
                       <Text style={[styles.periodLabelText, {
                         color: isCurrentSlot ? colors.tint : ScheduleTypeColors.personal,
                         fontWeight: isCurrentSlot ? '800' : '700'
@@ -813,6 +836,13 @@ export default function DashboardScreen() {
         </View>
 
       </ScrollView>
+
+      <EditNicknameModal
+        visible={nicknameModalVisible}
+        initialValue={nickname}
+        onClose={() => setNicknameModalVisible(false)}
+        onSaved={setNickname}
+      />
 
       {/* Multiple Lectures Modal */}
       <MultipleLecturesModal
@@ -961,7 +991,6 @@ const styles = StyleSheet.create({
     width: '48%',
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderLeftWidth: 3,
     padding: 16,
   },
   statTop: {
@@ -1121,12 +1150,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRightWidth: 1,
-  },
-  nowDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginBottom: 4,
   },
   periodLabelText: {
     fontSize: 12,

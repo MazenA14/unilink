@@ -7,13 +7,14 @@ import { APP_VERSION } from './Version';
 export const WHATS_NEW_CONFIG = {
   version: APP_VERSION,
   features: [
-    "Ui/UX Improvements",
-    "Preview/Download for CMS",
-    "Evaluate Courses & Staff",
-    "Faster Loading",
-    "Transcript Fix",
-    "Notifications Fix",
-    "App Icon Fix",
+    "Unseen CMS Content Indicators",
+    "Notifications Search",
+    "Swipe to Mark Read/Unread",
+    "Clickable Links in Notifications",
+    "Smoother Notification Sheet",
+    "Long-Press to Copy Notifications",
+    "Redesigned Dashboard & Sidebar",
+    "Tap Your Name to Edit Nickname",
     "Bug Fixes"
   ]
 };

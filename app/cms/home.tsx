@@ -3,10 +3,10 @@ import { AppRefreshControl } from '@/components/ui/AppRefreshControl';
 import { Colors } from '@/constants/Colors';
 import { Radius, Shadow, Spacing, Type, withAlpha } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { getCmsCourses, getCmsCourseView } from '@/utils/handlers/cmsHandler';
+import { CmsUnseenSummary, fetchCmsUnseenSummary, getCachedCmsUnseenSummary, getCmsCourses, getCmsCourseView } from '@/utils/handlers/cmsHandler';
 import type { CMSCourseRow } from '@/utils/parsers/cmsCoursesParser';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,13 +20,18 @@ export default function CMSHomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedSeasons, setExpandedSeasons] = useState<Set<string>>(new Set());
+  const [unseen, setUnseen] = useState<CmsUnseenSummary | null>(null);
 
   const load = useCallback(async (bypassCache: boolean = false) => {
     try {
       setError(null);
       if (bypassCache) setRefreshing(true); else setLoading(true);
-      const data = await getCmsCourses(!bypassCache ? false : true);
+      const [data, unseenSummary] = await Promise.all([
+        getCmsCourses(!bypassCache ? false : true),
+        fetchCmsUnseenSummary().catch(() => null),
+      ]);
       setCourses(data);
+      if (unseenSummary) setUnseen(unseenSummary);
     } catch (e: any) {
       setError(e?.message || 'Failed to load courses');
     } finally {
@@ -38,6 +43,15 @@ export default function CMSHomeScreen() {
   useEffect(() => {
     load(false);
   }, [load]);
+
+  // Pick up items marked seen inside a course when returning to this screen
+  useFocusEffect(
+    useCallback(() => {
+      getCachedCmsUnseenSummary().then((cached) => {
+        if (cached) setUnseen(cached);
+      });
+    }, [])
+  );
 
   const groupedCourses = useMemo(() => {
     if (!courses) return [];
@@ -57,18 +71,31 @@ export default function CMSHomeScreen() {
       return bNum - aNum;
     });
 
+    // Unseen counts only describe the current offering, so attach them to the
+    // newest season a course appears in.
+    const claimedCourseIds = new Set<string>();
+    const unseenFor = (course: CMSCourseRow) => {
+      if (!unseen || claimedCourseIds.has(course.courseId)) return 0;
+      const entry = unseen[course.courseId];
+      if (!entry) return 0;
+      claimedCourseIds.add(course.courseId);
+      return entry.unseen;
+    };
+
     const result = sortedSeasons.map(seasonId => {
       const firstCourse = groups[seasonId][0];
       const seasonTitle = firstCourse?.seasonTitle || `Season ${seasonId}`;
+      const seasonCourses = groups[seasonId].map(course => ({ ...course, unseenCount: unseenFor(course) }));
       return {
         seasonId,
         seasonName: `${seasonTitle} - ${seasonId}`,
-        courses: groups[seasonId]
+        courses: seasonCourses,
+        unseenTotal: seasonCourses.reduce((sum, c) => sum + c.unseenCount, 0),
       };
     });
 
     return result;
-  }, [courses]);
+  }, [courses, unseen]);
 
   // Auto-expand the newest season when courses are first loaded
   useEffect(() => {
@@ -160,10 +187,20 @@ export default function CMSHomeScreen() {
                 </View>
                 <View style={styles.seasonHeaderContent}>
                   <Text style={[Type.h3, { color: colors.textPrimary }]} numberOfLines={1}>{seasonGroup.seasonName}</Text>
-                  <View style={[styles.countPill, { backgroundColor: withAlpha(colors.cms, 0.12) }]}>
-                    <Text style={[styles.countPillText, { color: colors.cms }]}>
-                      {seasonGroup.courses.length} course{seasonGroup.courses.length !== 1 ? 's' : ''}
-                    </Text>
+                  <View style={styles.pillRow}>
+                    <View style={[styles.countPill, { backgroundColor: withAlpha(colors.cms, 0.12) }]}>
+                      <Text style={[styles.countPillText, { color: colors.cms }]}>
+                        {seasonGroup.courses.length} course{seasonGroup.courses.length !== 1 ? 's' : ''}
+                      </Text>
+                    </View>
+                    {seasonGroup.unseenTotal > 0 && (
+                      <View style={[styles.countPill, styles.unseenPill, { backgroundColor: colors.dangerSoft }]}>
+                        <View style={[styles.unseenDot, { backgroundColor: colors.danger }]} />
+                        <Text style={[styles.countPillText, { color: colors.danger }]}>
+                          {seasonGroup.unseenTotal} new
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </View>
                 <View style={[styles.chevronChip, { backgroundColor: colors.surfaceAlt }]}>
@@ -186,10 +223,21 @@ export default function CMSHomeScreen() {
                     const isCancelled = course.status.toLowerCase() === 'canceled' || course.status.toLowerCase() === 'cancelled';
 
                     return (
-                      <View
+                      <TouchableOpacity
                         key={`${course.courseId}-${course.seasonId}`}
-                        style={[styles.card, { backgroundColor: colors.surfaceAlt, borderColor: colors.divider }]}
+                        style={[
+                          styles.card,
+                          { backgroundColor: colors.surfaceAlt, borderColor: colors.divider },
+                          isCancelled && styles.cardCancelled,
+                        ]}
+                        onPress={() => onPressViewCourse(course)}
+                        disabled={isCancelled}
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: isCancelled }}
                       >
+                        <View style={styles.cardRow}>
+                        <View style={styles.cardBody}>
                         <View style={styles.cardTopRow}>
                           {!!courseCode && (
                             <View style={[styles.codePill, { backgroundColor: withAlpha(colors.cms, 0.12) }]}>
@@ -201,6 +249,14 @@ export default function CMSHomeScreen() {
                               <Text style={[styles.codePillText, { color: colors.danger }]}>Cancelled</Text>
                             </View>
                           )}
+                          {course.unseenCount > 0 && (
+                            <View
+                              style={[styles.unseenBadge, { backgroundColor: colors.danger }]}
+                              accessibilityLabel={`${course.unseenCount} unseen item${course.unseenCount !== 1 ? 's' : ''}`}
+                            >
+                              <Text style={styles.unseenBadgeText}>{course.unseenCount} new</Text>
+                            </View>
+                          )}
                         </View>
                         <Text style={[Type.bodyStrong, { color: colors.textPrimary, marginTop: Spacing.xs }]}>
                           {cleanCourseName}
@@ -208,22 +264,12 @@ export default function CMSHomeScreen() {
                         <Text style={[Type.caption, { color: colors.textSecondary, marginTop: 2, textTransform: 'none', letterSpacing: 0 }]}>
                           {course.season}
                         </Text>
-                        {isCancelled ? (
-                          <View style={[styles.button, styles.disabledButton, { backgroundColor: colors.surfaceSunken, borderColor: colors.divider }]}>
-                            <Ionicons name="ban-outline" size={15} color={colors.textTertiary} style={{ marginRight: 6 }} />
-                            <Text style={[styles.disabledButtonText, { color: colors.textTertiary }]}>Course Cancelled</Text>
-                          </View>
-                        ) : (
-                          <TouchableOpacity
-                            style={[styles.button, { backgroundColor: colors.cms }, Shadow.glow(colors.cms)]}
-                            onPress={() => onPressViewCourse(course)}
-                            activeOpacity={0.85}
-                          >
-                            <Text style={styles.buttonText}>View Course</Text>
-                            <Ionicons name="arrow-forward" size={15} color="#fff" style={{ marginLeft: 6 }} />
-                          </TouchableOpacity>
+                        </View>
+                        {!isCancelled && (
+                          <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
                         )}
-                      </View>
+                        </View>
+                      </TouchableOpacity>
                     );
                   })}
                 </View>
@@ -263,26 +309,22 @@ const styles = StyleSheet.create({
   seasonHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.lg },
   seasonIconChip: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
   seasonHeaderContent: { flex: 1, gap: Spacing.xs },
+  pillRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  unseenPill: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  unseenDot: { width: 6, height: 6, borderRadius: 3 },
+  unseenBadge: { marginLeft: 'auto', paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: Radius.pill, alignSelf: 'flex-start' },
+  unseenBadgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
   countPill: { alignSelf: 'flex-start', paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: Radius.pill, marginTop: 2 },
   countPillText: { fontSize: 11, fontWeight: '700' },
   chevronChip: { width: 30, height: 30, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   seasonContent: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.lg, gap: Spacing.sm },
   card: { padding: Spacing.md, borderRadius: Radius.lg, borderWidth: 1 },
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  cardBody: { flex: 1 },
+  cardCancelled: { opacity: 0.7 },
   cardTopRow: { flexDirection: 'row', gap: Spacing.xs },
   codePill: { paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: Radius.pill, alignSelf: 'flex-start' },
   codePillText: { fontSize: 11, fontWeight: '700' },
-  button: {
-    flexDirection: 'row',
-    alignSelf: 'flex-start',
-    alignItems: 'center',
-    marginTop: Spacing.md,
-    paddingVertical: 10,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: Radius.pill,
-  },
-  buttonText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  disabledButton: { borderWidth: 1 },
-  disabledButtonText: { fontWeight: '600', fontSize: 13 },
   emptyWrap: { alignItems: 'center', paddingTop: Spacing.huge, gap: Spacing.md },
   emptyIconChip: { width: 64, height: 64, borderRadius: Radius.xxl, alignItems: 'center', justifyContent: 'center' },
   loadingText: { marginTop: Spacing.sm, fontSize: 14, fontWeight: '500' },

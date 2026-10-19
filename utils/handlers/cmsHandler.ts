@@ -1,15 +1,20 @@
 import { makeGucRequest as makeProxyRequest } from '@/utils/gucRequest';
 import { gucDownloadFile, gucOpenFile, gucSaveToDownloads } from '@/utils/gucNativeClient';
 import { extractViewState } from '@/utils/extractors/gradeExtractor';
-import { CMSCourseRow, parseCmsCourses } from '@/utils/parsers/cmsCoursesParser';
+import { CMSCourseRow, CMSUnseenCount, parseCmsCourses, parseCmsUnseenSummary } from '@/utils/parsers/cmsCoursesParser';
 import { CMSCourseView, parseCmsCourseView } from '@/utils/parsers/cmsCourseViewParser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { cacheDirectory, documentDirectory, deleteAsync, getInfoAsync, moveAsync } from 'expo-file-system/legacy';
 
 const CMS_HOME_ENDPOINT = 'https://cms.guc.edu.eg/apps/student/ViewAllCourseStn';
+const CMS_STUDENT_HOME_ENDPOINT = 'https://cms.guc.edu.eg/apps/student/HomePageStn.aspx';
+const CMS_UNSEEN_CACHE_KEY = 'cms_unseen_summary_v1';
 const CMS_COURSES_CACHE_KEY = 'cms_courses_cache_v1';
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-const CMS_COURSE_VIEW_CACHE_PREFIX = 'cms_course_view_v1:';
+// v3: per-item `unseen` now reads the *visible* seen icon / data-seen; older
+// entries are missing it (v1) or have it wrong (v2) and must be refetched.
+const CMS_COURSE_VIEW_CACHE_PREFIX = 'cms_course_view_v3:';
+const LEGACY_COURSE_VIEW_CACHE_PREFIXES = ['cms_course_view_v1:', 'cms_course_view_v2:'];
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 interface CmsCoursesCacheEntry {
@@ -47,6 +52,71 @@ export async function getCmsCourses(bypassCache: boolean = false): Promise<CMSCo
   } catch {}
 
   return rows;
+}
+
+export type CmsUnseenSummary = Record<string, CMSUnseenCount>;
+
+/** Last known unseen counts (instant, offline-friendly). */
+export async function getCachedCmsUnseenSummary(): Promise<CmsUnseenSummary | null> {
+  try {
+    const cached = await AsyncStorage.getItem(CMS_UNSEEN_CACHE_KEY);
+    return cached ? (JSON.parse(cached) as CmsUnseenSummary) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetches per-course unseen content counts from the CMS student home page
+ * (falls back to the courses page if the grid isn't there) and caches them.
+ */
+export async function fetchCmsUnseenSummary(): Promise<CmsUnseenSummary | null> {
+  let summary: CmsUnseenSummary | null = null;
+  for (const url of [CMS_STUDENT_HOME_ENDPOINT, CMS_HOME_ENDPOINT]) {
+    try {
+      const res = await makeProxyRequest(url, 'GET');
+      summary = parseCmsUnseenSummary(res.html || res.body || '');
+      if (summary) break;
+    } catch {}
+  }
+  if (summary) {
+    try { await AsyncStorage.setItem(CMS_UNSEEN_CACHE_KEY, JSON.stringify(summary)); } catch {}
+  }
+  return summary;
+}
+
+/**
+ * Locally marks a content item as seen after the user opens it, so the unseen
+ * indicators update without waiting for the next CMS refresh.
+ */
+export async function markCmsContentSeen(courseId: string, seasonId: string, contentId: string): Promise<void> {
+  let wasUnseen = false;
+  try {
+    const cacheKey = `${CMS_COURSE_VIEW_CACHE_PREFIX}${courseId}:${seasonId}`;
+    const cached = await AsyncStorage.getItem(cacheKey);
+    if (cached) {
+      const entry: CmsCourseViewCacheEntry = JSON.parse(cached);
+      for (const week of entry.data.weeks) {
+        for (const item of week.contents) {
+          if (item.contentId === contentId && item.unseen) {
+            item.unseen = false;
+            item.seen = true;
+            wasUnseen = true;
+          }
+        }
+      }
+      if (wasUnseen) await AsyncStorage.setItem(cacheKey, JSON.stringify(entry));
+    }
+  } catch {}
+
+  if (!wasUnseen) return;
+  try {
+    const summary = await getCachedCmsUnseenSummary();
+    if (summary?.[courseId] && summary[courseId].unseen > 0) {
+      summary[courseId].unseen -= 1;
+      await AsyncStorage.setItem(CMS_UNSEEN_CACHE_KEY, JSON.stringify(summary));
+    }
+  } catch {}
 }
 
 export async function submitCmsViewCourse(buttonName: string): Promise<string> {
@@ -88,6 +158,8 @@ export async function getCmsCourseView(courseId: string, seasonId: string, bypas
       }
     } catch {}
   }
+
+  AsyncStorage.multiRemove(LEGACY_COURSE_VIEW_CACHE_PREFIXES.map(prefix => `${prefix}${courseId}:${seasonId}`)).catch(() => {});
 
   // Fetch fresh
   const url = `https://cms.guc.edu.eg/apps/student/CourseViewStn.aspx?id=${encodeURIComponent(courseId)}&sid=${encodeURIComponent(seasonId)}`;

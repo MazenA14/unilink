@@ -4,6 +4,7 @@ import { useNavigationUI } from '@/contexts/NavigationUIContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthManager } from '@/utils/auth';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router, usePathname } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -21,16 +22,18 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+type MciName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 interface NavEntry {
   key: string;
   label: string;
   icon: IoniconName;
+  /** Overrides `icon` for glyphs Ionicons lacks (e.g. a chair) */
+  mciIcon?: MciName;
   /** tab routes use replace; pushed routes use push; actions run onPress */
   route?: string;
   mode?: 'replace' | 'push';
   action?: 'quickAccess';
-  accent?: string;
 }
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -200,28 +203,20 @@ export function Sidebar() {
     }, 120);
   }, [closeSidebar]);
 
-  const primary: NavEntry[] = [
+  // Grades, Schedule and CMS are reached from the dashboard overview tiles.
+  const entries: NavEntry[] = [
     { key: 'dashboard', label: 'Dashboard', icon: 'grid-outline', route: '/(tabs)/dashboard', mode: 'replace' },
-    { key: 'grades', label: 'Grades', icon: 'school-outline', route: '/(tabs)/grades', mode: 'replace' },
-    { key: 'schedule', label: 'Schedule', icon: 'calendar-outline', route: '/(tabs)/schedule', mode: 'replace' },
     { key: 'transcript', label: 'Transcript', icon: 'document-text-outline', route: '/(tabs)/transcript', mode: 'replace' },
+    { key: 'instructors', label: 'Instructors', icon: 'people-outline', route: '/instructors', mode: 'push' },
+    { key: 'attendance', label: 'Attendance', icon: 'checkmark-circle-outline', route: '/attendance', mode: 'push' },
+    { key: 'exam-seats', label: 'Exam Seats', icon: 'reader-outline', mciIcon: 'chair-school', route: '/exam-seats', mode: 'push' },
+    { key: 'eval-course', label: 'Evaluate Courses', icon: 'star-outline', route: '/evaluation/course', mode: 'push' },
+    { key: 'eval-staff', label: 'Evaluate Staff', icon: 'ribbon-outline', route: '/evaluation/staff', mode: 'push' },
+    { key: 'dates', label: 'Important Dates', icon: 'calendar-number-outline', route: '/dates', mode: 'push' },
+    { key: 'quick', label: 'Quick Access', icon: 'folder-open-outline', action: 'quickAccess' },
   ];
 
-  const services: NavEntry[] = [
-    { key: 'instructors', label: 'Instructors', icon: 'people-outline', route: '/instructors', mode: 'push', accent: colors.secondary },
-    { key: 'cms', label: 'CMS', icon: 'document-attach-outline', route: '/cms/home', mode: 'push', accent: colors.info },
-    { key: 'attendance', label: 'Attendance', icon: 'checkmark-circle-outline', route: '/attendance', mode: 'push', accent: colors.success },
-    { key: 'exam-seats', label: 'Exam Seats', icon: 'grid-outline', route: '/exam-seats', mode: 'push', accent: colors.primary },
-    { key: 'eval-course', label: 'Evaluate Courses', icon: 'star-outline', route: '/evaluation/course', mode: 'push', accent: colors.warning },
-    { key: 'eval-staff', label: 'Evaluate Staff', icon: 'ribbon-outline', route: '/evaluation/staff', mode: 'push', accent: colors.warning },
-    { key: 'dates', label: 'Important Dates', icon: 'calendar-number-outline', route: '/dates', mode: 'push', accent: colors.info },
-    { key: 'quick', label: 'Quick Access', icon: 'folder-open-outline', action: 'quickAccess', accent: colors.cms },
-  ];
-
-  const account: NavEntry[] = [
-    // { key: 'notifications', label: 'Notifications', icon: 'notifications-outline', route: '/notifications', mode: 'push' },
-    { key: 'settings', label: 'Settings', icon: 'settings-outline', route: '/(tabs)/settings', mode: 'replace' },
-  ];
+  const settingsEntry: NavEntry = { key: 'settings', label: 'Settings', icon: 'settings-outline', route: '/(tabs)/settings', mode: 'replace' };
 
   const isActive = (entry: NavEntry) => {
     if (!entry.route) return false;
@@ -241,7 +236,8 @@ export function Sidebar() {
 
   const renderItem = (entry: NavEntry) => {
     const active = isActive(entry);
-    const accent = entry.accent || colors.primary;
+    // One neutral treatment for every item; only the active one carries the brand colour
+    const iconColor = active ? colors.primary : colors.textSecondary;
     return (
       <TouchableOpacity
         key={entry.key}
@@ -253,8 +249,12 @@ export function Sidebar() {
         ]}
       >
         {active && <View style={[styles.activeBar, { backgroundColor: colors.primary }]} />}
-        <View style={[styles.itemIcon, { backgroundColor: withAlpha(active ? colors.primary : accent, 0.14) }]}>
-          <Ionicons name={entry.icon} size={19} color={active ? colors.primary : accent} />
+        <View style={[styles.itemIcon, { backgroundColor: active ? withAlpha(colors.primary, 0.14) : withAlpha(colors.textPrimary, 0.06) }]}>
+          {entry.mciIcon ? (
+            <MaterialCommunityIcons name={entry.mciIcon} size={20} color={iconColor} />
+          ) : (
+            <Ionicons name={entry.icon} size={19} color={iconColor} />
+          )}
         </View>
         <Text
           style={[
@@ -311,18 +311,28 @@ export function Sidebar() {
               </Text>
             ) : null}
           </View>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => navigate(settingsEntry)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+            style={[
+              styles.settingsBtn,
+              {
+                backgroundColor: isActive(settingsEntry) ? withAlpha(colors.primary, 0.14) : colors.surfaceAlt,
+                borderColor: isActive(settingsEntry) ? withAlpha(colors.primary, 0.3) : colors.border,
+              },
+            ]}
+          >
+            <Ionicons name="settings-outline" size={19} color={isActive(settingsEntry) ? colors.primary : colors.textSecondary} />
+          </TouchableOpacity>
         </View>
 
         <View style={[styles.headerDivider, { backgroundColor: colors.divider }]} />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollBody}>
-          {primary.map(renderItem)}
-
-          <Text style={[styles.groupLabel, { color: colors.textTertiary }]}>SERVICES</Text>
-          {services.map(renderItem)}
-
-          <Text style={[styles.groupLabel, { color: colors.textTertiary }]}>ACCOUNT</Text>
-          {account.map(renderItem)}
+          {entries.map(renderItem)}
         </ScrollView>
 
         {/* Footer */}
@@ -382,6 +392,15 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12,
   },
+  settingsBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
   profileName: {
     fontSize: 16,
     fontWeight: '800',
@@ -400,14 +419,6 @@ const styles = StyleSheet.create({
   scrollBody: {
     paddingHorizontal: 12,
     paddingBottom: 12,
-  },
-  groupLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    marginTop: 18,
-    marginBottom: 6,
-    marginLeft: 12,
   },
   item: {
     flexDirection: 'row',

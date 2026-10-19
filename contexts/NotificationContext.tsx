@@ -32,7 +32,7 @@ type NotificationAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_NOTIFICATIONS'; payload: Notification[] }
-  | { type: 'MARK_AS_READ'; payload: string }
+  | { type: 'SET_READ_STATUS'; payload: { id: string; isRead: boolean } }
   | { type: 'MARK_ALL_AS_READ' }
   | { type: 'SET_LAST_FETCHED'; payload: string }
   | { type: 'CLEAR_ERROR' };
@@ -55,10 +55,10 @@ function notificationReducer(state: NotificationState, action: NotificationActio
         error: null,
       };
     
-    case 'MARK_AS_READ':
+    case 'SET_READ_STATUS':
       const updatedNotifications = state.notifications.map(notification =>
-        notification.id === action.payload
-          ? { ...notification, isRead: true }
+        notification.id === action.payload.id
+          ? { ...notification, isRead: action.payload.isRead }
           : notification
       );
       return {
@@ -232,18 +232,21 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [saveNotificationsToCache]);
 
-  // Mark notification as read
-  const markAsRead = useCallback(async (notificationId: string) => {
-    dispatch({ type: 'MARK_AS_READ', payload: notificationId });
+  // Mark a notification as read or unread
+  const setReadStatus = useCallback(async (notificationId: string, isRead: boolean) => {
+    dispatch({ type: 'SET_READ_STATUS', payload: { id: notificationId, isRead } });
     
     // Save updated read status to cache
     const updatedNotifications = state.notifications.map(notification =>
       notification.id === notificationId
-        ? { ...notification, isRead: true }
+        ? { ...notification, isRead }
         : notification
     );
     await saveReadStatusToCache(updatedNotifications);
   }, [state.notifications, saveReadStatusToCache]);
+
+  const markAsRead = useCallback((notificationId: string) => setReadStatus(notificationId, true), [setReadStatus]);
+  const markAsUnread = useCallback((notificationId: string) => setReadStatus(notificationId, false), [setReadStatus]);
 
   // Mark all notifications as read
   const markAllAsRead = useCallback(async () => {
@@ -297,6 +300,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     ...state,
     fetchNotifications: fetchNotificationsFromAPI,
     markAsRead,
+    markAsUnread,
     markAllAsRead,
     refreshNotifications,
     clearError,
