@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { GlobalBackHandler } from '@/components/navigation/GlobalBackHandler';
 import { Sidebar } from '@/components/navigation/Sidebar';
+import OtaUpdateSheet from '@/components/OtaUpdateSheet';
 import QuickMediaModal from '@/components/QuickMediaModal';
 import { DefaultScreenProvider } from '@/contexts/DefaultScreenContext';
 import { NavigationUIProvider, useNavigationUI } from '@/contexts/NavigationUIContext';
@@ -79,6 +80,7 @@ function AppContent() {
         <GlobalBackHandler />
         <Sidebar />
         <GlobalQuickAccess />
+        <OtaUpdateSheet />
       </View>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
     </NavigationThemeProvider>

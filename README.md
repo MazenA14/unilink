@@ -58,6 +58,7 @@
 - $env:PATH="C:\Users\Mazen\AppData\Local\Android\Sdk\platform-tools;$env:PATH"
 - adb logcat -s ReactNativeJS:V | findstr "[Transcript] [TranscriptParse] [GucRequest]"
 - adb logcat | Select-String -Pattern "ReactNativeJS|console"
+- npx eas-cli update --channel preview --platform android --message "Notification sheet: native text selection"
 
 ## To-Do (Notes)
 - Clear Course previous grades cache on pull to refresh and not be visibile while refreshing
