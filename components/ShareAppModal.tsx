@@ -6,7 +6,7 @@ import { UPDATE_DOWNLOAD_LINK } from '@/constants/Version';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useMemo, useState } from 'react';
-import { Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 // Core encoder only — pure JS, so no native QR/SVG module is needed
 import { create as createQR } from 'qrcode';
 
@@ -121,14 +121,22 @@ export default function ShareAppModal({ visible, onClose }: ShareAppModalProps) 
           </View>
 
           <View style={[styles.linkRow, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
-            <Text
-              selectable={false}
-              numberOfLines={1}
-              ellipsizeMode="middle"
-              style={[styles.linkText, { color: colors.textPrimary }]}
+            <TouchableOpacity
+              onPress={() => Linking.openURL(UPDATE_DOWNLOAD_LINK).catch(() => {})}
+              activeOpacity={0.6}
+              accessibilityRole="link"
+              accessibilityLabel="Open download link"
+              style={styles.linkPress}
             >
-              {UPDATE_DOWNLOAD_LINK}
-            </Text>
+              <Text
+                selectable={false}
+                numberOfLines={1}
+                ellipsizeMode="middle"
+                style={[styles.linkText, { color: colors.primary }]}
+              >
+                {UPDATE_DOWNLOAD_LINK}
+              </Text>
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={copy}
               activeOpacity={0.7}
@@ -177,11 +185,15 @@ const styles = StyleSheet.create({
     paddingRight: 6,
     paddingVertical: 6,
   },
-  linkText: {
+  linkPress: {
     flex: 1,
-    fontSize: 13,
-    fontWeight: '500',
     marginRight: 8,
+    paddingVertical: 8,
+  },
+  linkText: {
+    fontSize: 13,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   copyBtn: {
     width: 36,

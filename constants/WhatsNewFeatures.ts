@@ -7,6 +7,7 @@ import { APP_VERSION } from './Version';
 export const WHATS_NEW_CONFIG = {
   version: APP_VERSION,
   features: [
+    "Added Email",
     "Class Reminders Before Each Slot (Set in Settings)",
     "Added Schedule Widget",
     "UI/UX Improvements",

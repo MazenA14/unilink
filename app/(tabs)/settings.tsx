@@ -22,7 +22,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useVersionCheck } from '@/hooks/useVersionCheck';
 import { AuthManager } from '@/utils/auth';
 import { GUCAPIProxy, PaymentItem } from '@/utils/gucApiProxy';
-import { DEFAULT_REMINDER_OFFSET, EXACT_ALARM_PROMPT, REMINDER_OFFSET_OPTIONS, canScheduleExactAlarms, formatReminderOffset, getReminderOffset, openExactAlarmSettings, setReminderOffset } from '@/utils/slotReminders';
+import { DEFAULT_REMINDER_OFFSET, EXACT_ALARM_PROMPT, NOTIFICATIONS_BLOCKED_PROMPT, REMINDER_OFFSET_OPTIONS, canScheduleExactAlarms, formatReminderOffset, getReminderOffset, getRemindersEnabled, hasNotificationPermission, openExactAlarmSettings, openNotificationSettings, setReminderOffset, setRemindersEnabled } from '@/utils/slotReminders';
 import { userTrackingService } from '@/utils/services/userTrackingService';
 import { supabase } from '@/utils/supabase';
 import { resetWhatsNewStatus } from '@/utils/whatsNewStorage';
@@ -76,7 +76,9 @@ export default function SettingsScreen() {
   const [dashboardSlots, setDashboardSlots] = useState<number>(5);
   const [slotsDropdownVisible, setSlotsDropdownVisible] = useState(false);
   const [currentAppIcon, setCurrentAppIcon] = useState<string>('DEFAULT');
+  const [remindersEnabled, setRemindersEnabledState] = useState(false);
   const [reminderOffset, setReminderOffsetState] = useState<number>(DEFAULT_REMINDER_OFFSET);
+  const [notificationsAllowed, setNotificationsAllowed] = useState(true);
   const [reminderDropdownVisible, setReminderDropdownVisible] = useState(false);
   const [exactAlarmsAllowed, setExactAlarmsAllowed] = useState(true);
   
@@ -215,11 +217,16 @@ export default function SettingsScreen() {
   }, []);
 
   useEffect(() => {
+    getRemindersEnabled().then(setRemindersEnabledState);
     getReminderOffset().then(setReminderOffsetState);
-    canScheduleExactAlarms().then(setExactAlarmsAllowed);
-    // Re-check after returning from the system "Alarms & reminders" page
+    const checkPermissions = () => {
+      hasNotificationPermission().then(setNotificationsAllowed);
+      canScheduleExactAlarms().then(setExactAlarmsAllowed);
+    };
+    checkPermissions();
+    // Re-check after returning from system settings
     const sub = AppState.addEventListener('change', state => {
-      if (state === 'active') canScheduleExactAlarms().then(setExactAlarmsAllowed);
+      if (state === 'active') checkPermissions();
     });
     return () => sub.remove();
   }, []);
@@ -235,23 +242,38 @@ export default function SettingsScreen() {
     });
   };
 
-  const changeReminderOffset = async (minutes: number) => {
-    setReminderOffsetState(minutes);
-    setReminderDropdownVisible(false);
-    const permitted = await setReminderOffset(minutes);
-    if (!permitted) {
-      showAlert({
-        title: 'Notifications Blocked',
-        message: 'Allow notifications for UniLink in your device settings to receive class reminders.',
-        type: 'warning',
-        buttons: [{ text: 'OK' }],
-      });
+  const promptNotificationsBlocked = () => {
+    showAlert({
+      ...NOTIFICATIONS_BLOCKED_PROMPT,
+      type: 'warning',
+      buttons: [
+        { text: 'Not Now', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => { void openNotificationSettings(); } },
+      ],
+    });
+  };
+
+  const toggleReminders = async (enabled: boolean) => {
+    setRemindersEnabledState(enabled);
+    const result = await setRemindersEnabled(enabled);
+    setRemindersEnabledState(result);
+    if (!enabled) return;
+    if (!result) {
+      setNotificationsAllowed(false);
+      promptNotificationsBlocked();
       return;
     }
-    if (minutes > 0 && !(await canScheduleExactAlarms())) {
+    setNotificationsAllowed(true);
+    if (!(await canScheduleExactAlarms())) {
       setExactAlarmsAllowed(false);
       promptExactAlarms();
     }
+  };
+
+  const changeReminderOffset = (minutes: number) => {
+    setReminderOffsetState(minutes);
+    setReminderDropdownVisible(false);
+    void setReminderOffset(minutes);
   };
 
   useEffect(() => {
@@ -476,22 +498,45 @@ export default function SettingsScreen() {
             <View style={{ flex: 1, marginRight: 12 }}>
               <Text style={[styles.primaryText, { color: colors.mainFont }]}>Class Reminders</Text>
               <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>Get notified before each class starts</Text>
-              {reminderOffset > 0 && !exactAlarmsAllowed && (
+              {remindersEnabled && !notificationsAllowed && (
+                <TouchableOpacity onPress={promptNotificationsBlocked}>
+                  <Text style={[styles.secondaryText, { color: colors.tabColor }]}>Notifications are blocked. Tap to allow them</Text>
+                </TouchableOpacity>
+              )}
+              {remindersEnabled && notificationsAllowed && !exactAlarmsAllowed && (
                 <TouchableOpacity onPress={promptExactAlarms}>
                   <Text style={[styles.secondaryText, { color: colors.tabColor }]}>May arrive late. Tap to allow on-time reminders</Text>
                 </TouchableOpacity>
               )}
             </View>
-            <TouchableOpacity
-              style={[styles.valuePill, { backgroundColor: colors.primarySoft }]}
-              onPress={() => setReminderDropdownVisible(true)}
-            >
-              <Text style={[styles.pillText, { color: colors.primary }]}>
-                {reminderOffset === 0 ? 'Off' : `${formatReminderOffset(reminderOffset)} before`}
-              </Text>
-              <Ionicons name="chevron-down" size={14} color={colors.primary} />
-            </TouchableOpacity>
+            <Switch
+              value={remindersEnabled}
+              onValueChange={(val) => { void toggleReminders(val); }}
+              trackColor={{ false: colors.borderStrong, true: colors.primary }}
+              thumbColor={colors.surfaceElevated}
+            />
           </View>
+
+          {remindersEnabled && (
+            <>
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+              <View style={styles.rowBetween}>
+                <RowIcon name="timer-outline" color={colors.primary} background={colors.primarySoft} />
+                <View style={{ flex: 1, marginRight: 12 }}>
+                  <Text style={[styles.primaryText, { color: colors.mainFont }]}>Remind Me</Text>
+                  <Text style={[styles.secondaryText, { color: colors.secondaryFont }]}>How early before class to notify you</Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.valuePill, { backgroundColor: colors.primarySoft }]}
+                  onPress={() => setReminderDropdownVisible(true)}
+                >
+                  <Text style={[styles.pillText, { color: colors.primary }]}>{`${formatReminderOffset(reminderOffset)} before`}</Text>
+                  <Ionicons name="chevron-down" size={14} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
@@ -757,11 +802,11 @@ export default function SettingsScreen() {
         subtitle="How early to notify you"
         options={REMINDER_OFFSET_OPTIONS.map((o) => ({
           value: o.value as number,
-          label: o.value === 0 ? 'Off' : `${o.label} before`,
-          icon: (o.value === 0 ? 'notifications-off-outline' : 'notifications-outline') as IconName,
+          label: `${o.label} before`,
+          icon: 'notifications-outline' as IconName,
         }))}
         selected={reminderOffset}
-        onSelect={(val) => { void changeReminderOffset(val); }}
+        onSelect={changeReminderOffset}
       />
 
       {/* What's New Modal */}

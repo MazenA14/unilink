@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
-import { NativeModules, Platform } from 'react-native';
+import { Linking, NativeModules, Platform } from 'react-native';
 import { resolveCourseTitle } from './courseTitle';
 import { getTimeSlots } from './currentSlotUtils';
 import { GradeCache } from './gradeCache';
@@ -10,11 +10,14 @@ import type { ScheduleData } from './types/gucTypes';
  * Local "class starts soon" reminders. Each class slot in the personal schedule
  * gets one weekly repeating notification, registered with the OS so it fires
  * even while the app is closed. Reminders are rebuilt whenever the schedule is
- * refetched, the offset changes or slot times change (delayed 3rd slot).
+ * refetched, the toggle/offset changes or slot times change (delayed 3rd slot).
+ *
+ * Permission prompts only happen from the foreground UI (the Settings toggle and
+ * the dashboard startup check). Background syncs never prompt: on Android a
+ * request made before the activity is ready is silently denied.
  */
 
 export const REMINDER_OFFSET_OPTIONS = [
-  { value: 0, label: 'Off' },
   { value: 15, label: '15 min' },
   { value: 30, label: '30 min' },
   { value: 60, label: '1 hour' },
@@ -23,11 +26,12 @@ export const REMINDER_OFFSET_OPTIONS = [
 
 export const DEFAULT_REMINDER_OFFSET = 15;
 
+const ENABLED_KEY = 'slotRemindersEnabled';
 const OFFSET_KEY = 'slotReminderOffset';
 const SIGNATURE_KEY = 'slotReminderSignature';
-const PERMISSION_ASKED_KEY = 'slotReminderPermissionAsked';
-const EXACT_PROMPTED_KEY = 'slotReminderExactPrompted';
-const CHANNEL_ID = 'class-reminders';
+// Android fixes a channel's sound/vibration once created, so changing them needs a new id
+const CHANNEL_ID = 'class-reminders-v2';
+const LEGACY_CHANNEL_IDS = ['class-reminders'];
 const REMINDER_KIND = 'slot-reminder';
 
 // Exact-alarm helpers live in the schedule widget's native module (plugins/schedulewidget)
@@ -64,6 +68,27 @@ export function formatReminderOffset(minutes: number): string {
   return REMINDER_OFFSET_OPTIONS.find(o => o.value === minutes)?.label ?? `${minutes} min`;
 }
 
+/** Reminders are off until the user turns them on in Settings. */
+export async function getRemindersEnabled(): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(ENABLED_KEY)) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Turn reminders on or off and rebuild them. Turning on asks for notification
+ * permission and only sticks if it's granted; returns the resulting state.
+ */
+export async function setRemindersEnabled(enabled: boolean): Promise<boolean> {
+  const granted = enabled ? await requestNotificationPermission() : false;
+  const next = enabled && granted;
+  await AsyncStorage.setItem(ENABLED_KEY, next ? '1' : '0');
+  await syncSlotReminders({ force: true });
+  return next;
+}
+
 export async function getReminderOffset(): Promise<number> {
   try {
     const raw = await AsyncStorage.getItem(OFFSET_KEY);
@@ -75,16 +100,41 @@ export async function getReminderOffset(): Promise<number> {
   }
 }
 
-/** Save the offset and rebuild reminders. Returns false if notifications aren't permitted. */
-export async function setReminderOffset(minutes: number): Promise<boolean> {
+/** Save the offset and rebuild reminders. */
+export async function setReminderOffset(minutes: number): Promise<void> {
   await AsyncStorage.setItem(OFFSET_KEY, String(minutes));
-  if (minutes === 0) {
-    await syncSlotReminders({ force: true });
-    return true;
-  }
-  const granted = await ensurePermission();
   await syncSlotReminders({ force: true });
-  return granted;
+}
+
+export async function hasNotificationPermission(): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
+  try {
+    return (await Notifications.getPermissionsAsync()).granted;
+  } catch {
+    return false;
+  }
+}
+
+/** Ask for notification permission if the OS still allows asking. Call from the foreground UI only. */
+export async function requestNotificationPermission(): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
+  try {
+    const current = await Notifications.getPermissionsAsync();
+    if (current.granted) return true;
+    if (!current.canAskAgain) return false;
+    return (await Notifications.requestPermissionsAsync()).granted;
+  } catch {
+    return false;
+  }
+}
+
+/** Open this app's page in system settings (to unblock notifications). */
+export async function openNotificationSettings(): Promise<void> {
+  try {
+    await Linking.openSettings();
+  } catch {
+    // Not supported on this device
+  }
 }
 
 /**
@@ -114,24 +164,33 @@ export const EXACT_ALARM_PROMPT = {
   message: 'To get class reminders exactly on time, allow "Alarms & reminders" for UniLink. Otherwise they may arrive up to an hour late.',
 };
 
+export const NOTIFICATIONS_BLOCKED_PROMPT = {
+  title: 'Notifications Blocked',
+  message: 'Class reminders are on, but notifications are blocked for UniLink. Allow them in your device settings to receive reminders.',
+};
+
+export type ReminderStartupPrompt = 'notifications-blocked' | 'exact-alarm' | null;
+
 /**
- * True once per install when reminders are on and notifications are allowed but
- * exact alarms aren't. Reminders are on by default, so most users never open the
- * offset picker; this lets the app ask them anyway. Marks itself as shown.
+ * Run on every app start while reminders are on. Shows the system notification
+ * prompt if it can still be asked, then reports which in-app prompt (if any) the
+ * caller should show: notifications blocked for good, or exact alarms missing.
  */
-export async function shouldPromptExactAlarms(): Promise<boolean> {
-  if (Platform.OS !== 'android') return false;
+export async function checkReminderPermissionsOnStartup(): Promise<ReminderStartupPrompt> {
+  if (Platform.OS === 'web') return null;
   try {
-    // Wait for any in-flight sync (which may be showing the notification prompt)
-    await syncSlotReminders();
-    if ((await getReminderOffset()) === 0) return false;
-    if (await AsyncStorage.getItem(EXACT_PROMPTED_KEY)) return false;
-    if (!(await Notifications.getPermissionsAsync()).granted) return false;
-    if (await canScheduleExactAlarms()) return false;
-    await AsyncStorage.setItem(EXACT_PROMPTED_KEY, '1');
-    return true;
+    if (!(await getRemindersEnabled())) return null;
+    const current = await Notifications.getPermissionsAsync();
+    if (!current.granted) {
+      if (!current.canAskAgain) return 'notifications-blocked';
+      const requested = await Notifications.requestPermissionsAsync();
+      // Declined just now: don't follow up with another prompt this launch
+      if (!requested.granted) return null;
+      await syncSlotReminders({ force: true });
+    }
+    return (await canScheduleExactAlarms()) ? null : 'exact-alarm';
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -184,22 +243,10 @@ async function ensureChannel(): Promise<void> {
     name: 'Class reminders',
     description: 'Reminders before your scheduled classes',
     importance: Notifications.AndroidImportance.HIGH,
+    enableVibrate: true,
+    vibrationPattern: [0, 300, 200, 300],
   });
-}
-
-/**
- * Check notification permission, prompting if allowed. Automatic syncs only
- * prompt once ever so a dismissed prompt doesn't come back on every app open;
- * picking an offset in Settings always may prompt.
- */
-async function ensurePermission(alwaysPrompt = true): Promise<boolean> {
-  const current = await Notifications.getPermissionsAsync();
-  if (current.granted) return true;
-  if (!current.canAskAgain) return false;
-  if (!alwaysPrompt && (await AsyncStorage.getItem(PERMISSION_ASKED_KEY))) return false;
-  await AsyncStorage.setItem(PERMISSION_ASKED_KEY, '1');
-  const requested = await Notifications.requestPermissionsAsync();
-  return requested.granted;
+  await Promise.all(LEGACY_CHANNEL_IDS.map(id => Notifications.deleteNotificationChannelAsync(id).catch(() => {})));
 }
 
 async function getScheduledReminderIds(): Promise<string[]> {
@@ -234,9 +281,9 @@ async function runSync({ scheduleData, force = false }: { scheduleData?: Schedul
   if (Platform.OS === 'web') return;
 
   const data = scheduleData ?? (await GradeCache.getCachedScheduleData());
-  const offset = await getReminderOffset();
+  const [enabled, offset] = await Promise.all([getRemindersEnabled(), getReminderOffset()]);
 
-  if (!data || (data.type && data.type !== 'personal') || offset === 0) {
+  if (!data || (data.type && data.type !== 'personal') || !enabled) {
     await cancelAllReminders();
     await AsyncStorage.removeItem(SIGNATURE_KEY);
     return;
@@ -253,7 +300,9 @@ async function runSync({ scheduleData, force = false }: { scheduleData?: Schedul
   const exact = await canScheduleExactAlarms();
   // Alarms are absolute instants, so a timezone or DST change must rebuild them too
   const tzOffset = new Date().getTimezoneOffset();
-  const signature = JSON.stringify({ exact, tzOffset, planned });
+  // Include permission so granting it later in system settings triggers a rebuild on resume
+  const permitted = await hasNotificationPermission();
+  const signature = JSON.stringify({ channel: CHANNEL_ID, exact, tzOffset, permitted, planned });
 
   if (!force) {
     const [storedSignature, scheduledIds] = await Promise.all([
@@ -263,7 +312,6 @@ async function runSync({ scheduleData, force = false }: { scheduleData?: Schedul
     if (storedSignature === signature && scheduledIds.length === planned.length) return;
   }
 
-  const permitted = await ensurePermission(false);
   await cancelAllReminders();
   await AsyncStorage.removeItem(SIGNATURE_KEY);
   if (!permitted) return;
@@ -277,6 +325,7 @@ async function runSync({ scheduleData, force = false }: { scheduleData?: Schedul
         body: r.body,
         data: { kind: REMINDER_KIND },
         sound: 'default',
+        vibrate: [0, 300, 200, 300],
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
@@ -290,12 +339,12 @@ async function runSync({ scheduleData, force = false }: { scheduleData?: Schedul
   await AsyncStorage.setItem(SIGNATURE_KEY, signature);
 }
 
-/** Remove all class reminders and the saved offset (e.g. on logout). */
+/** Remove all class reminders and their settings (e.g. on logout). */
 export async function clearSlotReminders(): Promise<void> {
   if (Platform.OS === 'web') return;
   try {
     await cancelAllReminders();
-    await AsyncStorage.multiRemove([SIGNATURE_KEY, OFFSET_KEY]);
+    await AsyncStorage.multiRemove([SIGNATURE_KEY, OFFSET_KEY, ENABLED_KEY]);
   } catch {
     // Best-effort
   }

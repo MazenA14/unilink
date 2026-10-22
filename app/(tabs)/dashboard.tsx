@@ -23,7 +23,7 @@ import { GUCAPIProxy } from '@/utils/gucApiProxy';
 import { GradesPreloader } from '@/utils/gradesPreloader';
 import { GradeTracking } from '@/utils/gradeTracking';
 import { syncScheduleWidget } from '@/utils/scheduleWidget';
-import { EXACT_ALARM_PROMPT, openExactAlarmSettings, shouldPromptExactAlarms, syncSlotReminders } from '@/utils/slotReminders';
+import { EXACT_ALARM_PROMPT, NOTIFICATIONS_BLOCKED_PROMPT, checkReminderPermissionsOnStartup, openExactAlarmSettings, openNotificationSettings, setRemindersEnabled, syncSlotReminders } from '@/utils/slotReminders';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -49,6 +49,9 @@ const getMaxAbsenceLevel = async (): Promise<number | null> => {
 
 const sumUnseen = (summary: CmsUnseenSummary) =>
   Object.values(summary).reduce((total, course) => total + course.unseen, 0);
+
+// Once per app launch, not per dashboard mount
+let reminderPromptChecked = false;
 
 export default function DashboardScreen() {
   const colorScheme = useColorScheme();
@@ -79,6 +82,7 @@ export default function DashboardScreen() {
   const {
     showUpdateModal,
     forceUpdate,
+    isChecking: checkingForUpdates,
     checkForUpdates,
     handleUpdateModalClose,
     handleUpdateModalUpdate,
@@ -96,24 +100,36 @@ export default function DashboardScreen() {
 
   const { showAlert, AlertComponent } = useCustomAlert();
 
-  // Ask once for exact alarms so class reminders aren't delivered late.
-  // Waits for What's New so the two don't stack.
-  const exactPromptCheckedRef = useRef(false);
+  // On every app start while class reminders are on, make sure they can actually
+  // fire: ask for notifications, and for exact alarms so they aren't late.
+  // Waits for the What's New and Update modals so prompts don't stack (a second
+  // modal opened on top of another may never show).
   useEffect(() => {
-    if (whatsNewLoading || showWhatsNewModal || exactPromptCheckedRef.current) return;
-    exactPromptCheckedRef.current = true;
-    shouldPromptExactAlarms().then(shouldPrompt => {
-      if (!shouldPrompt) return;
-      showAlert({
-        ...EXACT_ALARM_PROMPT,
-        type: 'info',
-        buttons: [
-          { text: 'Not Now', style: 'cancel' },
-          { text: 'Allow', onPress: () => { void openExactAlarmSettings(); } },
-        ],
-      });
+    if (reminderPromptChecked) return;
+    if (whatsNewLoading || showWhatsNewModal || checkingForUpdates || showUpdateModal) return;
+    reminderPromptChecked = true;
+    checkReminderPermissionsOnStartup().then(prompt => {
+      if (prompt === 'exact-alarm') {
+        showAlert({
+          ...EXACT_ALARM_PROMPT,
+          type: 'info',
+          buttons: [
+            { text: 'Not Now', style: 'cancel' },
+            { text: 'Allow', onPress: () => { void openExactAlarmSettings(); } },
+          ],
+        });
+      } else if (prompt === 'notifications-blocked') {
+        showAlert({
+          ...NOTIFICATIONS_BLOCKED_PROMPT,
+          type: 'warning',
+          buttons: [
+            { text: 'Turn Off Reminders', style: 'cancel', onPress: () => { void setRemindersEnabled(false); } },
+            { text: 'Open Settings', onPress: () => { void openNotificationSettings(); } },
+          ],
+        });
+      }
     });
-  }, [whatsNewLoading, showWhatsNewModal, showAlert]);
+  }, [whatsNewLoading, showWhatsNewModal, checkingForUpdates, showUpdateModal, showAlert]);
   
   // State for course name mapping
   const [courseNameMapping, setCourseNameMapping] = useState<{ [courseId: string]: string }>({});

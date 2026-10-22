@@ -2,7 +2,7 @@
   "expo": {
     "name": "UniLink",
     "slug": "unilink",
-    "version": "3.4",
+    "version": "3.5",
     "orientation": "default",
     "icon": "./assets/images/app-icons/icon-original.png",
     "scheme": "unilink",
@@ -57,7 +57,8 @@
           "android": {
             "enableProguardInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true,
-            "enableMinifyInReleaseBuilds": true
+            "enableMinifyInReleaseBuilds": true,
+            "extraProguardRules": "-keep class expo.modules.notifications.** { *; }\n-keepclassmembers class * implements java.io.Serializable {\n  static final long serialVersionUID;\n  private void writeObject(java.io.ObjectOutputStream);\n  private void readObject(java.io.ObjectInputStream);\n  java.lang.Object writeReplace();\n  java.lang.Object readResolve();\n}"
           }
         }
       ],

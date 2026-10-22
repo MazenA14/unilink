@@ -9,6 +9,9 @@ export const DASHBOARD_ROUTE = '/(tabs)/dashboard';
 /** Routes where the hardware back button must keep its default behaviour. */
 const EXIT_ROUTES = ['/dashboard', '/(tabs)/dashboard', '/login', '/'];
 
+/** Routes that handle the hardware back button themselves (e.g. WebView history). */
+const SELF_HANDLED_ROUTES = ['/email'];
+
 export const isDashboardRoute = (pathname: string) =>
   pathname === '/dashboard' || pathname === '/(tabs)/dashboard';
 
@@ -49,6 +52,7 @@ export function GlobalBackHandler() {
 
       // Dashboard (and login) keep the default behaviour: exit the app.
       if (EXIT_ROUTES.includes(pathname)) return false;
+      if (SELF_HANDLED_ROUTES.includes(pathname)) return false;
 
       goBackOrDashboard();
       return true;

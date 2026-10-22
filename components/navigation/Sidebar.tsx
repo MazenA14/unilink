@@ -212,9 +212,9 @@ export function Sidebar() {
   // Grades, Schedule and CMS are reached from the dashboard overview tiles.
   const entries: NavEntry[] = [
     { key: 'dashboard', label: 'Dashboard', icon: 'grid-outline', route: '/(tabs)/dashboard', mode: 'replace' },
+    { key: 'email', label: 'Email', icon: 'mail-outline', route: '/email', mode: 'push' },
     { key: 'transcript', label: 'Transcript', icon: 'document-text-outline', route: '/(tabs)/transcript', mode: 'replace' },
     { key: 'instructors', label: 'Instructors', icon: 'people-outline', route: '/instructors', mode: 'push' },
-    { key: 'attendance', label: 'Attendance', icon: 'checkmark-circle-outline', route: '/attendance', mode: 'push' },
     { key: 'exam-seats', label: 'Exam Seats', icon: 'reader-outline', mciIcon: 'chair-school', route: '/exam-seats', mode: 'push' },
     { key: 'eval-course', label: 'Evaluate Courses', icon: 'star-outline', route: '/evaluation/course', mode: 'push' },
     { key: 'eval-staff', label: 'Evaluate Staff', icon: 'ribbon-outline', route: '/evaluation/staff', mode: 'push' },
