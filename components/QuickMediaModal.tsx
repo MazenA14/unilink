@@ -1,7 +1,9 @@
 import BottomSheet from '@/components/ui/BottomSheet';
 import { SheetHeader } from '@/components/ui/Dropdown';
 import { SheetButtons } from '@/components/ui/SheetButtons';
+import { ImageViewer } from '@/components/ui/ImageViewer';
 import { Colors } from '@/constants/Colors';
+import { Radius, Shadow, Spacing, Type, withAlpha } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,7 +12,7 @@ import * as FileSystem from 'expo-file-system';
 import { copyAsync } from 'expo-file-system/legacy';
 import { isAvailableAsync as isSharingAvailableAsync, shareAsync } from 'expo-sharing';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Animated, Image, Modal, PanResponder, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useCustomAlert } from './CustomAlert';
 
 interface MediaFile {
@@ -35,77 +37,19 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<MediaFile | null>(null);
-  const [imageLoading, setImageLoading] = useState(false);
-  const [imageError, setImageError] = useState(false);
   const [renameModalVisible, setRenameModalVisible] = useState(false);
   const [renameFileId, setRenameFileId] = useState<string>('');
   const [renameCurrentName, setRenameCurrentName] = useState<string>('');
   const [renameNewName, setRenameNewName] = useState<string>('');
   const [dropdownVisible, setDropdownVisible] = useState<string | null>(null);
   
-  // Image preview animation values
-  const scale = useState(new Animated.Value(1))[0];
-  const translateX = useState(new Animated.Value(0))[0];
-  const translateYPreview = useState(new Animated.Value(0))[0];
-  const previewOpacity = useState(new Animated.Value(0))[0];
-  const infoOpacity = useState(new Animated.Value(0))[0];
-  
+  // Two-column grid sized to the sheet
+  const { width: windowWidth } = useWindowDimensions();
+  const tileWidth = Math.floor((windowWidth - GRID_PADDING * 2 - GRID_GAP) / 2);
+
   // Storage keys
   const MEDIA_FILES_KEY = 'quick_media_files';
   const MEDIA_DIRECTORY = useMemo(() => new FileSystem.Directory(FileSystem.Paths.document, 'quick_media'), []);
-
-  // Image preview pan responder for zoom and pan gestures
-  const imagePanResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: () => {
-      scale.setOffset((scale as any)._value);
-      translateX.setOffset((translateX as any)._value);
-      translateYPreview.setOffset((translateYPreview as any)._value);
-    },
-    onPanResponderMove: (evt, gestureState) => {
-      // Handle pinch to zoom
-      if (gestureState.numberActiveTouches === 2) {
-        const distance = Math.sqrt(
-          Math.pow(gestureState.dx, 2) + Math.pow(gestureState.dy, 2)
-        );
-        const scaleValue = Math.max(0.5, Math.min(4, 1 + (distance - 100) / 150));
-        scale.setValue(scaleValue);
-      } else if (gestureState.numberActiveTouches === 1) {
-        // Handle pan - only allow panning when zoomed in
-        const currentScale = (scale as any)._value;
-        if (currentScale > 1) {
-          translateX.setValue(gestureState.dx);
-          translateYPreview.setValue(gestureState.dy);
-        }
-      }
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      scale.flattenOffset();
-      translateX.flattenOffset();
-      translateYPreview.flattenOffset();
-      
-      const currentScale = (scale as any)._value;
-      
-      // Reset if scale is too small or if user swipes down to close
-      if (currentScale < 0.8 || (gestureState.dy > 100 && currentScale <= 1.1)) {
-        if (gestureState.dy > 100) {
-          // Swipe down to close
-          closeImagePreview();
-        } else {
-          // Reset to normal size
-          Animated.parallel([
-            Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
-            Animated.spring(translateX, { toValue: 0, useNativeDriver: true }),
-            Animated.spring(translateYPreview, { toValue: 0, useNativeDriver: true }),
-          ]).start();
-        }
-      } else if (currentScale > 4) {
-        // Cap maximum zoom
-        Animated.spring(scale, { toValue: 4, useNativeDriver: true }).start();
-      }
-    },
-  });
 
   // Initialize media directory
   const initializeMediaDirectory = useCallback(async () => {
@@ -180,7 +124,10 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
           });
           return;
         }
-        
+
+        // Let the spinner paint before the copy and the new thumbnail's decode
+        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+
         // Create unique file name
         const timestamp = new Date().getTime();
         const fileName = `${timestamp}_${asset.name}`;
@@ -361,13 +308,6 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
         mimeType: file.type || 'image/jpeg',
         dialogTitle: `Share ${file.name}`,
       });
-
-      showAlert({
-        title: 'Success',
-        message: 'Image shared successfully!',
-        type: 'success',
-        buttons: [{ text: 'OK' }]
-      });
     } catch {
       // Error handling - share failed
       showAlert({
@@ -382,50 +322,11 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
   // Handle image preview
   const handleImagePreview = (file: MediaFile) => {
     setPreviewImage(file);
-    setImageLoading(true);
-    setImageError(false);
-    
-    // Animate in
-    Animated.parallel([
-      Animated.timing(previewOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(infoOpacity, {
-        toValue: 1,
-        duration: 400,
-        delay: 200,
-        useNativeDriver: true,
-      }),
-    ]).start();
   };
 
   // Close image preview
   const closeImagePreview = () => {
-    // Animate out
-    Animated.parallel([
-      Animated.timing(previewOpacity, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-      Animated.timing(infoOpacity, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      // Reset animation values
-      scale.setValue(1);
-      translateX.setValue(0);
-      translateYPreview.setValue(0);
-      previewOpacity.setValue(0);
-      infoOpacity.setValue(0);
-      setPreviewImage(null);
-      setImageLoading(false);
-      setImageError(false);
-    });
+    setPreviewImage(null);
   };
 
   // Format file size
@@ -489,91 +390,64 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
     (global as any).clearQuickMediaFiles = clearAllFiles;
   }, [clearAllFiles]);
 
-  const renderMediaFile = ({ item }: { item: MediaFile }) => (
+  // Keep the viewer in sync with renames, and close it if the image is deleted
+  const viewedFile = previewImage ? mediaFiles.find(f => f.id === previewImage.id) ?? null : null;
+  const menuFile = dropdownVisible ? mediaFiles.find(f => f.id === dropdownVisible) ?? null : null;
+  const totalSize = mediaFiles.reduce((sum, f) => sum + (f.size || 0), 0);
+
+  const renderMediaFile = (item: MediaFile) => (
     <TouchableOpacity
-      style={[
-        styles.mediaFileCard,
-        { backgroundColor: colors.cardBackground, borderColor: colors.border },
-        dropdownVisible === item.id ? { zIndex: 2000, elevation: 12 } : null,
-      ]}
+      key={item.id}
+      style={[styles.tile, { width: tileWidth }]}
       onPress={() => handleImagePreview(item)}
+      onLongPress={() => handleDropdownToggle(item.id)}
+      delayLongPress={300}
+      activeOpacity={0.85}
     >
-      <View style={styles.fileContent}>
-        <View style={styles.fileInfo}>
-          <View style={[styles.imagePreviewContainer, { backgroundColor: colors.tint + '15' }]}>
-            <Image 
-              source={{ uri: item.uri }} 
-              style={styles.imagePreview}
-              resizeMode="cover"
-            />
+      <View style={[styles.thumbWrap, { height: tileWidth, backgroundColor: colors.surfaceSunken }]}>
+        {/* Decode a downscaled bitmap: full-res photos stall the UI thread on Android */}
+        <Image source={{ uri: item.uri }} style={styles.thumb} resizeMode="cover" resizeMethod="resize" />
+        <TouchableOpacity
+          style={styles.moreButton}
+          onPress={() => handleDropdownToggle(item.id)}
+          hitSlop={8}
+          accessibilityLabel={`Options for ${item.name}`}
+        >
+          <Ionicons name="ellipsis-horizontal" size={16} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+      <Text style={[styles.tileName, { color: colors.textPrimary }]} numberOfLines={1}>
+        {item.name}
+      </Text>
+      <Text style={[styles.tileMeta, { color: colors.textTertiary }]} numberOfLines={1}>
+        {formatDate(item.uploadDate)} · {formatFileSize(item.size)}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  const renderAddTile = () => (
+    <TouchableOpacity
+      key="__add"
+      style={[styles.tile, { width: tileWidth }]}
+      onPress={handleUpload}
+      disabled={uploading}
+      activeOpacity={0.75}
+    >
+      <View
+        style={[
+          styles.thumbWrap,
+          styles.addTile,
+          { height: tileWidth, borderColor: withAlpha(colors.tint, 0.45), backgroundColor: withAlpha(colors.tint, 0.06) },
+        ]}
+      >
+        {uploading ? (
+          <ActivityIndicator color={colors.tint} />
+        ) : (
+          <View style={[styles.addIcon, { backgroundColor: colors.tint }]}>
+            <Ionicons name="add" size={26} color={colors.onPrimary} />
           </View>
-          <View style={styles.fileDetails}>
-            <Text style={[styles.fileName, { color: colors.mainFont }]} numberOfLines={2}>
-              {item.name}
-            </Text>
-            <Text style={[styles.fileDate, { color: colors.secondaryFont }]}>
-              {formatDate(item.uploadDate)}
-            </Text>
-            <Text style={[styles.fileSize, { color: colors.secondaryFont }]}>
-              {formatFileSize(item.size)}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.menuContainer}>
-          <TouchableOpacity
-            style={[styles.menuButton, { backgroundColor: colors.border + '30' }]}
-            onPress={() => handleDropdownToggle(item.id)}
-          >
-            <Ionicons name="ellipsis-vertical" size={20} color={colors.mainFont} />
-          </TouchableOpacity>
-          
-          {dropdownVisible === item.id && (
-            <View style={[styles.dropdown, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              <TouchableOpacity
-                style={styles.dropdownItem}
-                onPress={() => {
-                  handleDropdownClose();
-                  setTimeout(() => {
-                    handleRename(item.id, item.name);
-                  }, 100);
-                }}
-              >
-                <Ionicons name="create-outline" size={18} color={colors.success} />
-                <Text style={[styles.dropdownItemText, { color: colors.mainFont }]}>Rename</Text>
-              </TouchableOpacity>
-              
-              <View style={[styles.dropdownDivider, { backgroundColor: colors.border }]} />
-              
-              <TouchableOpacity
-                style={styles.dropdownItem}
-                onPress={() => {
-                  handleDropdownClose();
-                  setTimeout(() => {
-                    handleShare(item);
-                  }, 100);
-                }}
-              >
-                <Ionicons name="share-outline" size={18} color={colors.tint} />
-                <Text style={[styles.dropdownItemText, { color: colors.mainFont }]}>Share</Text>
-              </TouchableOpacity>
-              
-              <View style={[styles.dropdownDivider, { backgroundColor: colors.border }]} />
-              
-              <TouchableOpacity
-                style={styles.dropdownItem}
-                onPress={() => {
-                  handleDropdownClose();
-                  setTimeout(() => {
-                    handleDelete(item.id);
-                  }, 100);
-                }}
-              >
-                <Ionicons name="trash-outline" size={18} color={colors.gradeFailing} />
-                <Text style={[styles.dropdownItemText, { color: colors.mainFont }]}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
+        )}
+        <Text style={[styles.addText, { color: colors.tint }]}>{uploading ? 'Adding…' : 'Add image'}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -583,223 +457,144 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
       visible={visible}
       onRequestClose={closeModal}
       heightRatio={0.9}
-      header={<SheetHeader colors={colors} title="Quick Access" subtitle="Images saved on this device" />}
+      header={
+        <SheetHeader
+          colors={colors}
+          title="Quick Access"
+          subtitle={
+            mediaFiles.length > 0
+              ? `${mediaFiles.length} image${mediaFiles.length !== 1 ? 's' : ''} · ${formatFileSize(totalSize)} on this device`
+              : 'Images saved on this device'
+          }
+        />
+      }
     >
-          <View style={styles.uploadSection}>
+      <View style={styles.body}>
+        {loading ? (
+          <View style={styles.grid}>
+            {[0, 1, 2, 3].map(i => (
+              <View key={i} style={[styles.tile, { width: tileWidth }]}>
+                <View style={[styles.thumbWrap, { height: tileWidth, backgroundColor: colors.surface }]} />
+                <View style={[styles.skeletonLine, { backgroundColor: colors.surface, width: '70%' }]} />
+                <View style={[styles.skeletonLine, { backgroundColor: colors.surface, width: '45%', height: 10 }]} />
+              </View>
+            ))}
+          </View>
+        ) : mediaFiles.length > 0 ? (
+          <>
+            <View style={styles.grid}>
+              {renderAddTile()}
+              {mediaFiles.map(renderMediaFile)}
+            </View>
+            <Text style={[styles.footerHint, { color: colors.textTertiary }]}>
+              Tap to view · Long-press for options
+            </Text>
+          </>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <View style={[styles.emptyIcon, { backgroundColor: withAlpha(colors.tint, 0.1) }]}>
+              <Ionicons name="images" size={30} color={colors.tint} />
+            </View>
+            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Keep key images one tap away</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              Save things like the academic calendar, your study plan or a course map. They stay on this device.
+            </Text>
             <TouchableOpacity
-              style={[
-                styles.uploadButton, 
-                { 
-                  backgroundColor: colors.tint,
-                  opacity: uploading ? 0.7 : 1
-                }
-              ]}
+              style={[styles.emptyButton, { backgroundColor: colors.tint }, Shadow.glow(colors.tint), uploading && { opacity: 0.7 }]}
               onPress={handleUpload}
               disabled={uploading}
+              activeOpacity={0.85}
             >
               {uploading ? (
                 <ActivityIndicator size="small" color={colors.onPrimary} />
               ) : (
-                <Ionicons name="cloud-upload-outline" size={24} color={colors.onPrimary} />
+                <Ionicons name="add" size={20} color={colors.onPrimary} />
               )}
-              <Text style={[styles.uploadButtonText, { color: colors.onPrimary }]}>
-                {uploading ? 'Uploading...' : 'Upload Image'}
+              <Text style={[styles.emptyButtonText, { color: colors.onPrimary }]}>
+                {uploading ? 'Adding…' : 'Add your first image'}
               </Text>
             </TouchableOpacity>
-              <Text style={[styles.uploadHint, { color: colors.secondaryFont }]}>
-                Upload images for quick access and preview (e.g., Academic Calendar, Course Materials)
-              </Text>
           </View>
+        )}
+      </View>
 
-          <View style={styles.filesSection}>
-            {loading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.tint} />
-                <Text style={[styles.loadingText, { color: colors.secondaryFont }]}>
-                  Loading files...
-                </Text>
-              </View>
-            ) : mediaFiles.length > 0 ? (
-              <View style={styles.filesList}>
-                {mediaFiles.map((item) => (
-                  <View key={item.id}>{renderMediaFile({ item })}</View>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="image-outline" size={64} color={colors.secondaryFont} />
-                <Text style={[styles.emptyText, { color: colors.secondaryFont }]}>
-                  No images uploaded yet
-                </Text>
-                <Text style={[styles.emptySubtext, { color: colors.secondaryFont }]}>
-                  Tap the upload button to add your first image
-                </Text>
-              </View>
-            )}
-          </View>
+      <ImageViewer
+        visible={viewedFile !== null}
+        uri={viewedFile?.uri ?? null}
+        title={viewedFile?.name}
+        subtitle={viewedFile ? `${formatFileSize(viewedFile.size)} · ${formatDate(viewedFile.uploadDate)}` : undefined}
+        onClose={closeImagePreview}
+        actions={
+          viewedFile
+            ? [
+                { icon: 'share-outline', label: 'Share', onPress: () => handleShare(viewedFile) },
+                { icon: 'create-outline', label: 'Rename', onPress: () => handleRename(viewedFile.id, viewedFile.name) },
+                { icon: 'trash-outline', label: 'Delete', onPress: () => handleDelete(viewedFile.id), destructive: true },
+              ]
+            : []
+        }
+      />
 
-      <Modal
-        visible={previewImage !== null}
-        transparent={true}
-        animationType="none"
-        onRequestClose={closeImagePreview}
-        statusBarTranslucent={true}
+      {/* Per-image actions */}
+      <BottomSheet
+        visible={menuFile !== null}
+        onRequestClose={handleDropdownClose}
+        autoHeight
+        header={<SheetHeader colors={colors} title={menuFile?.name ?? ''} subtitle={menuFile ? `${formatFileSize(menuFile.size)} · ${formatDate(menuFile.uploadDate)}` : undefined} />}
       >
-        <Animated.View 
-          style={[
-            styles.previewOverlay,
-            { opacity: previewOpacity }
-          ]}
-        >
-          {/* Three-section layout container */}
-          <View style={styles.previewContainer}>
-            {/* Top Header Section */}
-            <Animated.View 
-              style={[
-                styles.previewTopSection,
-                { 
-                  backgroundColor: colors.background + '95',
-                  opacity: infoOpacity
-                }
-              ]}
-            >
+        {menuFile && (
+          <View style={styles.menuBody}>
+            {[
+              { icon: 'expand-outline' as const, label: 'View', tint: colors.textPrimary, run: () => handleImagePreview(menuFile) },
+              { icon: 'share-outline' as const, label: 'Share', tint: colors.textPrimary, run: () => handleShare(menuFile) },
+              { icon: 'create-outline' as const, label: 'Rename', tint: colors.textPrimary, run: () => handleRename(menuFile.id, menuFile.name) },
+              { icon: 'trash-outline' as const, label: 'Delete', tint: colors.danger, run: () => handleDelete(menuFile.id) },
+            ].map((row, i, all) => (
               <TouchableOpacity
-                style={[styles.previewCloseButton, { backgroundColor: colors.tint + '20' }]}
-                onPress={closeImagePreview}
-              >
-                <Ionicons name="close" size={20} color={colors.tint} />
-              </TouchableOpacity>
-              
-              <View style={styles.previewActions}>
-                <TouchableOpacity
-                  style={[styles.previewActionButton, { backgroundColor: colors.tint + '20' }]}
-                  onPress={() => {
-                    // Reset zoom
-                    Animated.parallel([
-                      Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
-                      Animated.spring(translateX, { toValue: 0, useNativeDriver: true }),
-                      Animated.spring(translateYPreview, { toValue: 0, useNativeDriver: true }),
-                    ]).start();
-                  }}
-                >
-                  <Ionicons name="refresh" size={18} color={colors.tint} />
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
-
-            {/* Middle Image Section */}
-            <View style={styles.previewMiddleSection}>
-              {previewImage && (
-                <TouchableOpacity 
-                  style={styles.imageWrapper} 
-                  activeOpacity={1}
-                  onPress={(e) => e.stopPropagation()}
-                  {...imagePanResponder.panHandlers}
-                >
-                  {imageLoading && (
-                    <View style={styles.imageLoadingContainer}>
-                      <ActivityIndicator size="large" color={colors.tint} />
-                      <Text style={[styles.loadingText, { color: colors.secondaryFont }]}>
-                        Loading image...
-                      </Text>
-                    </View>
-                  )}
-                  
-                  {imageError && (
-                    <View style={styles.imageErrorContainer}>
-                      <Ionicons name="image-outline" size={64} color={colors.secondaryFont} />
-                      <Text style={[styles.errorText, { color: colors.secondaryFont }]}>
-                        Failed to load image
-                      </Text>
-                    </View>
-                  )}
-                  
-                  <Animated.Image
-                    source={{ uri: previewImage.uri }}
-                    style={[
-                      styles.previewImage,
-                      {
-                        opacity: imageLoading || imageError ? 0 : 1,
-                        transform: [
-                          { scale: scale },
-                          { translateX: translateX },
-                          { translateY: translateYPreview },
-                        ],
-                      },
-                    ]}
-                    resizeMode="contain"
-                    onLoad={() => {
-                      setImageLoading(false);
-                      setImageError(false);
-                    }}
-                    onError={() => {
-                      setImageLoading(false);
-                      setImageError(true);
-                    }}
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Bottom Info Section */}
-            {previewImage && (
-              <Animated.View 
+                key={row.label}
                 style={[
-                  styles.previewBottomSection,
-                  { 
-                    backgroundColor: colors.background + '95',
-                    opacity: infoOpacity
-                  }
+                  styles.menuRow,
+                  { backgroundColor: colors.surface },
+                  i === 0 && styles.menuRowFirst,
+                  i === all.length - 1 && styles.menuRowLast,
                 ]}
+                onPress={() => {
+                  handleDropdownClose();
+                  setTimeout(row.run, 250);
+                }}
+                activeOpacity={0.6}
               >
-                <View style={styles.previewInfoContent}>
-                  <View style={styles.previewInfoLeft}>
-                    <Text style={[styles.previewFileName, { color: colors.mainFont }]}>
-                      {previewImage.name}
-                    </Text>
-                    <Text style={[styles.previewFileDetails, { color: colors.secondaryFont }]}>
-                      {formatFileSize(previewImage.size)} • {formatDate(previewImage.uploadDate)}
-                    </Text>
-                  </View>
-                </View>
-              </Animated.View>
-            )}
+                <Ionicons name={row.icon} size={20} color={row.tint} />
+                <Text style={[styles.menuRowText, { color: row.tint }]}>{row.label}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
-        </Animated.View>
-      </Modal>
+        )}
+      </BottomSheet>
 
       {/* Rename sheet */}
       <BottomSheet
         visible={renameModalVisible}
         onRequestClose={handleRenameCancel}
         autoHeight
-        header={<SheetHeader colors={colors} title="Rename File" />}
+        header={<SheetHeader colors={colors} title="Rename Image" subtitle={renameCurrentName} />}
         footer={
           <SheetButtons
             secondary={{ label: 'Cancel', onPress: handleRenameCancel }}
-            primary={{ label: 'Rename', onPress: handleRenameConfirm }}
+            primary={{ label: 'Rename', onPress: handleRenameConfirm, disabled: !renameNewName.trim() || renameNewName.trim() === renameCurrentName }}
           />
         }
       >
         <View style={styles.renameBody}>
-            <Text style={[styles.renameModalSubtitle, { color: colors.secondaryFont }]}>
-              Current name: {renameCurrentName}
-            </Text>
-            
-            <TextInput
-              style={[styles.renameInput, { 
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                color: colors.mainFont
-              }]}
-              value={renameNewName}
-              onChangeText={setRenameNewName}
-              placeholder="Enter new name"
-              placeholderTextColor={colors.secondaryFont}
-              autoFocus={true}
-              selectTextOnFocus={true}
-            />
-            
+          <TextInput
+            style={[styles.renameInput, { backgroundColor: colors.surface, color: colors.textPrimary }]}
+            value={renameNewName}
+            onChangeText={setRenameNewName}
+            placeholder="Enter new name"
+            placeholderTextColor={colors.textTertiary}
+            autoFocus={true}
+            selectTextOnFocus={true}
+          />
         </View>
       </BottomSheet>
 
@@ -809,279 +604,149 @@ export default function QuickMediaModal({ visible, onClose }: QuickMediaModalPro
   );
 }
 
+const GRID_PADDING = Spacing.xl;
+const GRID_GAP = Spacing.md;
+
 const styles = StyleSheet.create({
-  renameBody: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
-  uploadSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  uploadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  uploadButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  uploadHint: {
-    fontSize: 12,
-    textAlign: 'center',
-    opacity: 0.8,
-  },
-  filesSection: {
+  body: {
+    paddingHorizontal: GRID_PADDING,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.lg,
     minHeight: 240,
   },
-  filesList: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  mediaFileCard: {
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    overflow: 'visible',
-  },
-  fileContent: {
+  grid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
+    flexWrap: 'wrap',
+    gap: GRID_GAP,
   },
-  fileInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
+  tile: {
+    marginBottom: Spacing.xs,
   },
-  imagePreviewContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+  thumbWrap: {
+    borderRadius: Radius.lg,
     overflow: 'hidden',
   },
-  imagePreview: {
+  thumb: {
     width: '100%',
     height: '100%',
   },
-  fileDetails: {
-    flex: 1,
-  },
-  fileName: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
-    marginRight: 16,
-  },
-  fileDate: {
-    fontSize: 12,
-    marginBottom: 2,
-    opacity: 0.8,
-  },
-  fileSize: {
-    fontSize: 11,
-    opacity: 0.6,
-  },
-  menuContainer: {
-    position: 'relative',
-  },
-  menuButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dropdown: {
+  moreButton: {
     position: 'absolute',
-    top: 40,
-    right: 0,
-    minWidth: 120,
-    borderRadius: 8,
-    borderWidth: 1,
-    elevation: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    zIndex: 1000,
-  },
-  dropdownItem: {
-    flexDirection: 'row',
+    top: Spacing.sm,
+    right: Spacing.sm,
+    width: 30,
+    height: 30,
+    borderRadius: Radius.pill,
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  dropdownItemText: {
-    fontSize: 14,
-    marginLeft: 8,
-    fontWeight: '500',
-  },
-  dropdownDivider: {
-    height: 1,
-    marginHorizontal: 8,
-  },
-  loadingContainer: {
-    flex: 1,
     justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  tileName: {
+    ...Type.callout,
+    marginTop: Spacing.sm,
+  },
+  tileMeta: {
+    ...Type.caption,
+    fontWeight: '500',
+    marginTop: 1,
+  },
+  addTile: {
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+  },
+  addIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addText: {
+    ...Type.callout,
+  },
+  skeletonLine: {
+    height: 12,
+    borderRadius: Radius.xs,
+    marginTop: Spacing.sm,
+  },
+  footerHint: {
+    ...Type.caption,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: Spacing.lg,
   },
   emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 64,
+    paddingVertical: Spacing.huge,
+    paddingHorizontal: Spacing.lg,
+  },
+  emptyIcon: {
+    width: 68,
+    height: 68,
+    borderRadius: Radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.lg,
+  },
+  emptyTitle: {
+    ...Type.h3,
+    textAlign: 'center',
+    marginBottom: Spacing.xs + 2,
   },
   emptyText: {
-    fontSize: 18,
+    ...Type.subtext,
+    textAlign: 'center',
+    lineHeight: 19,
+  },
+  emptyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.pill,
+  },
+  emptyButtonText: {
+    ...Type.callout,
+  },
+  menuBody: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xs,
+    paddingBottom: Spacing.lg,
+    gap: 2,
+  },
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 15,
+  },
+  menuRowFirst: {
+    borderTopLeftRadius: Radius.lg,
+    borderTopRightRadius: Radius.lg,
+  },
+  menuRowLast: {
+    borderBottomLeftRadius: Radius.lg,
+    borderBottomRightRadius: Radius.lg,
+  },
+  menuRowText: {
+    ...Type.body,
     fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
   },
-  emptySubtext: {
-    fontSize: 14,
-    opacity: 0.7,
-    textAlign: 'center',
-  },
-  // Enhanced Image Preview Styles
-  previewOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
-  },
-  previewContainer: {
-    flex: 1,
-    flexDirection: 'column',
-  },
-  previewTopSection: {
-    height: 100,
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  previewCloseButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  previewActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  previewActionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  previewMiddleSection: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imageWrapper: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    maxHeight: '100%',
-  },
-  imageLoadingContainer: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 5,
-  },
-  imageErrorContainer: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 5,
-  },
-  loadingText: {
-    fontSize: 16,
-    marginTop: 16,
-    fontWeight: '500',
-  },
-  errorText: {
-    fontSize: 16,
-    marginTop: 16,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  previewImage: {
-    width: '100%',
-    height: '100%',
-    maxWidth: '100%',
-    maxHeight: '100%',
-  },
-  previewBottomSection: {
-    paddingTop: 20,
-    paddingBottom: 40,
-    paddingHorizontal: 20,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    zIndex: 10,
-  },
-  previewInfoContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  previewInfoLeft: {
-    flex: 1,
-  },
-  previewFileName: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  previewFileDetails: {
-    fontSize: 14,
-    opacity: 0.8,
-  },
-  // Rename Modal Styles
-  renameModalSubtitle: {
-    fontSize: 14,
-    marginBottom: 20,
-    textAlign: 'center',
-    opacity: 0.8,
+  renameBody: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.md,
   },
   renameInput: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
+    ...Type.body,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 14,
   },
 });

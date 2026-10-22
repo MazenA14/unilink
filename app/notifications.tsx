@@ -344,27 +344,26 @@ export default function NotificationsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <AppBar title="Notifications" showNotifications={false} />
-
-      {unreadCount > 0 && (
-        <View style={[styles.unreadBanner, { backgroundColor: colors.tint + '15' }]}>
-          <View style={styles.unreadBannerLeft}>
-            <Ionicons name="notifications" size={20} color={colors.tint} />
-            <Text style={[styles.unreadText, { color: colors.tint }]}>
-              {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.markAllButton, { backgroundColor: colors.gradeGood + '20' }]}
-            onPress={markAllAsRead}
-          >
-            <Ionicons name="checkmark-done" size={16} color={colors.gradeGood} />
-            <Text style={[styles.markAllText, { color: colors.gradeGood }]}>
-              Mark All
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <AppBar
+        title="Notifications"
+        subtitle={unreadCount > 0 ? `${unreadCount} unread` : undefined}
+        showNotifications={false}
+        rightActions={
+          unreadCount > 0 ? (
+            <TouchableOpacity
+              style={[styles.markAllButton, { backgroundColor: colors.gradeGood + '20' }]}
+              onPress={markAllAsRead}
+              accessibilityRole="button"
+              accessibilityLabel="Mark all as read"
+            >
+              <Ionicons name="checkmark-done" size={16} color={colors.gradeGood} />
+              <Text style={[styles.markAllText, { color: colors.gradeGood }]}>
+                Mark all
+              </Text>
+            </TouchableOpacity>
+          ) : undefined
+        }
+      />
 
       {notifications.length > 0 && (
         <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -563,34 +562,14 @@ const styles = StyleSheet.create({
   markAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    height: 44,
+    paddingHorizontal: 14,
+    borderRadius: 14,
   },
   markAllText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     marginLeft: 4,
-  },
-  unreadBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginHorizontal: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  unreadBannerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  unreadText: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
   },
   searchBar: {
     flexDirection: 'row',

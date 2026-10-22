@@ -7,8 +7,8 @@ import { getCmsCourseView, markCmsContentSeen, previewCmsContent, saveCmsContent
 import type { CMSCourseView } from '@/utils/parsers/cmsCourseViewParser';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, ScrollView, StyleSheet, Text, ToastAndroid, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Linking, Platform, ScrollView, StyleSheet, Text, ToastAndroid, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function CMSCourseViewScreen() {
@@ -309,10 +309,7 @@ export default function CMSCourseViewScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <AppBar title="Course" variant="back" />
-        <View style={[styles.center, { backgroundColor: colors.background }]}>
-          <ActivityIndicator color={colors.cms} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading course…</Text>
-        </View>
+        <CourseSkeleton colors={colors} />
       </View>
     );
   }
@@ -325,31 +322,8 @@ export default function CMSCourseViewScreen() {
         variant="back"
       />
 
-      {(courseData?.header.totalWeeks || totalUnseen > 0 || !!error) && (
-        <View style={styles.metaRow}>
-          {!!courseData?.header.totalWeeks && (
-            <View style={[styles.metaPill, { backgroundColor: withAlpha(colors.cms, 0.12) }]}>
-              <Ionicons name="calendar-outline" size={13} color={colors.cms} />
-              <Text style={[styles.metaPillText, { color: colors.cms }]}>{courseData.header.totalWeeks} weeks</Text>
-            </View>
-          )}
-          {totalUnseen > 0 && (
-            <View style={[styles.metaPill, { backgroundColor: colors.dangerSoft }]}>
-              <View style={[styles.unseenDot, { backgroundColor: colors.danger }]} />
-              <Text style={[styles.metaPillText, { color: colors.danger }]}>{totalUnseen} new</Text>
-            </View>
-          )}
-          {!!courseData?.header.contentCount && (
-            <View style={[styles.metaPill, { backgroundColor: colors.surfaceAlt, borderColor: colors.divider, borderWidth: 1 }]}>
-              <Ionicons name="documents-outline" size={13} color={colors.textSecondary} />
-              <Text style={[styles.metaPillText, { color: colors.textSecondary }]}>{courseData.header.contentCount} items</Text>
-            </View>
-          )}
-        </View>
-      )}
-
       {!!error && (
-        <View style={[styles.errorBanner, { backgroundColor: colors.dangerSoft, borderColor: withAlpha(colors.danger, 0.3) }]}>
+        <View style={[styles.errorBanner, { backgroundColor: colors.dangerSoft }]}>
           <Ionicons name="alert-circle" size={16} color={colors.danger} />
           <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
         </View>
@@ -357,32 +331,53 @@ export default function CMSCourseViewScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 24 }]}
+        showsVerticalScrollIndicator={false}
         refreshControl={<AppRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {/* Stats */}
+        {(!!courseData?.header.totalWeeks || !!courseData?.header.contentCount || totalUnseen > 0) && (
+          <View style={styles.statsRow}>
+            {!!courseData?.header.totalWeeks && (
+              <StatTile colors={colors} icon="calendar-outline" value={courseData.header.totalWeeks} label="Weeks" />
+            )}
+            {!!courseData?.header.contentCount && (
+              <StatTile colors={colors} icon="documents-outline" value={courseData.header.contentCount} label="Items" />
+            )}
+            {totalUnseen > 0 && (
+              <StatTile colors={colors} icon="sparkles" value={totalUnseen} label="New" highlight />
+            )}
+          </View>
+        )}
+
         {/* Announcements Section */}
         {courseData?.announcementsHtml && (
-          <View style={[styles.section, { backgroundColor: colors.surfaceElevated, borderColor: colors.divider }, Shadow.card(colors)]}>
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: colors.surfaceElevated, borderColor: announcementsExpanded ? withAlpha(colors.tint, 0.35) : colors.border },
+              announcementsExpanded ? Shadow.card(colors) : Shadow.xs(colors),
+            ]}
+          >
             <TouchableOpacity
-              style={styles.sectionHeader}
+              style={styles.cardHeader}
               onPress={() => setAnnouncementsExpanded(!announcementsExpanded)}
               activeOpacity={0.7}
             >
-              <View style={[styles.sectionIconChip, { backgroundColor: withAlpha(colors.cms, 0.14) }]}>
-                <Ionicons name="megaphone-outline" size={18} color={colors.cms} />
+              <View style={[styles.iconTile, { backgroundColor: withAlpha(colors.tint, 0.12) }]}>
+                <Ionicons name="megaphone" size={18} color={colors.tint} />
               </View>
-              <Text style={[Type.h3, { color: colors.textPrimary, flex: 1 }]}>Announcements</Text>
-              <View style={[styles.chevronChip, { backgroundColor: colors.surfaceAlt }]}>
-                <Ionicons
-                  name={announcementsExpanded ? 'chevron-up' : 'chevron-down'}
-                  size={16}
-                  color={colors.textSecondary}
-                />
+              <View style={styles.cardHeaderBody}>
+                <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Announcements</Text>
+                <Text style={[styles.cardSubtitle, { color: colors.textTertiary }]}>
+                  {announcementsExpanded ? 'Tap to collapse' : 'Tap to read'}
+                </Text>
               </View>
+              <Chevron colors={colors} open={announcementsExpanded} />
             </TouchableOpacity>
 
             {announcementsExpanded && (
-              <View style={styles.announcementContent}>
+              <View style={[styles.announcementContent, { backgroundColor: colors.surface }]}>
                 {announcementParts.map((part, index) => {
                   if (part.type === 'link') {
                     return (
@@ -391,7 +386,8 @@ export default function CMSCourseViewScreen() {
                         onPress={() => handleLinkPress(part.url!)}
                         style={styles.linkContainer}
                       >
-                        <Text style={[styles.linkText, { color: colors.cms }]}>{part.content}</Text>
+                        <Ionicons name="link" size={14} color={colors.link} />
+                        <Text style={[styles.linkText, { color: colors.link }]}>{part.content}</Text>
                       </TouchableOpacity>
                     );
                   } else if (part.type === 'table') {
@@ -426,8 +422,8 @@ export default function CMSCourseViewScreen() {
 
         {/* Weeks Section */}
         {courseData?.weeks && courseData.weeks.length > 0 && (
-          <View style={styles.weeksContainer}>
-            <Text style={[Type.overline, styles.courseContentTitle, { color: colors.textSecondary }]}>Course Content</Text>
+          <View>
+            <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>Course Content</Text>
             {courseData.weeks.map((week, weekIndex) => {
               const isExpanded = expandedWeeks.has(weekIndex);
               const hasContent = week.contents && week.contents.length > 0;
@@ -438,135 +434,159 @@ export default function CMSCourseViewScreen() {
               return (
                 <View
                   key={weekIndex}
-                  style={[styles.weekCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.divider }, Shadow.card(colors)]}
+                  style={[
+                    styles.card,
+                    {
+                      backgroundColor: colors.surfaceElevated,
+                      borderColor: weekUnseen > 0 ? withAlpha(colors.tint, 0.35) : colors.border,
+                    },
+                    isExpanded || weekUnseen > 0 ? Shadow.card(colors) : Shadow.xs(colors),
+                  ]}
                 >
                   <TouchableOpacity
-                    style={styles.sectionHeader}
+                    style={styles.cardHeader}
                     onPress={() => toggleWeek(weekIndex)}
                     activeOpacity={0.7}
                   >
-                    <View style={[styles.sectionIconChip, { backgroundColor: withAlpha(colors.cms, 0.14) }]}>
-                      <Ionicons name="calendar-outline" size={16} color={colors.cms} />
+                    <View
+                      style={[
+                        styles.iconTile,
+                        { backgroundColor: weekUnseen > 0 ? withAlpha(colors.tint, 0.12) : colors.surface },
+                      ]}
+                    >
+                      <Ionicons name="calendar" size={17} color={weekUnseen > 0 ? colors.tint : colors.textSecondary} />
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[Type.h3, { color: colors.textPrimary }]} numberOfLines={1}>{week.weekLabel}</Text>
-                      {hasContent && (
-                        <Text style={[styles.weekContentCount, { color: colors.textSecondary }]}>
-                          {week.contents!.length} item{week.contents!.length !== 1 ? 's' : ''}
-                          {weekUnseen > 0 && (
-                            <Text style={{ color: colors.danger, fontWeight: '700' }}>{`  ·  ${weekUnseen} new`}</Text>
-                          )}
-                        </Text>
-                      )}
+                    <View style={styles.cardHeaderBody}>
+                      <Text style={[styles.cardTitle, { color: colors.textPrimary }]} numberOfLines={1}>{week.weekLabel}</Text>
+                      <Text style={[styles.cardSubtitle, { color: colors.textTertiary }]}>
+                        {hasContent
+                          ? `${week.contents!.length} item${week.contents!.length !== 1 ? 's' : ''}`
+                          : 'No files'}
+                      </Text>
                     </View>
                     {weekUnseen > 0 && (
-                      <View style={[styles.unseenDot, { backgroundColor: colors.danger }]} />
+                      <View style={[styles.newPill, { backgroundColor: colors.tint }]}>
+                        <Text style={[styles.newPillText, { color: colors.onPrimary }]}>{weekUnseen} new</Text>
+                      </View>
                     )}
-                    <View style={[styles.chevronChip, { backgroundColor: colors.surfaceAlt }]}>
-                      <Ionicons
-                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                        size={16}
-                        color={colors.textSecondary}
-                      />
-                    </View>
+                    <Chevron colors={colors} open={isExpanded} />
                   </TouchableOpacity>
 
                   {isExpanded && (
                     <View style={styles.weekContent}>
                       {hasAnnouncement && (
-                        <View style={styles.weekAnnouncement}>
-                          <Text style={[styles.weekAnnouncementLabel, { color: colors.textPrimary }]}>Announcement</Text>
-                          <Text style={[styles.weekAnnouncementText, { color: colors.textSecondary }]}>{week.announcement}</Text>
+                        <View style={[styles.callout, { backgroundColor: withAlpha(colors.warning, 0.1) }]}>
+                          <Ionicons name="megaphone-outline" size={15} color={colors.warning} style={styles.calloutIcon} />
+                          <View style={styles.calloutBody}>
+                            <Text style={[styles.calloutLabel, { color: colors.warning }]}>Announcement</Text>
+                            <Text style={[styles.calloutText, { color: colors.textPrimary }]}>{week.announcement}</Text>
+                          </View>
                         </View>
                       )}
 
                       {hasDescription && (
-                        <View style={styles.weekDescription}>
-                          <Text style={[styles.weekAnnouncementLabel, { color: colors.textPrimary }]}>Description</Text>
-                          <Text style={[styles.weekAnnouncementText, { color: colors.textSecondary }]}>{week.description}</Text>
+                        <View style={[styles.callout, { backgroundColor: colors.surface }]}>
+                          <Ionicons name="information-circle-outline" size={15} color={colors.textSecondary} style={styles.calloutIcon} />
+                          <View style={styles.calloutBody}>
+                            <Text style={[styles.calloutLabel, { color: colors.textSecondary }]}>Description</Text>
+                            <Text style={[styles.calloutText, { color: colors.textPrimary }]}>{week.description}</Text>
+                          </View>
                         </View>
                       )}
 
-                      {hasContent && (
-                        <View style={styles.contentsContainer}>
-                          {week.contents!.map((content, contentIndex) => (
-                            <View
-                              key={contentIndex}
-                              style={[
-                                styles.contentItem,
-                                { backgroundColor: colors.surfaceAlt, borderColor: content.unseen ? withAlpha(colors.danger, 0.35) : colors.divider },
-                              ]}
-                            >
-                              <View style={styles.contentItemHeader}>
-                                <Text style={[Type.bodyStrong, { color: colors.textPrimary, flex: 1 }]}>{content.title}</Text>
+                      {hasContent && week.contents!.map((content, contentIndex) => (
+                        <View
+                          key={contentIndex}
+                          style={[
+                            styles.contentItem,
+                            {
+                              backgroundColor: content.unseen ? withAlpha(colors.tint, 0.05) : colors.surface,
+                              borderColor: content.unseen ? withAlpha(colors.tint, 0.3) : 'transparent',
+                            },
+                          ]}
+                        >
+                          <View style={styles.contentTop}>
+                            <View style={[styles.typeIcon, { backgroundColor: colors.surfaceElevated }]}>
+                              <Ionicons name={contentTypeIcon(content.type)} size={18} color={content.unseen ? colors.tint : colors.textSecondary} />
+                            </View>
+                            <View style={styles.contentBody}>
+                              <View style={styles.contentTitleRow}>
+                                <Text style={[styles.contentTitle, { color: colors.textPrimary }]}>{content.title}</Text>
                                 {content.unseen && (
-                                  <View style={[styles.newBadge, { backgroundColor: colors.dangerSoft }]} accessibilityLabel="Not opened yet">
-                                    <View style={[styles.unseenDot, { backgroundColor: colors.danger }]} />
-                                    <Text style={[styles.newBadgeText, { color: colors.danger }]}>New</Text>
+                                  <View style={[styles.newDotBadge, { backgroundColor: withAlpha(colors.tint, 0.12) }]} accessibilityLabel="Not opened yet">
+                                    <View style={[styles.unseenDot, { backgroundColor: colors.tint }]} />
+                                    <Text style={[styles.newDotBadgeText, { color: colors.tint }]}>New</Text>
                                   </View>
                                 )}
                               </View>
                               {content.type && (
-                                <View style={[styles.typeBadge, { backgroundColor: colors.infoSoft }]}>
-                                  <Text style={[styles.typeBadgeText, { color: colors.info }]}>{content.type}</Text>
-                                </View>
+                                <Text style={[styles.contentType, { color: colors.textTertiary }]}>{content.type}</Text>
                               )}
-                              {content.description && (
-                                <Text style={[styles.contentDescription, { color: colors.textSecondary }]}>{content.description}</Text>
-                              )}
-                              <View style={styles.buttonContainer}>
-                                {content.type === 'VoD' && content.watchUrl ? (
+                            </View>
+                          </View>
+                          {content.description && (
+                            <Text style={[styles.contentDescription, { color: colors.textSecondary }]}>{content.description}</Text>
+                          )}
+                          {content.type === 'VoD' && content.watchUrl ? (
+                            <View style={styles.actionButtons}>
+                              <TouchableOpacity
+                                style={[styles.actionButton, styles.actionPrimary, { backgroundColor: colors.tint }]}
+                                onPress={() => handleWatchVideo(content.watchUrl!)}
+                                activeOpacity={0.85}
+                              >
+                                <Ionicons name="play" size={15} color={colors.onPrimary} />
+                                <Text style={[styles.actionText, { color: colors.onPrimary }]}>Watch on CMS</Text>
+                              </TouchableOpacity>
+                            </View>
+                          ) : content.downloadUrl ? (
+                            (() => {
+                              const itemKey = content.contentId || `${weekIndex}-${contentIndex}`;
+                              const previewing = busyItem === `${itemKey}:preview`;
+                              const downloading = busyItem === `${itemKey}:download`;
+                              const anyBusy = busyItem !== null;
+                              return (
+                                <View style={styles.actionButtons}>
                                   <TouchableOpacity
-                                    style={[styles.watchButton, { backgroundColor: colors.cms }, Shadow.glow(colors.cms)]}
-                                    onPress={() => handleWatchVideo(content.watchUrl!)}
+                                    style={[
+                                      styles.actionButton,
+                                      { backgroundColor: colors.surfaceElevated, borderColor: colors.border, borderWidth: 1 },
+                                      anyBusy && !previewing && styles.buttonDisabled,
+                                    ]}
+                                    onPress={() => handlePreview(itemKey, content.downloadUrl!, content.title)}
+                                    disabled={anyBusy}
+                                    activeOpacity={0.75}
+                                  >
+                                    {previewing ? (
+                                      <ActivityIndicator size="small" color={colors.textPrimary} />
+                                    ) : (
+                                      <Ionicons name="eye-outline" size={15} color={colors.textPrimary} />
+                                    )}
+                                    <Text style={[styles.actionText, { color: colors.textPrimary }]}>Preview</Text>
+                                  </TouchableOpacity>
+                                  <TouchableOpacity
+                                    style={[
+                                      styles.actionButton,
+                                      styles.actionPrimary,
+                                      { backgroundColor: colors.tint },
+                                      anyBusy && !downloading && styles.buttonDisabled,
+                                    ]}
+                                    onPress={() => handleSave(itemKey, content.downloadUrl!, content.title)}
+                                    disabled={anyBusy}
                                     activeOpacity={0.85}
                                   >
-                                    <Ionicons name="play" size={14} color={colors.onAccent} style={styles.actionIcon} />
-                                    <Text style={[styles.actionButtonText, { color: colors.onAccent }]}>Watch Video</Text>
+                                    {downloading ? (
+                                      <ActivityIndicator size="small" color={colors.onPrimary} />
+                                    ) : (
+                                      <Ionicons name="download-outline" size={15} color={colors.onPrimary} />
+                                    )}
+                                    <Text style={[styles.actionText, { color: colors.onPrimary }]}>Download</Text>
                                   </TouchableOpacity>
-                                ) : content.downloadUrl ? (
-                                  (() => {
-                                    const itemKey = content.contentId || `${weekIndex}-${contentIndex}`;
-                                    const previewing = busyItem === `${itemKey}:preview`;
-                                    const downloading = busyItem === `${itemKey}:download`;
-                                    const anyBusy = busyItem !== null;
-                                    return (
-                                      <View style={styles.actionButtons}>
-                                        <TouchableOpacity
-                                          style={[styles.previewButton, { borderColor: colors.cms }, anyBusy && styles.buttonDisabled]}
-                                          onPress={() => handlePreview(itemKey, content.downloadUrl!, content.title)}
-                                          disabled={anyBusy}
-                                          activeOpacity={0.75}
-                                        >
-                                          {previewing ? (
-                                            <ActivityIndicator size="small" color={colors.cms} style={styles.actionIcon} />
-                                          ) : (
-                                            <Ionicons name="eye-outline" size={14} color={colors.cms} style={styles.actionIcon} />
-                                          )}
-                                          <Text style={[styles.previewButtonText, { color: colors.cms }]}>Preview</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                          style={[styles.downloadButton, { backgroundColor: colors.cms }, Shadow.glow(colors.cms), anyBusy && styles.buttonDisabled]}
-                                          onPress={() => handleSave(itemKey, content.downloadUrl!, content.title)}
-                                          disabled={anyBusy}
-                                          activeOpacity={0.85}
-                                        >
-                                          {downloading ? (
-                                            <ActivityIndicator size="small" color={colors.onAccent} style={styles.actionIcon} />
-                                          ) : (
-                                            <Ionicons name="download-outline" size={14} color={colors.onAccent} style={styles.actionIcon} />
-                                          )}
-                                          <Text style={[styles.actionButtonText, { color: colors.onAccent }]}>Download</Text>
-                                        </TouchableOpacity>
-                                      </View>
-                                    );
-                                  })()
-                                ) : null}
-                              </View>
-                            </View>
-                          ))}
+                                </View>
+                              );
+                            })()
+                          ) : null}
                         </View>
-                      )}
+                      ))}
 
                       {!hasAnnouncement && !hasDescription && !hasContent && (
                         <View style={styles.emptyWeek}>
@@ -586,10 +606,11 @@ export default function CMSCourseViewScreen() {
 
         {courseData && !courseData.announcementsHtml && courseData.weeks.length === 0 && (
           <View style={styles.emptyWrap}>
-            <View style={[styles.emptyIconChip, { backgroundColor: withAlpha(colors.cms, 0.12) }]}>
-              <Ionicons name="folder-open-outline" size={28} color={colors.cms} />
+            <View style={[styles.emptyIconChip, { backgroundColor: colors.surface }]}>
+              <Ionicons name="folder-open-outline" size={28} color={colors.textTertiary} />
             </View>
-            <Text style={[Type.body, { color: colors.textSecondary, textAlign: 'center' }]}>
+            <Text style={[Type.h3, { color: colors.textPrimary }]}>Nothing here yet</Text>
+            <Text style={[Type.subtext, { color: colors.textSecondary, textAlign: 'center' }]}>
               No content available for this course yet.
             </Text>
           </View>
@@ -599,65 +620,174 @@ export default function CMSCourseViewScreen() {
   );
 }
 
+type ThemeColors = (typeof Colors)['light'];
+
+function contentTypeIcon(type?: string): keyof typeof Ionicons.glyphMap {
+  const t = (type || '').toLowerCase();
+  if (t.includes('vod') || t.includes('video')) return 'play-circle';
+  if (t.includes('lecture')) return 'easel';
+  if (t.includes('assignment')) return 'create';
+  if (t.includes('exam') || t.includes('quiz')) return 'school';
+  if (t.includes('project')) return 'construct';
+  if (t.includes('lab') || t.includes('tutorial') || t.includes('practice')) return 'flask';
+  if (t.includes('sheet') || t.includes('solution')) return 'document-text';
+  return 'document';
+}
+
+function Chevron({ colors, open }: { colors: ThemeColors; open: boolean }) {
+  return (
+    <View style={[styles.chevronChip, { backgroundColor: open ? colors.tint : colors.surface }]}>
+      <Ionicons
+        name="chevron-down"
+        size={16}
+        color={open ? colors.onPrimary : colors.textSecondary}
+        style={open && styles.chevronOpen}
+      />
+    </View>
+  );
+}
+
+function StatTile({
+  colors,
+  icon,
+  value,
+  label,
+  highlight,
+}: {
+  colors: ThemeColors;
+  icon: keyof typeof Ionicons.glyphMap;
+  value: number | string;
+  label: string;
+  highlight?: boolean;
+}) {
+  return (
+    <View style={[styles.statTile, { backgroundColor: highlight ? withAlpha(colors.tint, 0.1) : colors.surface }]}>
+      <Ionicons name={icon} size={15} color={highlight ? colors.tint : colors.textTertiary} />
+      <Text style={[styles.statValue, { color: highlight ? colors.tint : colors.textPrimary }]}>{value}</Text>
+      <Text style={[styles.statLabel, { color: highlight ? colors.tint : colors.textSecondary }]}>{label}</Text>
+    </View>
+  );
+}
+
+function CourseSkeleton({ colors }: { colors: ThemeColors }) {
+  const pulse = useRef(new Animated.Value(0.5)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.5, duration: 700, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
+  const line = (width: number | `${number}%`, height = 12) => (
+    <View style={{ width, height, borderRadius: Radius.xs, backgroundColor: colors.surfaceSunken }} />
+  );
+
+  return (
+    <Animated.View style={[styles.contentContainer, { opacity: pulse }]}>
+      <View style={styles.statsRow}>
+        {[0, 1, 2].map(i => (
+          <View key={i} style={[styles.statTile, { backgroundColor: colors.surface, height: 64 }]} />
+        ))}
+      </View>
+      {[0, 1, 2, 3, 4].map(i => (
+        <View key={i} style={[styles.card, { backgroundColor: colors.surface, borderColor: 'transparent' }]}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.iconTile, { backgroundColor: colors.surfaceSunken }]} />
+            <View style={{ flex: 1, gap: Spacing.sm }}>
+              {line('60%', 14)}
+              {line('25%')}
+            </View>
+          </View>
+        </View>
+      ))}
+    </Animated.View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { marginTop: Spacing.sm, fontSize: 14, fontWeight: '500' },
-  metaRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs, marginHorizontal: Spacing.xl },
-  metaPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: Spacing.sm, paddingVertical: 5, borderRadius: Radius.pill },
-  metaPillText: { fontSize: 12, fontWeight: '700' },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    marginHorizontal: Spacing.xl,
-    marginTop: Spacing.sm,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
     padding: Spacing.md,
     borderRadius: Radius.md,
-    borderWidth: 1,
   },
   errorText: { fontSize: 13, fontWeight: '600', flex: 1 },
-  content: { flex: 1, paddingHorizontal: Spacing.xl, marginTop: Spacing.md },
-  section: { padding: Spacing.lg, borderRadius: Radius.xl, borderWidth: 1, marginBottom: Spacing.lg },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  sectionIconChip: { width: 36, height: 36, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  content: { flex: 1 },
+  contentContainer: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.xs },
+  // Stats
+  statsRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md },
+  statTile: {
+    flex: 1,
+    alignItems: 'flex-start',
+    gap: 2,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: 14,
+    borderRadius: Radius.lg,
+  },
+  statValue: { fontSize: 20, fontWeight: '800', letterSpacing: -0.4, marginTop: 2 },
+  statLabel: { ...Type.caption, fontWeight: '600' },
+  // Cards (announcements + weeks)
+  card: { borderRadius: Radius.lg, borderWidth: 1, marginBottom: Spacing.sm + 2, padding: 14 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  cardHeaderBody: { flex: 1, gap: 2 },
+  cardTitle: { ...Type.body, fontWeight: '700' },
+  cardSubtitle: { ...Type.caption, fontWeight: '500' },
+  iconTile: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
   chevronChip: { width: 28, height: 28, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  announcementContent: { marginTop: Spacing.md },
+  chevronOpen: { transform: [{ rotate: '180deg' }] },
+  newPill: { paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: Radius.pill },
+  newPillText: { fontSize: 11, fontWeight: '800' },
+  sectionLabel: { ...Type.overline, marginTop: Spacing.md, marginBottom: Spacing.sm, marginLeft: Spacing.xs },
+  // Announcements
+  announcementContent: { marginTop: 14, padding: 14, borderRadius: Radius.md },
   announcementText: { fontSize: 14, lineHeight: 21, marginBottom: Spacing.sm },
   boldText: { fontWeight: 'bold' },
   paragraphBreak: { marginBottom: 12, height: 0 },
-  linkContainer: { marginBottom: Spacing.sm },
-  linkText: { fontSize: 14, fontWeight: '600', textDecorationLine: 'underline' },
+  linkContainer: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: Spacing.sm },
+  linkText: { fontSize: 14, fontWeight: '600', textDecorationLine: 'underline', flexShrink: 1 },
   announcementTable: { marginVertical: Spacing.sm },
-  weeksContainer: { marginBottom: Spacing.lg },
-  courseContentTitle: { marginBottom: Spacing.sm, marginLeft: 2 },
-  weekCard: { borderRadius: Radius.xl, borderWidth: 1, marginBottom: Spacing.md, padding: Spacing.lg },
-  weekContentCount: { fontSize: 12, fontWeight: '500', marginTop: 1 },
-  weekContent: { marginTop: Spacing.lg, gap: Spacing.md },
-  weekAnnouncement: { gap: 2 },
-  weekDescription: { gap: 2 },
-  weekAnnouncementLabel: { fontSize: 12, fontWeight: '700' },
-  weekAnnouncementText: { fontSize: 14, lineHeight: 20 },
-  contentsContainer: { gap: Spacing.sm },
-  contentItem: { padding: Spacing.md, borderRadius: Radius.lg, borderWidth: 1 },
-  contentItemHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.xs },
-  unseenDot: { width: 7, height: 7, borderRadius: 4 },
-  newBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: Spacing.sm, paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: Radius.pill },
-  newBadgeText: { fontSize: 11, fontWeight: '800' },
-  typeBadge: { alignSelf: 'flex-start', paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: Radius.pill, marginBottom: Spacing.xs },
-  typeBadgeText: { fontSize: 11, fontWeight: '700' },
-  contentDescription: { fontSize: 12, marginBottom: Spacing.sm, lineHeight: 17 },
-  buttonContainer: { marginTop: Spacing.xs },
-  actionButtons: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, flexWrap: 'wrap' },
-  downloadButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: Spacing.md, borderRadius: Radius.pill, alignSelf: 'flex-start' },
-  previewButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: Spacing.md, borderRadius: Radius.pill, alignSelf: 'flex-start', borderWidth: 1.5 },
-  previewButtonText: { fontSize: 12, fontWeight: '700' },
+  // Week content
+  weekContent: { marginTop: 14, gap: Spacing.sm },
+  callout: { flexDirection: 'row', gap: Spacing.sm, padding: Spacing.md, borderRadius: Radius.md },
+  calloutIcon: { marginTop: 1 },
+  calloutBody: { flex: 1, gap: 2 },
+  calloutLabel: { ...Type.caption, fontWeight: '700' },
+  calloutText: { fontSize: 14, lineHeight: 20 },
+  contentItem: { padding: Spacing.md, borderRadius: Radius.md, borderWidth: 1, gap: Spacing.sm },
+  contentTop: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md },
+  typeIcon: { width: 36, height: 36, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
+  contentBody: { flex: 1, gap: 2 },
+  contentTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
+  contentTitle: { ...Type.callout, flex: 1, lineHeight: 19 },
+  contentType: { ...Type.caption, fontWeight: '500' },
+  contentDescription: { fontSize: 13, lineHeight: 18 },
+  unseenDot: { width: 6, height: 6, borderRadius: 3 },
+  newDotBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: Radius.pill },
+  newDotBadgeText: { fontSize: 11, fontWeight: '800' },
+  actionButtons: { flexDirection: 'row', gap: Spacing.sm, marginTop: 2 },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 40,
+    borderRadius: Radius.md,
+  },
+  actionPrimary: {},
+  actionText: { fontSize: 13, fontWeight: '700' },
   buttonDisabled: { opacity: 0.5 },
-  watchButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: Spacing.md, borderRadius: Radius.pill, alignSelf: 'flex-start' },
-  actionIcon: { marginRight: 5 },
-  actionButtonText: { fontSize: 12, fontWeight: '700' },
   emptyWeek: { alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.lg },
   emptyContent: { fontSize: 14, textAlign: 'center' },
-  emptyWrap: { alignItems: 'center', paddingTop: Spacing.huge, gap: Spacing.md },
-  emptyIconChip: { width: 64, height: 64, borderRadius: Radius.xxl, alignItems: 'center', justifyContent: 'center' },
+  emptyWrap: { alignItems: 'center', paddingTop: Spacing.huge, gap: Spacing.sm },
+  emptyIconChip: { width: 64, height: 64, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.sm },
 });

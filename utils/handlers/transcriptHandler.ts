@@ -1,6 +1,7 @@
 import { AuthManager } from '../auth';
 import { makeGucRequest as makeProxyRequest } from '../gucRequest';
 import { extractViewState } from '../extractors/gradeExtractor';
+import { isOptionSelected, onSharedRequestsReset } from '../sharedRequest';
 import {
   MaintenanceError,
   extractMaintenanceMessage,
@@ -24,6 +25,80 @@ function isServerOverloaded(html: string): boolean {
   return html.includes('server overload') ||
          html.includes('temporarily paused') ||
          html.includes('refresh the page again after');
+}
+
+/** GUC throttling page ("temporarily paused, refresh the page again after ..."). */
+class ServerOverloadError extends Error {
+  constructor() {
+    super("Server is busy right now. Please try again in a moment.");
+    this.name = 'ServerOverloadError';
+  }
+}
+
+/** Pause before each retry so GUC's throttle has time to lift. */
+const RETRY_DELAY_MS = 100;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Between retries: wait a few seconds, then re-login for a fresh session. */
+async function prepareRetry(): Promise<void> {
+  await sleep(RETRY_DELAY_MS);
+  await AuthManager.logoutAndLogin();
+}
+
+/**
+ * Last real transcript page this session reached. Its form fields are enough
+ * to POST another year selection directly, skipping the GET + sTo() hops (and
+ * the overload page GUC serves when that page is re-requested too soon).
+ * Cleared whenever the GUC session is reset.
+ */
+let lastPage: { html: string; url: string } | null = null;
+/**
+ * GUC serves the overload page for a second year POST on the same login
+ * session; a re-login lifts it. True once this session has served one.
+ */
+let sessionUsed = false;
+/** Background re-login started after a load, so the next one starts fresh. */
+let pendingRelogin: Promise<void> | null = null;
+
+onSharedRequestsReset(() => {
+  lastPage = null;
+  sessionUsed = false;
+});
+
+/**
+ * Re-login for a fresh session, keeping the held page: it belongs to the same
+ * account and GUC accepts its form fields on the new session.
+ */
+async function reloginKeepingPage(): Promise<void> {
+  const held = lastPage;
+  const ok = await AuthManager.logoutAndLogin();
+  if (ok) {
+    lastPage = held;
+    sessionUsed = false;
+  }
+}
+
+/** Fire-and-forget re-login so the next year selection is a single POST. */
+function scheduleBackgroundRelogin(): void {
+  if (pendingRelogin) return;
+  pendingRelogin = reloginKeepingPage()
+    .catch(() => {})
+    .finally(() => {
+      pendingRelogin = null;
+    });
+}
+
+/** Don't hit GUC while a background re-login is swapping the session cookies. */
+async function awaitPendingRelogin(): Promise<void> {
+  if (pendingRelogin) await pendingRelogin;
+}
+
+function rememberPage(html: string, url: string): void {
+  const vs = extractViewState(html);
+  if (vs.__VIEWSTATE && vs.__VIEWSTATEGENERATOR && vs.__EVENTVALIDATION) {
+    lastPage = { html, url };
+  }
 }
 
 /**
@@ -103,7 +178,7 @@ async function fetchTranscriptPage(): Promise<{ html: string; url: string }> {
     }
 
     if (isServerOverloaded(html)) {
-      throw new Error('Server overload detected');
+      throw new ServerOverloadError();
     }
 
     // GUC JS `sTo()` redirect: extract the token and follow it.
@@ -124,6 +199,7 @@ async function fetchTranscriptPage(): Promise<{ html: string; url: string }> {
  * Get available study years from transcript page
  */
 export async function getAvailableStudyYears(): Promise<{value: string, text: string}[]> {
+  await awaitPendingRelogin();
   let attempt = 0;
   const maxAttempts = 3;
 
@@ -131,7 +207,7 @@ export async function getAvailableStudyYears(): Promise<{value: string, text: st
     attempt++;
 
     try {
-      const { html } = await fetchTranscriptPage();
+      const { html, url } = await fetchTranscriptPage();
 
       // A pending evaluation blocks the transcript: GUC disables the year
       // dropdown and shows the "You have not evaluated..." message. Surface it
@@ -153,7 +229,10 @@ export async function getAvailableStudyYears(): Promise<{value: string, text: st
         }
       }
 
-      if (years.length > 0) return years;
+      if (years.length > 0) {
+        rememberPage(html, url);
+        return years;
+      }
       throw new Error('No study years found');
 
     } catch (error: any) {
@@ -163,7 +242,7 @@ export async function getAvailableStudyYears(): Promise<{value: string, text: st
       if (isMaintenanceError(error)) throw error;
       if (isEvaluationRequiredError(error)) throw error;
       if (attempt < maxAttempts) {
-        await AuthManager.logoutAndLogin();
+        await prepareRetry();
       } else {
         throw error;
       }
@@ -174,9 +253,95 @@ export async function getAvailableStudyYears(): Promise<{value: string, text: st
 }
 
 /**
+ * Submit the year-selection form from an already-loaded transcript page.
+ * Throws on maintenance, overload, or a non-200 response.
+ */
+async function postYearSelect(page: { html: string; url: string }, studyYearId: string): Promise<any> {
+  const { html, url } = page;
+
+  const viewStateData = extractViewState(html);
+  if (!viewStateData.__VIEWSTATE || !viewStateData.__VIEWSTATEGENERATOR || !viewStateData.__EVENTVALIDATION) {
+    throw new Error('Failed to extract view state data');
+  }
+
+  const formBody = new URLSearchParams({
+    ...viewStateData,
+    'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$stdYrLst': studyYearId,
+    '__EVENTTARGET': 'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$stdYrLst',
+    '__EVENTARGUMENT': '',
+  });
+
+  const finalData = await makeProxyRequest(url, 'POST', formBody.toString(), { allowNon200: true });
+  const finalHtml = finalData.html || finalData.body || '';
+
+  // A maintenance redirect can also occur on the POST.
+  if (finalData.status === 302 || finalData.status === 303) {
+    const location = finalData.headers?.location || '';
+    if (isMaintenanceUrl(location) || isMaintenanceHtml(finalHtml)) {
+      throw new MaintenanceError(extractMaintenanceMessage(finalHtml, location));
+    }
+    throw new Error(`Request failed: ${finalData.status}`);
+  }
+  if (isMaintenanceHtml(finalHtml)) {
+    throw new MaintenanceError(extractMaintenanceMessage(finalHtml, url));
+  }
+  if (isServerOverloaded(finalHtml)) {
+    throw new ServerOverloadError();
+  }
+  if (finalData.status !== 200) {
+    throw new Error(`Request failed: ${finalData.status}`);
+  }
+
+  // The response is itself a transcript page; keep it for the next selection.
+  if (!isRedirectResponse(finalHtml)) rememberPage(finalHtml, url);
+  sessionUsed = true;
+
+  return finalData;
+}
+
+/**
  * Get transcript data for a specific study year with redirect protection
  */
 export async function getTranscriptData(studyYearId: string): Promise<any> {
+  await awaitPendingRelogin();
+  const data = await loadTranscriptData(studyYearId);
+  // This session is now spent; refresh it while the user reads the result.
+  scheduleBackgroundRelogin();
+  return data;
+}
+
+async function loadTranscriptData(studyYearId: string): Promise<any> {
+  // Fast path: POST straight from the last page we hold (one request).
+  const held = lastPage;
+  if (held) {
+    // A spent session would just return the overload page; refresh it first.
+    if (sessionUsed) {
+      try {
+        await reloginKeepingPage();
+      } catch {
+        // Fall through; the POST below will surface any real problem.
+      }
+    }
+
+    for (let fastTry = 1; fastTry <= 2; fastTry++) {
+      try {
+        const data = await postYearSelect(held, studyYearId);
+        const html = data.html || data.body || '';
+        // Only trust a real transcript page showing the requested year.
+        if (isRedirectResponse(html) || !isOptionSelected(html, studyYearId)) {
+          throw new Error('held page is stale');
+        }
+        return data;
+      } catch (error: any) {
+        if (isMaintenanceError(error)) throw error;
+        if (!(error instanceof ServerOverloadError) || fastTry === 2) break;
+        // Overload: a fresh session lifts it.
+        await reloginKeepingPage();
+      }
+    }
+    lastPage = null;
+  }
+
   let attempt = 0;
   const maxAttempts = 3;
 
@@ -185,47 +350,15 @@ export async function getTranscriptData(studyYearId: string): Promise<any> {
 
     try {
       // Resolve the real transcript page (follows 302 + sTo() hops, throws
-      // MaintenanceError if GUC is under maintenance).
-      const { html, url } = await fetchTranscriptPage();
-
-      // Extract view state and submit the year-selection form.
-      const viewStateData = extractViewState(html);
-      if (!viewStateData.__VIEWSTATE || !viewStateData.__VIEWSTATEGENERATOR || !viewStateData.__EVENTVALIDATION) {
-        throw new Error('Failed to extract view state data');
-      }
-
-      const formBody = new URLSearchParams({
-        ...viewStateData,
-        'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$stdYrLst': studyYearId,
-        '__EVENTTARGET': 'ctl00$ctl00$ContentPlaceHolderright$ContentPlaceHoldercontent$stdYrLst',
-        '__EVENTARGUMENT': '',
-      });
-
-      const finalData = await makeProxyRequest(url, 'POST', formBody.toString(), { allowNon200: true });
-      const finalHtml = finalData.html || finalData.body || '';
-
-      // A maintenance redirect can also occur on the POST.
-      if (finalData.status === 302 || finalData.status === 303) {
-        const location = finalData.headers?.location || '';
-        if (isMaintenanceUrl(location) || isMaintenanceHtml(finalHtml)) {
-          throw new MaintenanceError(extractMaintenanceMessage(finalHtml, location));
-        }
-        throw new Error(`Request failed: ${finalData.status}`);
-      }
-      if (isMaintenanceHtml(finalHtml)) {
-        throw new MaintenanceError(extractMaintenanceMessage(finalHtml, url));
-      }
-      if (finalData.status !== 200) {
-        throw new Error(`Request failed: ${finalData.status}`);
-      }
-
-      return finalData;
+      // MaintenanceError if GUC is under maintenance), then submit the year.
+      const page = await fetchTranscriptPage();
+      return await postYearSelect(page, studyYearId);
 
     } catch (error: any) {
       // Maintenance is not an auth problem — surface it immediately.
       if (isMaintenanceError(error)) throw error;
       if (attempt < maxAttempts) {
-        await AuthManager.logoutAndLogin();
+        await prepareRetry();
       } else {
         throw error;
       }

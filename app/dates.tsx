@@ -1,13 +1,15 @@
 import BottomSheet from '@/components/ui/BottomSheet';
 import { SheetHeader } from '@/components/ui/Dropdown';
+import { SegmentOption, SegmentedControl } from '@/components/ui/SegmentedControl';
 import { SheetButtons } from '@/components/ui/SheetButtons';
 import { useCustomAlert } from '@/components/CustomAlert';
 import { AppBar } from '@/components/navigation/AppBar';
-import { Colors, SlotTypeColors } from '@/constants/Colors';
+import { Colors } from '@/constants/Colors';
+import { Radius, Shadow, Spacing, Type, withAlpha } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
-import { FlatList, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ComponentProps, useEffect, useMemo, useState } from 'react';
+import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -20,15 +22,14 @@ interface DateItem {
   type: 'quiz' | 'assignment' | 'project' | 'exam' | 'other';
 }
 
-const typeColors = {
-  quiz: SlotTypeColors.Lecture,
-  assignment: SlotTypeColors.Tutorial,
-  project: SlotTypeColors.Lab,
-  exam: SlotTypeColors.Workshop,
-  other: SlotTypeColors.Seminar,
-};
+type DateType = DateItem['type'];
+type ThemeColors = (typeof Colors)['light'];
+type IconName = ComponentProps<typeof Ionicons>['name'];
+type Tab = 'upcoming' | 'past';
 
-const typeIcons = {
+const TYPES: DateType[] = ['quiz', 'assignment', 'project', 'exam', 'other'];
+
+const typeIcons: Record<DateType, IconName> = {
   quiz: 'clipboard',
   assignment: 'document-text',
   project: 'folder',
@@ -36,25 +37,90 @@ const typeIcons = {
   other: 'calendar',
 };
 
+function typeColor(type: DateType, colors: ThemeColors): string {
+  switch (type) {
+    case 'quiz': return colors.secondary;
+    case 'assignment': return colors.success;
+    case 'project': return colors.warning;
+    case 'exam': return colors.tint;
+    default: return colors.cms;
+  }
+}
+
+const MONTHS_SHORT = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+const WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Dates are stored as "YYYY-MM-DD" and must be read as local days —
+// `new Date("YYYY-MM-DD")` is UTC and can land on the previous day.
+function parseLocalDate(value: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  const fallback = new Date(value);
+  fallback.setHours(0, 0, 0, 0);
+  return fallback;
+}
+
+function toLocalDateString(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function startOfToday(): Date {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+}
+
+function daysFromToday(value: string): number {
+  return Math.round((parseLocalDate(value).getTime() - startOfToday().getTime()) / DAY_MS);
+}
+
+function relativeLabel(days: number): string {
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Tomorrow';
+  if (days === -1) return 'Yesterday';
+  if (days > 1) return days < 14 ? `In ${days} days` : `In ${Math.round(days / 7)} weeks`;
+  const ago = -days;
+  return ago < 14 ? `${ago} days ago` : `${Math.round(ago / 7)} weeks ago`;
+}
+
+function formatLongDate(value: string): string {
+  return parseLocalDate(value).toLocaleDateString('en-US', {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+const EMPTY_FORM = {
+  date: '',
+  title: '',
+  description: '',
+  location: '',
+  type: 'quiz' as DateType,
+};
+
 export default function DatesScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { showAlert, AlertComponent } = useCustomAlert();
   const [dates, setDates] = useState<DateItem[]>([]);
+  const [activeTab, setActiveTab] = useState<Tab>('upcoming');
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<DateItem | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [formData, setFormData] = useState({
-    date: '',
-    title: '',
-    description: '',
-    location: '',
-    type: 'quiz' as DateItem['type'],
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
   const openModal = () => setModalVisible(true);
-  const closeModal = () => setModalVisible(false);
+  const closeModal = () => {
+    setModalVisible(false);
+    setShowDatePicker(false);
+  };
 
   // Load dates from storage on component mount
   useEffect(() => {
@@ -63,8 +129,6 @@ export default function DatesScreen() {
 
   const loadDates = async () => {
     try {
-      // For now, we'll use a simple approach with AsyncStorage
-      // In a real app, you might want to use a more robust storage solution
       const stored = await import('@react-native-async-storage/async-storage').then(
         (AsyncStorage) => AsyncStorage.default.getItem('dates')
       );
@@ -86,49 +150,47 @@ export default function DatesScreen() {
     }
   };
 
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    const currentDate = selectedDate || new Date();
+  const setFormDate = (date: Date) => {
+    setSelectedDate(date);
+    setFormData(prev => ({ ...prev, date: toLocalDateString(date) }));
+  };
+
+  const handleDateChange = (event: any, picked?: Date) => {
     setShowDatePicker(Platform.OS === 'ios');
-    setSelectedDate(currentDate);
-    setFormData({ ...formData, date: currentDate.toISOString().split('T')[0] });
+    if (event?.type === 'dismissed' || !picked) return;
+    setFormDate(picked);
+  };
+
+  const quickDate = (offsetDays: number) => {
+    const date = startOfToday();
+    date.setDate(date.getDate() + offsetDays);
+    setFormDate(date);
+    setShowDatePicker(false);
   };
 
   const handleAddDate = () => {
-    if (!formData.date || !formData.title) {
-      showAlert({
-        title: 'Error',
-        message: 'Please fill in the date and title fields.',
-        type: 'error',
-      });
-      return;
-    }
+    if (!formData.date || !formData.title.trim()) return;
 
     const newDate: DateItem = {
       id: editingItem?.id || Date.now().toString(),
       date: formData.date,
-      title: formData.title,
-      description: formData.description,
-      location: formData.location,
+      title: formData.title.trim(),
+      description: formData.description.trim(),
+      location: formData.location.trim(),
       type: formData.type,
     };
 
-    let updatedDates;
-    if (editingItem) {
-      updatedDates = dates.map(item => 
-        item.id === editingItem.id ? newDate : item
-      );
-    } else {
-      updatedDates = [...dates, newDate];
-    }
+    const updatedDates = editingItem
+      ? dates.map(item => (item.id === editingItem.id ? newDate : item))
+      : [...dates, newDate];
 
     // Sort dates by date
-    updatedDates.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
+    updatedDates.sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
+
     saveDates(updatedDates);
     resetForm();
-    setModalVisible(false);
+    closeModal();
   };
-
 
   const handleDeleteDate = (id: string) => {
     showAlert({
@@ -141,8 +203,9 @@ export default function DatesScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            const updatedDates = dates.filter(item => item.id !== id);
-            saveDates(updatedDates);
+            saveDates(dates.filter(item => item.id !== id));
+            closeModal();
+            resetForm();
           },
         },
       ],
@@ -150,16 +213,6 @@ export default function DatesScreen() {
   };
 
   const handleDeleteAll = () => {
-    if (dates.length === 0) {
-      showAlert({
-        title: 'No Dates',
-        message: 'There are no dates to delete.',
-        type: 'info',
-        buttons: [{ text: 'OK', style: 'default' }],
-      });
-      return;
-    }
-
     showAlert({
       title: 'Delete All Dates',
       message: `Are you sure you want to delete all ${dates.length} date(s)? This action cannot be undone.`,
@@ -169,22 +222,31 @@ export default function DatesScreen() {
         {
           text: 'Delete All',
           style: 'destructive',
-          onPress: () => {
-            saveDates([]);
-          },
+          onPress: () => saveDates([]),
+        },
+      ],
+    });
+  };
+
+  const handleClearPast = () => {
+    const pastCount = dates.filter(d => daysFromToday(d.date) < 0).length;
+    showAlert({
+      title: 'Clear Past Dates',
+      message: `Remove ${pastCount} past date${pastCount === 1 ? '' : 's'}? Upcoming dates are kept.`,
+      type: 'warning',
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: () => saveDates(dates.filter(d => daysFromToday(d.date) >= 0)),
         },
       ],
     });
   };
 
   const resetForm = () => {
-    setFormData({
-      date: '',
-      title: '',
-      description: '',
-      location: '',
-      type: 'quiz',
-    });
+    setFormData(EMPTY_FORM);
     setSelectedDate(new Date());
     setEditingItem(null);
   };
@@ -196,8 +258,7 @@ export default function DatesScreen() {
 
   const handleEditDate = (item: DateItem) => {
     setEditingItem(item);
-    const itemDate = new Date(item.date);
-    setSelectedDate(itemDate);
+    setSelectedDate(parseLocalDate(item.date));
     setFormData({
       date: item.date,
       title: item.title,
@@ -208,128 +269,189 @@ export default function DatesScreen() {
     openModal();
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
+  // Upcoming grouped by how soon; past shown most recent first
+  const { sections, upcomingCount, pastCount } = useMemo(() => {
+    const withDays = dates.map(item => ({ item, days: daysFromToday(item.date) }));
+    const upcoming = withDays.filter(d => d.days >= 0).sort((a, b) => a.days - b.days);
+    const past = withDays.filter(d => d.days < 0).sort((a, b) => b.days - a.days);
 
-  const getTypeDisplayName = (type: DateItem['type']) => {
-    return type.charAt(0).toUpperCase() + type.slice(1);
-  };
-
-  const getDateStatusColor = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset time to start of day
-    date.setHours(0, 0, 0, 0); // Reset time to start of day
-    
-    if (date < today) {
-      return colors.danger; // Past dates
-    } else if (date.getTime() === today.getTime()) {
-      return colors.info; // Today
-    } else {
-      return colors.success; // Future dates
+    const groups: { title: string; data: typeof withDays }[] = [];
+    if (activeTab === 'upcoming') {
+      const bucket = (days: number) =>
+        days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : days <= 7 ? 'This week' : 'Later';
+      for (const entry of upcoming) {
+        const title = bucket(entry.days);
+        const last = groups[groups.length - 1];
+        if (last?.title === title) last.data.push(entry);
+        else groups.push({ title, data: [entry] });
+      }
+    } else if (past.length > 0) {
+      groups.push({ title: 'Past', data: past });
     }
-  };
+    return { sections: groups, upcomingCount: upcoming.length, pastCount: past.length };
+  }, [dates, activeTab]);
 
-  const renderDateItem = ({ item }: { item: DateItem }) => (
-    <View style={[styles.dateCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-      {/* Date Status Color Strip */}
-      <View style={[styles.dateStatusStrip, { backgroundColor: getDateStatusColor(item.date) }]} />
-      
-      <View style={styles.dateCardHeader}>
-        <View style={[styles.typeIndicator, { backgroundColor: typeColors[item.type] }]}>
-          <Ionicons name={typeIcons[item.type] as any} size={16} color={colors.onAccent} />
+  const tabOptions: SegmentOption<Tab>[] = [
+    { value: 'upcoming', label: `Upcoming${upcomingCount ? ` · ${upcomingCount}` : ''}`, icon: 'time-outline' },
+    { value: 'past', label: `Past${pastCount ? ` · ${pastCount}` : ''}`, icon: 'checkmark-done' },
+  ];
+
+  const renderDateCard = ({ item, days }: { item: DateItem; days: number }) => {
+    const accent = typeColor(item.type, colors);
+    const date = parseLocalDate(item.date);
+    const isPast = days < 0;
+    const soon = days >= 0 && days <= 1;
+
+    return (
+      <TouchableOpacity
+        key={item.id}
+        style={[
+          styles.card,
+          { backgroundColor: colors.surfaceElevated, borderColor: soon ? withAlpha(accent, 0.45) : colors.border },
+          soon ? Shadow.card(colors) : Shadow.xs(colors),
+          isPast && styles.cardPast,
+        ]}
+        onPress={() => handleEditDate(item)}
+        activeOpacity={0.75}
+      >
+        <View style={[styles.dateBlock, { backgroundColor: withAlpha(accent, 0.12) }]}>
+          <Text style={[styles.dateMonth, { color: accent }]}>{MONTHS_SHORT[date.getMonth()]}</Text>
+          <Text style={[styles.dateDay, { color: accent }]}>{date.getDate()}</Text>
+          <Text style={[styles.dateWeekday, { color: accent }]}>{WEEKDAYS_SHORT[date.getDay()]}</Text>
         </View>
-        <View style={styles.dateCardContent}>
-          <Text style={[styles.dateTitle, { color: colors.mainFont }]}>{item.title}</Text>
-          <View style={styles.typeAndLocationRow}>
-            <Text style={[styles.dateType, { color: colors.secondaryFont }]}>
-              {getTypeDisplayName(item.type)}
+
+        <View style={styles.cardBody}>
+          <View style={styles.cardTopRow}>
+            <Text style={[styles.cardTitle, { color: colors.textPrimary }]} numberOfLines={2}>
+              {item.title}
             </Text>
-            {item.location && (
-              <>
-                <Text style={[styles.separator, { color: colors.secondaryFont }]}>•</Text>
-                <View style={styles.locationRow}>
-                  <Ionicons name="location-outline" size={12} color={colors.secondaryFont} />
-                  <Text style={[styles.locationText, { color: colors.secondaryFont }]}>{item.location}</Text>
-                </View>
-              </>
+            <View
+              style={[
+                styles.relativeChip,
+                { backgroundColor: soon ? accent : colors.surface },
+              ]}
+            >
+              <Text style={[styles.relativeText, { color: soon ? colors.onAccent : colors.textSecondary }]}>
+                {relativeLabel(days)}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.metaRow}>
+            <View style={[styles.typeChip, { backgroundColor: withAlpha(accent, 0.14) }]}>
+              <Ionicons name={typeIcons[item.type]} size={11} color={accent} />
+              <Text style={[styles.typeChipText, { color: accent }]}>{capitalize(item.type)}</Text>
+            </View>
+            {!!item.location && (
+              <View style={styles.locationRow}>
+                <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
+                <Text style={[styles.locationText, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {item.location}
+                </Text>
+              </View>
             )}
           </View>
+
+          {!!item.description && (
+            <Text style={[styles.description, { color: colors.textSecondary }]} numberOfLines={2}>
+              {item.description}
+            </Text>
+          )}
         </View>
-        <View style={styles.dateCardActions}>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.tint + '20' }]}
-            onPress={() => handleEditDate(item)}
-          >
-            <Ionicons name="pencil" size={16} color={colors.tint} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.gradeFailing + '20' }]}
-            onPress={() => handleDeleteDate(item.id)}
-          >
-            <Ionicons name="trash" size={16} color={colors.gradeFailing} />
-          </TouchableOpacity>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderEmpty = () => {
+    const noneAtAll = dates.length === 0;
+    return (
+      <View style={styles.centerState}>
+        <View style={[styles.stateIcon, { backgroundColor: withAlpha(colors.tint, 0.1) }]}>
+          <Ionicons
+            name={noneAtAll ? 'calendar-number-outline' : activeTab === 'upcoming' ? 'sunny-outline' : 'archive-outline'}
+            size={30}
+            color={colors.tint}
+          />
         </View>
-      </View>
-      <Text style={[styles.dateText, { color: getDateStatusColor(item.date) }]}>{formatDate(item.date)}</Text>
-      {item.description && (
-        <Text style={[styles.dateDescription, { color: colors.secondaryFont }]}>
-          {item.description}
+        <Text style={[styles.stateTitle, { color: colors.textPrimary }]}>
+          {noneAtAll ? 'No dates yet' : activeTab === 'upcoming' ? 'Nothing coming up' : 'No past dates'}
         </Text>
-      )}
-    </View>
-  );
+        <Text style={[styles.stateText, { color: colors.textSecondary }]}>
+          {noneAtAll
+            ? 'Keep track of quizzes, assignments, projects and exams in one place.'
+            : activeTab === 'upcoming'
+              ? 'You’re all clear. Add a date when something new comes up.'
+              : 'Dates you’ve passed will show up here.'}
+        </Text>
+        {(noneAtAll || activeTab === 'upcoming') && (
+          <TouchableOpacity
+            style={[styles.ctaButton, { backgroundColor: colors.tint }, Shadow.glow(colors.tint)]}
+            onPress={handleOpenModal}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add" size={18} color={colors.onPrimary} />
+            <Text style={[styles.ctaText, { color: colors.onPrimary }]}>Add a date</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
+  const canSave = !!formData.date && !!formData.title.trim();
+  const formDays = formData.date ? daysFromToday(formData.date) : null;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppBar
-        title="Dates"
+        title="Important Dates"
         rightActions={
           <>
+            {dates.length > 0 && (
+              <TouchableOpacity
+                style={[styles.headerIconButton, { backgroundColor: colors.surface, borderColor: colors.border }, Shadow.xs(colors)]}
+                onPress={handleDeleteAll}
+                accessibilityLabel="Delete all dates"
+              >
+                <Ionicons name="trash-outline" size={19} color={colors.danger} />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
-              style={[styles.headerActionButton, { backgroundColor: colors.gradeFailing }]}
-              onPress={handleDeleteAll}
-            >
-              <Ionicons name="trash" size={18} color={colors.onAccent} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.headerActionButton, { backgroundColor: colors.tint }]}
+              style={[styles.headerIconButton, { backgroundColor: colors.tint, borderColor: colors.tint }, Shadow.glow(colors.tint)]}
               onPress={handleOpenModal}
+              accessibilityLabel="Add date"
             >
-              <Ionicons name="add" size={20} color={colors.onPrimary} />
+              <Ionicons name="add" size={24} color={colors.onPrimary} />
             </TouchableOpacity>
           </>
         }
       />
 
-      {/* Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {dates.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="calendar-outline" size={64} color={colors.secondaryFont} />
-            <Text style={[styles.emptyStateTitle, { color: colors.mainFont }]}>
-              No dates added yet
-            </Text>
-            <Text style={[styles.emptyStateText, { color: colors.secondaryFont }]}>
-              Add quizzes, assignments, projects, and other important dates to keep track of your schedule.
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={dates}
-            renderItem={renderDateItem}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-            contentContainerStyle={styles.datesList}
-          />
-        )}
+      {dates.length > 0 && (
+        <View style={styles.controls}>
+          <SegmentedControl options={tabOptions} value={activeTab} onChange={setActiveTab} />
+        </View>
+      )}
+
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {sections.length === 0
+          ? renderEmpty()
+          : sections.map(section => (
+              <View key={section.title}>
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={[styles.sectionHeader, { color: colors.textTertiary }]}>{section.title}</Text>
+                  {activeTab === 'past' && (
+                    <TouchableOpacity onPress={handleClearPast} hitSlop={8}>
+                      <Text style={[styles.clearPast, { color: colors.danger }]}>Clear past</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {section.data.map(renderDateCard)}
+              </View>
+            ))}
       </ScrollView>
 
       {/* Add/Edit Modal */}
@@ -337,122 +459,144 @@ export default function DatesScreen() {
         visible={modalVisible}
         onRequestClose={closeModal}
         heightRatio={0.9}
-        header={<SheetHeader colors={colors} title={editingItem ? 'Edit Date' : 'Add New Date'} />}
-        footer={<SheetButtons secondary={{ label: 'Cancel', onPress: closeModal }} primary={{ label: 'Save', onPress: handleAddDate }} />}
+        header={<SheetHeader colors={colors} title={editingItem ? 'Edit Date' : 'New Date'} />}
+        footer={
+          <SheetButtons
+            secondary={{ label: 'Cancel', onPress: closeModal }}
+            primary={{ label: editingItem ? 'Save' : 'Add', icon: 'checkmark', onPress: handleAddDate, disabled: !canSave }}
+          />
+        }
       >
         <View style={styles.modalContent}>
-            {/* Title Input */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.mainFont }]}>Title *</Text>
-              <TextInput
-                style={[styles.input, { 
-                  backgroundColor: colors.cardBackground, 
-                  borderColor: colors.border,
-                  color: colors.mainFont 
-                }]}
-                value={formData.title}
-                onChangeText={(text) => setFormData({ ...formData, title: text })}
-                placeholder="Enter title"
-                placeholderTextColor={colors.secondaryFont}
-              />
-            </View>
+          {/* Title */}
+          <TextInput
+            style={[styles.titleInput, { backgroundColor: colors.surface, color: colors.textPrimary }]}
+            value={formData.title}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, title: text }))}
+            placeholder="What's due? e.g. CSEN 401 Quiz 2"
+            placeholderTextColor={colors.textTertiary}
+          />
 
-            {/* Date Input */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.mainFont }]}>Date *</Text>
-              <TouchableOpacity
-                style={[styles.datePickerButton, { 
-                  backgroundColor: colors.cardBackground, 
-                  borderColor: colors.border,
-                }]}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Text style={[styles.datePickerText, { color: colors.mainFont }]}>
-                  {formData.date ? new Date(formData.date).toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  }) : 'Select Date'}
-                </Text>
-                <Ionicons name="calendar-outline" size={20} color={colors.secondaryFont} />
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={selectedDate}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={handleDateChange}
-                />
-              )}
-            </View>
-
-            {/* Location Input */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.mainFont }]}>Location</Text>
-              <TextInput
-                style={[styles.input, { 
-                  backgroundColor: colors.cardBackground, 
-                  borderColor: colors.border,
-                  color: colors.mainFont 
-                }]}
-                value={formData.location}
-                onChangeText={(text) => setFormData({ ...formData, location: text })}
-                placeholder="Enter location (optional)"
-                placeholderTextColor={colors.secondaryFont}
-              />
-            </View>
-
-            {/* Type Selection */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.mainFont }]}>Type</Text>
-              <View style={styles.typeSelector}>
-                {Object.keys(typeColors).map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[
-                      styles.typeOption,
-                      { 
-                        backgroundColor: formData.type === type ? typeColors[type as DateItem['type']] : colors.cardBackground,
-                        borderColor: colors.border
-                      }
-                    ]}
-                    onPress={() => setFormData({ ...formData, type: type as DateItem['type'] })}
+          {/* Type */}
+          <Text style={[styles.fieldLabel, { color: colors.textTertiary }]}>Type</Text>
+          <View style={styles.typeGrid}>
+            {TYPES.map(type => {
+              const active = formData.type === type;
+              const accent = typeColor(type, colors);
+              return (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.typeTile,
+                    {
+                      backgroundColor: active ? withAlpha(accent, 0.14) : colors.surface,
+                      borderColor: active ? accent : 'transparent',
+                    },
+                  ]}
+                  onPress={() => setFormData(prev => ({ ...prev, type }))}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name={typeIcons[type]} size={20} color={active ? accent : colors.textSecondary} />
+                  <Text
+                    style={[styles.typeTileText, { color: active ? accent : colors.textSecondary }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
                   >
-                    <Ionicons 
-                      name={typeIcons[type as DateItem['type']] as any} 
-                      size={20} 
-                      color={formData.type === type ? colors.onAccent : colors.secondaryFont} 
-                    />
-                    <Text style={[
-                      styles.typeOptionText,
-                      { color: formData.type === type ? colors.onAccent : colors.mainFont }
-                    ]}>
-                      {getTypeDisplayName(type as DateItem['type'])}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+                    {capitalize(type)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
-            {/* Description Input */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.mainFont }]}>Description</Text>
-              <TextInput
-                style={[styles.textArea, { 
-                  backgroundColor: colors.cardBackground, 
-                  borderColor: colors.border,
-                  color: colors.mainFont 
-                }]}
-                value={formData.description}
-                onChangeText={(text) => setFormData({ ...formData, description: text })}
-                placeholder="Enter description (optional)"
-                placeholderTextColor={colors.secondaryFont}
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-              />
+          {/* Date */}
+          <Text style={[styles.fieldLabel, { color: colors.textTertiary }]}>Date</Text>
+          <TouchableOpacity
+            style={[styles.fieldRow, { backgroundColor: colors.surface }]}
+            onPress={() => setShowDatePicker(true)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.fieldIcon, { backgroundColor: withAlpha(colors.tint, 0.12) }]}>
+              <Ionicons name="calendar" size={16} color={colors.tint} />
             </View>
+            <Text style={[styles.fieldValue, { color: formData.date ? colors.textPrimary : colors.textTertiary }]}>
+              {formData.date ? formatLongDate(formData.date) : 'Pick a date'}
+            </Text>
+            {formDays !== null && (
+              <Text style={[styles.fieldHint, { color: colors.textTertiary }]}>{relativeLabel(formDays)}</Text>
+            )}
+          </TouchableOpacity>
+          <View style={styles.quickRow}>
+            {[
+              { label: 'Today', offset: 0 },
+              { label: 'Tomorrow', offset: 1 },
+              { label: 'In a week', offset: 7 },
+            ].map(({ label, offset }) => {
+              const active = formDays === offset;
+              return (
+                <TouchableOpacity
+                  key={label}
+                  style={[
+                    styles.quickChip,
+                    { backgroundColor: active ? colors.tint : colors.surface },
+                  ]}
+                  onPress={() => quickDate(offset)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.quickChipText, { color: active ? colors.onPrimary : colors.textSecondary }]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          {showDatePicker && (
+            <DateTimePicker
+              value={selectedDate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleDateChange}
+            />
+          )}
+
+          {/* Location */}
+          <Text style={[styles.fieldLabel, { color: colors.textTertiary }]}>Location</Text>
+          <View style={[styles.fieldRow, { backgroundColor: colors.surface }]}>
+            <View style={[styles.fieldIcon, { backgroundColor: withAlpha(colors.secondary, 0.12) }]}>
+              <Ionicons name="location" size={16} color={colors.secondary} />
+            </View>
+            <TextInput
+              style={[styles.fieldInput, { color: colors.textPrimary }]}
+              value={formData.location}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, location: text }))}
+              placeholder="Optional — hall, room, or online"
+              placeholderTextColor={colors.textTertiary}
+            />
+          </View>
+
+          {/* Notes */}
+          <Text style={[styles.fieldLabel, { color: colors.textTertiary }]}>Notes</Text>
+          <TextInput
+            style={[styles.textArea, { backgroundColor: colors.surface, color: colors.textPrimary }]}
+            value={formData.description}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
+            placeholder="Optional — topics, chapters, submission link…"
+            placeholderTextColor={colors.textTertiary}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+
+          {editingItem && (
+            <TouchableOpacity
+              style={[styles.deleteButton, { backgroundColor: withAlpha(colors.danger, 0.1) }]}
+              onPress={() => handleDeleteDate(editingItem.id)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="trash-outline" size={16} color={colors.danger} />
+              <Text style={[styles.deleteText, { color: colors.danger }]}>Delete this date</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </BottomSheet>
 
@@ -466,179 +610,264 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerActionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  headerIconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  controls: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xs,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
   },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
+  contentContainer: {
+    flexGrow: 1,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xxxl,
+  },
+  // Sections
+  sectionHeaderRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 60,
+    justifyContent: 'space-between',
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.xs,
+    marginHorizontal: Spacing.xs,
   },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
+  sectionHeader: {
+    ...Type.overline,
   },
-  emptyStateText: {
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 24,
-    paddingHorizontal: 32,
+  clearPast: {
+    ...Type.caption,
   },
-  datesList: {
-    paddingBottom: 20,
-  },
-  dateCard: {
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+  // Card
+  card: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.md + 2,
+    padding: 14,
+    marginTop: Spacing.sm + 2,
+    borderRadius: Radius.lg,
     borderWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    position: 'relative',
-    overflow: 'hidden',
   },
-  dateStatusStrip: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-    borderTopLeftRadius: 16,
-    borderBottomLeftRadius: 16,
-    zIndex: 1,
+  cardPast: {
+    opacity: 0.65,
   },
-  dateCardHeader: {
-    flexDirection: 'row',
+  dateBlock: {
+    width: 54,
+    height: 62,
+    borderRadius: Radius.md,
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  typeIndicator: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
     justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
   },
-  dateCardContent: {
+  dateMonth: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  dateDay: {
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    lineHeight: 26,
+  },
+  dateWeekday: {
+    fontSize: 10,
+    fontWeight: '700',
+    opacity: 0.8,
+  },
+  cardBody: {
     flex: 1,
+    gap: 6,
   },
-  dateTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
   },
-  dateType: {
-    fontSize: 12,
-    fontWeight: '500',
+  cardTitle: {
+    ...Type.body,
+    flex: 1,
+    fontWeight: '700',
+    lineHeight: 20,
   },
-  typeAndLocationRow: {
+  relativeChip: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 3,
+    borderRadius: Radius.pill,
+  },
+  relativeText: {
+    ...Type.caption,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
+    gap: Spacing.sm,
   },
-  separator: {
-    fontSize: 12,
-    marginHorizontal: 6,
+  typeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: Radius.pill,
+  },
+  typeChipText: {
+    ...Type.caption,
+    fontSize: 11,
+    fontWeight: '700',
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 3,
+    flexShrink: 1,
   },
-  dateCardActions: {
+  locationText: {
+    ...Type.subtext,
+    flexShrink: 1,
+  },
+  description: {
+    ...Type.subtext,
+    lineHeight: 18,
+  },
+  // Empty
+  centerState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xxl,
+    paddingVertical: Spacing.huge,
+  },
+  stateIcon: {
+    width: 68,
+    height: 68,
+    borderRadius: Radius.pill,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  stateTitle: {
+    ...Type.h3,
+    marginBottom: Spacing.xs + 2,
+    textAlign: 'center',
+  },
+  stateText: {
+    ...Type.subtext,
+    textAlign: 'center',
+    lineHeight: 19,
+  },
+  ctaButton: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    gap: Spacing.xs + 2,
+    marginTop: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.pill,
   },
-  actionButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  ctaText: {
+    ...Type.callout,
+  },
+  // Form
+  modalContent: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.lg,
+  },
+  titleInput: {
+    ...Type.h3,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 14,
+  },
+  fieldLabel: {
+    ...Type.overline,
+    marginTop: Spacing.xl,
+    marginBottom: Spacing.sm,
+    marginLeft: Spacing.xs,
+  },
+  typeGrid: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  typeTile: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: 2,
+    borderRadius: Radius.md,
+    borderWidth: 1.5,
+  },
+  typeTileText: {
+    ...Type.caption,
+    fontSize: 11,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    minHeight: 52,
+  },
+  fieldIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: Radius.sm,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  dateText: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
+  fieldValue: {
+    ...Type.body,
+    flex: 1,
   },
-  dateDescription: {
-    fontSize: 14,
-    lineHeight: 20,
+  fieldHint: {
+    ...Type.caption,
   },
-  locationText: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginLeft: 4,
+  fieldInput: {
+    ...Type.body,
+    flex: 1,
+    paddingVertical: 14,
   },
-  modalContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-  },
-  datePickerButton: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  quickRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
   },
-  datePickerText: {
-    fontSize: 16,
+  quickChip: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 7,
+    borderRadius: Radius.pill,
+  },
+  quickChipText: {
+    ...Type.caption,
   },
   textArea: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
+    ...Type.body,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
     minHeight: 100,
   },
-  typeSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  typeOption: {
+  deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: 6,
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.xxl,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
   },
-  typeOptionText: {
-    fontSize: 14,
-    fontWeight: '500',
+  deleteText: {
+    ...Type.callout,
   },
 });

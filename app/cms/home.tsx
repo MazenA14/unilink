@@ -7,8 +7,8 @@ import { CmsUnseenSummary, fetchCmsUnseenSummary, getCachedCmsUnseenSummary, get
 import type { CMSCourseRow } from '@/utils/parsers/cmsCoursesParser';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function CMSHomeScreen() {
@@ -138,10 +138,7 @@ export default function CMSHomeScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <AppBar title="CMS" large />
-        <View style={[styles.center, { backgroundColor: colors.background }]}>
-          <ActivityIndicator color={colors.cms} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading CMS courses…</Text>
-        </View>
+        <CmsHomeSkeleton colors={colors} />
       </View>
     );
   }
@@ -154,7 +151,7 @@ export default function CMSHomeScreen() {
         subtitle={groupedCourses.length > 0 ? `${groupedCourses.length} season${groupedCourses.length !== 1 ? 's' : ''}` : undefined}
       />
       {!!error && (
-        <View style={[styles.errorBanner, { backgroundColor: colors.dangerSoft, borderColor: withAlpha(colors.danger, 0.3) }]}>
+        <View style={[styles.errorBanner, { backgroundColor: colors.dangerSoft }]}>
           <Ionicons name="alert-circle" size={16} color={colors.danger} />
           <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
         </View>
@@ -163,51 +160,48 @@ export default function CMSHomeScreen() {
         data={groupedCourses}
         keyExtractor={(item) => item.seasonId}
         refreshControl={<AppRefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.listContent,
-          { paddingBottom: insets.bottom + 24, paddingHorizontal: Spacing.xl },
+          { paddingBottom: insets.bottom + 24 },
         ]}
-        renderItem={({ item: seasonGroup }) => {
+        renderItem={({ item: seasonGroup, index }) => {
           const isExpanded = expandedSeasons.has(seasonGroup.seasonId);
+          const isCurrent = index === 0;
           return (
-            <View
-              style={[
-                styles.seasonSection,
-                { backgroundColor: colors.surfaceElevated, borderColor: colors.divider },
-                Shadow.card(colors),
-              ]}
-            >
+            <View style={styles.seasonSection}>
               <TouchableOpacity
-                style={styles.seasonHeader}
+                style={[
+                  styles.seasonHeader,
+                  { backgroundColor: isExpanded ? 'transparent' : colors.surface },
+                ]}
                 onPress={() => toggleSeason(seasonGroup.seasonId)}
                 activeOpacity={0.7}
               >
-                <View style={[styles.seasonIconChip, { backgroundColor: withAlpha(colors.cms, 0.14) }]}>
-                  <Ionicons name="school-outline" size={20} color={colors.cms} />
-                </View>
                 <View style={styles.seasonHeaderContent}>
-                  <Text style={[Type.h3, { color: colors.textPrimary }]} numberOfLines={1}>{seasonGroup.seasonName}</Text>
-                  <View style={styles.pillRow}>
-                    <View style={[styles.countPill, { backgroundColor: withAlpha(colors.cms, 0.12) }]}>
-                      <Text style={[styles.countPillText, { color: colors.cms }]}>
-                        {seasonGroup.courses.length} course{seasonGroup.courses.length !== 1 ? 's' : ''}
-                      </Text>
-                    </View>
-                    {seasonGroup.unseenTotal > 0 && (
-                      <View style={[styles.countPill, styles.unseenPill, { backgroundColor: colors.dangerSoft }]}>
-                        <View style={[styles.unseenDot, { backgroundColor: colors.danger }]} />
-                        <Text style={[styles.countPillText, { color: colors.danger }]}>
-                          {seasonGroup.unseenTotal} new
-                        </Text>
+                  <View style={styles.seasonTitleRow}>
+                    <Text style={[Type.h3, { color: colors.textPrimary, flexShrink: 1 }]} numberOfLines={1}>
+                      {seasonGroup.seasonName}
+                    </Text>
+                    {isCurrent && (
+                      <View style={[styles.currentPill, { backgroundColor: withAlpha(colors.tint, 0.12) }]}>
+                        <Text style={[styles.currentPillText, { color: colors.tint }]}>Latest</Text>
                       </View>
                     )}
                   </View>
+                  <Text style={[styles.seasonMeta, { color: colors.textTertiary }]}>
+                    {seasonGroup.courses.length} course{seasonGroup.courses.length !== 1 ? 's' : ''}
+                    {seasonGroup.unseenTotal > 0 && (
+                      <Text style={{ color: colors.tint, fontWeight: '700' }}>{`  ·  ${seasonGroup.unseenTotal} new`}</Text>
+                    )}
+                  </Text>
                 </View>
-                <View style={[styles.chevronChip, { backgroundColor: colors.surfaceAlt }]}>
+                <View style={[styles.chevronChip, { backgroundColor: isExpanded ? colors.tint : colors.surfaceSunken }]}>
                   <Ionicons
-                    name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                    name="chevron-down"
                     size={16}
-                    color={colors.textSecondary}
+                    color={isExpanded ? colors.onPrimary : colors.textSecondary}
+                    style={isExpanded && styles.chevronOpen}
                   />
                 </View>
               </TouchableOpacity>
@@ -219,15 +213,21 @@ export default function CMSHomeScreen() {
                     const courseCodeMatch = course.name.match(/\(([^)]+)\)/);
                     const courseCode = courseCodeMatch ? courseCodeMatch[1].replace(/\|/g, '') : '';
                     const cleanCourseName = course.name.replace(/\s*\([^)]+\)\s*/g, '').trim();
+                    const codeParts = splitCourseCode(courseCode);
 
                     const isCancelled = course.status.toLowerCase() === 'canceled' || course.status.toLowerCase() === 'cancelled';
+                    const hasNew = course.unseenCount > 0;
 
                     return (
                       <TouchableOpacity
                         key={`${course.courseId}-${course.seasonId}`}
                         style={[
                           styles.card,
-                          { backgroundColor: colors.surfaceAlt, borderColor: colors.divider },
+                          {
+                            backgroundColor: colors.surfaceElevated,
+                            borderColor: hasNew ? withAlpha(colors.tint, 0.35) : colors.border,
+                          },
+                          hasNew ? Shadow.card(colors) : Shadow.xs(colors),
                           isCancelled && styles.cardCancelled,
                         ]}
                         onPress={() => onPressViewCourse(course)}
@@ -236,39 +236,59 @@ export default function CMSHomeScreen() {
                         accessibilityRole="button"
                         accessibilityState={{ disabled: isCancelled }}
                       >
-                        <View style={styles.cardRow}>
-                        <View style={styles.cardBody}>
-                        <View style={styles.cardTopRow}>
-                          {!!courseCode && (
-                            <View style={[styles.codePill, { backgroundColor: withAlpha(colors.cms, 0.12) }]}>
-                              <Text style={[styles.codePillText, { color: colors.cms }]}>{courseCode}</Text>
-                            </View>
+                        <View
+                          style={[
+                            styles.codeBadge,
+                            { backgroundColor: isCancelled ? colors.surfaceSunken : withAlpha(colors.tint, 0.1) },
+                          ]}
+                        >
+                          {codeParts ? (
+                            <>
+                              <Text style={[styles.codeDept, { color: isCancelled ? colors.textTertiary : colors.tint }]} numberOfLines={1}>
+                                {codeParts.dept}
+                              </Text>
+                              <Text style={[styles.codeNumber, { color: isCancelled ? colors.textTertiary : colors.tint }]} numberOfLines={1}>
+                                {codeParts.number}
+                              </Text>
+                            </>
+                          ) : (
+                            <Ionicons name="book" size={20} color={isCancelled ? colors.textTertiary : colors.tint} />
                           )}
-                          {isCancelled && (
-                            <View style={[styles.codePill, { backgroundColor: colors.dangerSoft }]}>
-                              <Text style={[styles.codePillText, { color: colors.danger }]}>Cancelled</Text>
-                            </View>
-                          )}
-                          {course.unseenCount > 0 && (
+                          {hasNew && (
                             <View
-                              style={[styles.unseenBadge, { backgroundColor: colors.danger }]}
+                              style={[styles.unseenBadge, { backgroundColor: colors.tint, borderColor: colors.surfaceElevated }]}
                               accessibilityLabel={`${course.unseenCount} unseen item${course.unseenCount !== 1 ? 's' : ''}`}
                             >
-                              <Text style={[styles.unseenBadgeText, { color: colors.onAccent }]}>{course.unseenCount} new</Text>
+                              <Text style={[styles.unseenBadgeText, { color: colors.onPrimary }]}>
+                                {course.unseenCount > 99 ? '99+' : course.unseenCount}
+                              </Text>
                             </View>
                           )}
                         </View>
-                        <Text style={[Type.bodyStrong, { color: colors.textPrimary, marginTop: Spacing.xs }]}>
-                          {cleanCourseName}
-                        </Text>
-                        <Text style={[Type.caption, { color: colors.textSecondary, marginTop: 2, textTransform: 'none', letterSpacing: 0 }]}>
-                          {course.season}
-                        </Text>
+
+                        <View style={styles.cardBody}>
+                          <Text style={[styles.courseName, { color: colors.textPrimary }]} numberOfLines={2}>
+                            {cleanCourseName}
+                          </Text>
+                          <View style={styles.cardMetaRow}>
+                            {isCancelled ? (
+                              <View style={[styles.statusPill, { backgroundColor: colors.dangerSoft }]}>
+                                <Text style={[styles.statusPillText, { color: colors.danger }]}>Cancelled</Text>
+                              </View>
+                            ) : hasNew ? (
+                              <Text style={[styles.cardMeta, { color: colors.tint, fontWeight: '700' }]}>
+                                {course.unseenCount} new item{course.unseenCount !== 1 ? 's' : ''}
+                              </Text>
+                            ) : (
+                              <Text style={[styles.cardMeta, { color: colors.textTertiary }]} numberOfLines={1}>
+                                {course.season}
+                              </Text>
+                            )}
+                          </View>
                         </View>
                         {!isCancelled && (
                           <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
                         )}
-                        </View>
                       </TouchableOpacity>
                     );
                   })}
@@ -279,10 +299,13 @@ export default function CMSHomeScreen() {
         }}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
-            <View style={[styles.emptyIconChip, { backgroundColor: withAlpha(colors.cms, 0.12) }]}>
-              <Ionicons name="folder-open-outline" size={28} color={colors.cms} />
+            <View style={[styles.emptyIconChip, { backgroundColor: colors.surface }]}>
+              <Ionicons name="folder-open-outline" size={28} color={colors.textTertiary} />
             </View>
-            <Text style={[Type.body, { color: colors.textSecondary, textAlign: 'center' }]}>No courses found.</Text>
+            <Text style={[Type.h3, { color: colors.textPrimary }]}>No courses found</Text>
+            <Text style={[Type.subtext, { color: colors.textSecondary, textAlign: 'center' }]}>
+              Pull down to refresh.
+            </Text>
           </View>
         }
       />
@@ -290,42 +313,126 @@ export default function CMSHomeScreen() {
   );
 }
 
+type ThemeColors = (typeof Colors)['light'];
+
+// "CSEN401" / "CSEN 401" -> { dept: "CSEN", number: "401" }
+function splitCourseCode(code: string): { dept: string; number: string } | null {
+  const match = code.trim().match(/^([A-Za-z]+)\s*(\d+[A-Za-z]?)$/);
+  return match ? { dept: match[1].toUpperCase(), number: match[2] } : null;
+}
+
+function CmsHomeSkeleton({ colors }: { colors: ThemeColors }) {
+  const pulse = useRef(new Animated.Value(0.5)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.5, duration: 700, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
+  const line = (width: number | `${number}%`, height = 12) => (
+    <View style={{ width, height, borderRadius: Radius.xs, backgroundColor: colors.surfaceSunken }} />
+  );
+
+  return (
+    <Animated.View style={[styles.listContent, { opacity: pulse }]}>
+      <View style={[styles.seasonHeader, { paddingHorizontal: Spacing.xs }]}>
+        <View style={{ flex: 1, gap: Spacing.sm }}>
+          {line('55%', 16)}
+          {line('25%')}
+        </View>
+      </View>
+      <View style={styles.seasonContent}>
+        {[0, 1, 2, 3].map(i => (
+          <View key={i} style={[styles.card, { backgroundColor: colors.surface, borderColor: 'transparent' }]}>
+            <View style={[styles.codeBadge, { backgroundColor: colors.surfaceSunken }]} />
+            <View style={{ flex: 1, gap: Spacing.sm }}>
+              {line('75%', 14)}
+              {line('40%')}
+            </View>
+          </View>
+        ))}
+      </View>
+    </Animated.View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  listContent: { paddingBottom: 24 },
+  listContent: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.xs, paddingBottom: 24 },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    marginHorizontal: Spacing.xl,
+    marginHorizontal: Spacing.lg,
     marginBottom: Spacing.sm,
     padding: Spacing.md,
     borderRadius: Radius.md,
-    borderWidth: 1,
   },
   errorText: { fontSize: 13, fontWeight: '600', flex: 1 },
-  seasonSection: { marginBottom: Spacing.lg, borderRadius: Radius.xl, borderWidth: 1, overflow: 'hidden' },
-  seasonHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.lg },
-  seasonIconChip: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
-  seasonHeaderContent: { flex: 1, gap: Spacing.xs },
-  pillRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  unseenPill: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  unseenDot: { width: 6, height: 6, borderRadius: 3 },
-  unseenBadge: { marginLeft: 'auto', paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: Radius.pill, alignSelf: 'flex-start' },
-  unseenBadgeText: { fontSize: 11, fontWeight: '800' },
-  countPill: { alignSelf: 'flex-start', paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: Radius.pill, marginTop: 2 },
-  countPillText: { fontSize: 11, fontWeight: '700' },
-  chevronChip: { width: 30, height: 30, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  seasonContent: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.lg, gap: Spacing.sm },
-  card: { padding: Spacing.md, borderRadius: Radius.lg, borderWidth: 1 },
-  cardRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  cardBody: { flex: 1 },
-  cardCancelled: { opacity: 0.7 },
-  cardTopRow: { flexDirection: 'row', gap: Spacing.xs },
-  codePill: { paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: Radius.pill, alignSelf: 'flex-start' },
-  codePillText: { fontSize: 11, fontWeight: '700' },
-  emptyWrap: { alignItems: 'center', paddingTop: Spacing.huge, gap: Spacing.md },
-  emptyIconChip: { width: 64, height: 64, borderRadius: Radius.xxl, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { marginTop: Spacing.sm, fontSize: 14, fontWeight: '500' },
+  // Season
+  seasonSection: { marginBottom: Spacing.md },
+  seasonHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.lg,
+  },
+  seasonHeaderContent: { flex: 1, gap: 3 },
+  seasonTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  seasonMeta: { ...Type.caption, fontWeight: '500' },
+  currentPill: { paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: Radius.pill },
+  currentPillText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.4, textTransform: 'uppercase' },
+  chevronChip: { width: 28, height: 28, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
+  chevronOpen: { transform: [{ rotate: '180deg' }] },
+  seasonContent: { gap: Spacing.sm + 2 },
+  // Course card
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    padding: 14,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+  },
+  cardCancelled: { opacity: 0.6 },
+  codeBadge: {
+    width: 54,
+    height: 54,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  codeDept: { fontSize: 10, fontWeight: '800', letterSpacing: 0.6 },
+  codeNumber: { fontSize: 17, fontWeight: '800', letterSpacing: -0.3, marginTop: -1 },
+  unseenBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 5,
+    borderRadius: 10,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unseenBadgeText: { fontSize: 10, fontWeight: '800' },
+  cardBody: { flex: 1, gap: 4 },
+  courseName: { ...Type.body, fontWeight: '700', lineHeight: 20 },
+  cardMetaRow: { flexDirection: 'row', alignItems: 'center' },
+  cardMeta: { ...Type.caption, fontWeight: '500' },
+  statusPill: { paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: Radius.pill },
+  statusPillText: { fontSize: 11, fontWeight: '700' },
+  // Empty
+  emptyWrap: { alignItems: 'center', paddingTop: Spacing.huge, gap: Spacing.sm },
+  emptyIconChip: { width: 64, height: 64, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.sm },
 });

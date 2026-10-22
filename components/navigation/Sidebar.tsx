@@ -42,7 +42,7 @@ const PANEL_WIDTH = Math.min(320, SCREEN_WIDTH * 0.84);
 const EDGE_ZONE_WIDTH = 50;
 
 /** Routes whose content needs the left edge (e.g. a WebView), so swipe-to-open is disabled there. */
-const NO_EDGE_SWIPE_ROUTES = ['/email'];
+const NO_EDGE_SWIPE_ROUTES = ['/email', '/notifications'];
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
