@@ -1,8 +1,10 @@
 import { Colors } from '@/constants/Colors';
-import { Radius, Spacing } from '@/constants/Theme';
+import { Radius, Shadow, Spacing } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import React from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import React, { useEffect, useRef } from 'react';
+import { FlatList, Pressable, StyleSheet, Text } from 'react-native';
+import { formatYearToShort } from './formatYear';
 import { StudyYear } from './types';
 
 interface YearSelectorProps {
@@ -11,63 +13,108 @@ interface YearSelectorProps {
   onYearSelect: (year: StudyYear) => void;
 }
 
-/** Horizontal chip row — study years are few, so they stay visible inline. */
+/** Horizontal row of year tiles — big short label ("23/24") over the full range. */
 export default function YearSelector({ studyYears, selectedYear, onYearSelect }: YearSelectorProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const listRef = useRef<FlatList<StudyYear>>(null);
+
+  const selectedIndex = studyYears.findIndex((y) => y.value === selectedYear?.value);
+
+  // Keep the selected tile in view (e.g. after a refresh or a default selection)
+  useEffect(() => {
+    if (selectedIndex < 0) return;
+    const t = setTimeout(() => {
+      listRef.current?.scrollToIndex({ index: selectedIndex, viewPosition: 0.5, animated: true });
+    }, 50);
+    return () => clearTimeout(t);
+  }, [selectedIndex]);
 
   const renderYearItem = ({ item }: { item: StudyYear }) => {
     const active = selectedYear?.value === item.value;
+    const short = formatYearToShort(item.text);
+    const showFull = short !== item.text;
     return (
-      <TouchableOpacity
-        style={[
-          styles.chip,
-          {
-            backgroundColor: active ? colors.primary : colors.surface,
-            borderColor: active ? colors.primary : colors.border,
-          },
+      <Pressable
+        onPress={() => {
+          if (!active) Haptics.selectionAsync().catch(() => {});
+          onYearSelect(item);
+        }}
+        style={({ pressed }) => [
+          styles.tile,
+          active
+            ? { backgroundColor: colors.primary, borderColor: colors.primary, ...Shadow.glow(colors.primary) }
+            : { backgroundColor: colors.surface, borderColor: colors.border },
+          pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] },
         ]}
-        onPress={() => onYearSelect(item)}
-        activeOpacity={0.75}
         accessibilityRole="button"
+        accessibilityLabel={item.text}
         accessibilityState={{ selected: active }}
       >
-        <Text style={[styles.chipText, { color: active ? colors.onPrimary : colors.textPrimary }]}>
-          {item.text}
+        <Text
+          style={[styles.shortText, { color: active ? colors.onPrimary : colors.textPrimary }]}
+          numberOfLines={1}
+        >
+          {short}
         </Text>
-      </TouchableOpacity>
+        {showFull && (
+          <Text
+            style={[styles.fullText, { color: active ? colors.onPrimary : colors.textSecondary }, active && styles.fullTextActive]}
+            numberOfLines={1}
+          >
+            {item.text}
+          </Text>
+        )}
+      </Pressable>
     );
   };
 
   return (
     <FlatList
+      ref={listRef}
       data={studyYears}
       renderItem={renderYearItem}
       keyExtractor={(year) => year.value}
+      extraData={selectedYear?.value}
       horizontal
       showsHorizontalScrollIndicator={false}
       style={styles.list}
       contentContainerStyle={styles.listContent}
+      onScrollToIndexFailed={({ index, averageItemLength }) =>
+        listRef.current?.scrollToOffset({ offset: index * averageItemLength, animated: true })
+      }
     />
   );
 }
 
 const styles = StyleSheet.create({
   list: {
-    marginBottom: Spacing.sm,
+    marginHorizontal: -Spacing.lg,
   },
   listContent: {
-    paddingHorizontal: Spacing.xs,
-    gap: Spacing.sm,
-  },
-  chip: {
     paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xs,
+    paddingBottom: Spacing.md,
+    gap: Spacing.sm + 2,
+  },
+  tile: {
+    minWidth: 96,
+    paddingHorizontal: Spacing.md + 2,
     paddingVertical: Spacing.sm + 2,
-    borderRadius: Radius.pill,
+    borderRadius: Radius.lg,
     borderWidth: 1,
   },
-  chipText: {
-    fontSize: 14,
-    fontWeight: '700',
+  shortText: {
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+  },
+  fullText: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  fullTextActive: {
+    opacity: 0.85,
   },
 });

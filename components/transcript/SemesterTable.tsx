@@ -1,4 +1,5 @@
 import { Colors } from '@/constants/Colors';
+import { Radius, Shadow, Spacing, Type, withAlpha } from '@/constants/Theme';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { getGPAColor, getLetterGradeColor } from '@/utils/gradingColors';
 import { StyleSheet, Text, View } from 'react-native';
@@ -9,212 +10,207 @@ interface SemesterTableProps {
   index: number;
 }
 
+/** One semester as a card: header with GPA pill, then a list of course rows. */
 export default function SemesterTable({ semester, index }: SemesterTableProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  
-  // Use unified grading color functions
-  const getGradeColorForComponent = (letterGrade: string) => getLetterGradeColor(letterGrade, colors);
-  const getSemesterGPAColorForComponent = (gpa: string) => getGPAColor(gpa, colors);
 
-  const renderCourseRow = (course: Course, courseIndex: number) => (
-    <View key={courseIndex} style={[styles.courseRow, { borderBottomColor: colors.border }]}>
-      <View style={styles.courseSemester}>
-        <Text style={[styles.courseText, { color: colors.secondaryFont }]}>{course.semester}</Text>
-      </View>
-      <View style={styles.courseName}>
-        <Text style={[styles.courseText, { color: colors.mainFont }]}>{course.courseName}</Text>
-      </View>
-      <View style={styles.courseNumeric}>
-        <Text style={[styles.courseText, styles.boldText, { color: getGradeColorForComponent(course.letterGrade) }]}>{course.numericGrade}</Text>
-      </View>
-      <View style={styles.courseGrade}>
-        <View style={[styles.gradeBadge, { backgroundColor: getGradeColorForComponent(course.letterGrade) }]}>
-          <Text style={[styles.gradeText, { color: colors.onAccent }]}>{course.letterGrade}</Text>
+  const showGPA = !!semester.semesterGPA && semester.semesterGPA !== '0';
+  const gpaColor = showGPA ? getGPAColor(semester.semesterGPA, colors) : colors.secondaryFont;
+  const courseCount = semester.courses.length;
+
+  const renderCourseRow = (course: Course, courseIndex: number) => {
+    const gradeColor = getLetterGradeColor(course.letterGrade, colors);
+    const isLast = courseIndex === courseCount - 1;
+    return (
+      <View
+        key={courseIndex}
+        style={[
+          styles.courseRow,
+          !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.divider },
+        ]}
+      >
+        <View style={[styles.gradeBadge, { backgroundColor: withAlpha(gradeColor, 0.14) }]}>
+          <Text style={[styles.gradeLetter, { color: gradeColor }]} numberOfLines={1} adjustsFontSizeToFit>
+            {course.letterGrade}
+          </Text>
+        </View>
+
+        <View style={styles.courseInfo}>
+          <Text style={[styles.courseName, { color: colors.textPrimary }]} numberOfLines={2}>
+            {course.courseName}
+          </Text>
+          <View style={styles.courseMeta}>
+            <View style={[styles.codeTag, { backgroundColor: colors.surfaceSunken }]}>
+              <Text style={[styles.codeText, { color: colors.textSecondary }]}>{course.semester}</Text>
+            </View>
+            <Text style={[styles.metaText, { color: colors.textTertiary }]}>
+              {course.creditHours} credit hrs
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.numericCol}>
+          <Text style={[styles.numericValue, { color: gradeColor }]}>{course.numericGrade}</Text>
+          <Text style={[styles.numericLabel, { color: colors.textTertiary }]}>Grade</Text>
         </View>
       </View>
-      <View style={styles.courseHours}>
-        <Text style={[styles.courseText, { color: colors.secondaryFont }]}>{course.creditHours}</Text>
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
-    <View style={[styles.semesterTable, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <View style={[styles.semesterHeader, { backgroundColor: colors.tabColor }]}>
-        <View style={styles.semesterHeaderContent}>
-          <Text style={[styles.semesterTitle, { color: colors.onPrimary }]}>{semester.name}</Text>
-          {semester.semesterGPA && semester.semesterGPA !== '0' && (
-            <View style={[styles.semesterGpaBadge, { backgroundColor: getSemesterGPAColorForComponent(semester.semesterGPA) }]}>
-              <Text style={[styles.semesterGpaLabel, { color: colors.onAccent }]}>GPA</Text>
-              <Text style={[styles.semesterGpaValue, { color: colors.onAccent }]}>{semester.semesterGPA}</Text>
-            </View>
-          )}
+    <View
+      style={[
+        styles.card,
+        { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
+        Shadow.card(colors),
+      ]}
+    >
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={[styles.indexBubble, { backgroundColor: colors.primarySoft }]}>
+          <Text style={[styles.indexText, { color: colors.primary }]}>{index + 1}</Text>
         </View>
+        <View style={styles.headerText}>
+          <Text style={[styles.semesterTitle, { color: colors.textPrimary }]} numberOfLines={2}>
+            {semester.name}
+          </Text>
+          <Text style={[styles.semesterSubtitle, { color: colors.textSecondary }]}>
+            {courseCount} {courseCount === 1 ? 'course' : 'courses'}
+            {semester.totalHours ? `  ·  ${semester.totalHours} credit hrs` : ''}
+          </Text>
+        </View>
+        {showGPA && (
+          <View style={[styles.gpaPill, { backgroundColor: withAlpha(gpaColor, 0.14), borderColor: withAlpha(gpaColor, 0.35) }]}>
+            <Text style={[styles.gpaLabel, { color: gpaColor }]}>GPA</Text>
+            <Text style={[styles.gpaValue, { color: gpaColor }]}>{semester.semesterGPA}</Text>
+          </View>
+        )}
       </View>
-      
-      {/* Table Header */}
-      <View style={[styles.tableHeader, { backgroundColor: colors.surface }]}>
-        <View style={styles.courseSemester}>
-          <Text style={[styles.headerText, { color: colors.secondaryFont }]}>Semester</Text>
-        </View>
-        <View style={styles.courseName}>
-          <Text style={[styles.headerText, { color: colors.secondaryFont }]}>Course</Text>
-        </View>
-        <View style={styles.courseNumeric}>
-          <Text style={[styles.headerText, { color: colors.secondaryFont }]}>Grade</Text>
-        </View>
-        <View style={styles.courseGrade}>
-          <Text style={[styles.headerText, { color: colors.secondaryFont }]}>Letter</Text>
-        </View>
-        <View style={styles.courseHours}>
-          <Text style={[styles.headerText, { color: colors.secondaryFont }]}>Hours</Text>
-        </View>
-      </View>
-      
-      {/* Course Rows */}
-      {semester.courses.map((course, courseIndex) => renderCourseRow(course, courseIndex))}
-      
-      {/* Semester Summary */}
-      <View style={[styles.semesterSummary, { backgroundColor: colors.surface }]}>
-        <View style={styles.summaryContent}>
-          <Text style={[styles.summaryText, { color: colors.mainFont }]}>Total Credit Hours</Text>
-          <Text style={[styles.summaryText, styles.boldText, { color: colors.mainFont }]}>{semester.totalHours}h</Text>
-        </View>
+
+      {/* Course list */}
+      <View style={[styles.courseList, { backgroundColor: colors.surface }]}>
+        {semester.courses.map(renderCourseRow)}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  semesterTable: {
-    borderRadius: 16,
+  card: {
+    borderRadius: Radius.xl,
     borderWidth: 1,
-    marginBottom: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    marginBottom: Spacing.lg,
+    padding: Spacing.sm,
   },
-  semesterHeader: {
-    padding: 16,
-    alignItems: 'center',
-  },
-  semesterHeaderContent: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
+    paddingHorizontal: Spacing.sm,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.md,
+    gap: Spacing.md,
+  },
+  indexBubble: {
+    width: 32,
+    height: 32,
+    borderRadius: Radius.sm + 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  indexText: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  headerText: {
+    flex: 1,
   },
   semesterTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    flex: 1,
-    marginRight: 12,
-    marginLeft: 8,
+    ...Type.h3,
   },
-  semesterGpaBadge: {
-    borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+  semesterSubtitle: {
+    ...Type.subtext,
+    marginTop: 2,
+  },
+  gpaPill: {
     alignItems: 'center',
-    minWidth: 65,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
+    paddingVertical: 6,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    minWidth: 62,
   },
-  semesterGpaLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    opacity: 0.9,
-    marginBottom: 2,
-    letterSpacing: 0.5,
+  gpaLabel: {
+    ...Type.overline,
+    fontSize: 9,
   },
-  semesterGpaValue: {
-    fontSize: 16,
+  gpaValue: {
+    fontSize: 17,
     fontWeight: '800',
-    letterSpacing: 0.3,
+    letterSpacing: -0.2,
   },
-  tableHeader: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+  courseList: {
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
   },
   courseRow: {
     flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-  },
-  semesterSummary: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.02)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  summaryContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  courseSemester: {
-    flex: 1.0,
-    alignItems: 'center',
-  },
-  courseName: {
-    flex: 1.8,
-    paddingHorizontal: 4,
-  },
-  courseNumeric: {
-    flex: 0.8,
-    alignItems: 'center',
-  },
-  courseGrade: {
-    flex: 0.8,
-    alignItems: 'center',
-  },
-  courseHours: {
-    flex: 0.8,
-    alignItems: 'center',
-  },
-  headerText: {
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  courseText: {
-    fontSize: 12,
-    textAlign: 'center',
-    fontWeight: '500',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    gap: Spacing.md,
   },
   gradeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    minWidth: 32,
+    width: 44,
+    height: 44,
+    borderRadius: Radius.md,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
   },
-  gradeText: {
+  gradeLetter: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  courseInfo: {
+    flex: 1,
+  },
+  courseName: {
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 19,
+  },
+  courseMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+    gap: Spacing.sm,
+  },
+  codeTag: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: Radius.xs,
+  },
+  codeText: {
     fontSize: 11,
     fontWeight: '700',
+    letterSpacing: 0.3,
   },
-  summaryText: {
-    fontSize: 13,
+  metaText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  numericCol: {
+    alignItems: 'flex-end',
+    minWidth: 44,
+  },
+  numericValue: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  numericLabel: {
+    fontSize: 10,
     fontWeight: '600',
-    textAlign: 'center',
-  },
-  boldText: {
-    fontWeight: '700',
+    marginTop: 1,
   },
 });

@@ -13,7 +13,7 @@ export default function LoadingIndicator({ message }: LoadingIndicatorProps) {
   
   return (
     <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color={colors.tabColor} />
+      <ActivityIndicator size="large" color={colors.primary} />
       <Text style={[styles.loadingText, { color: colors.secondaryFont }]}>
         {message}
       </Text>
