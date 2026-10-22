@@ -443,6 +443,7 @@ export default function NotificationsScreen() {
         visible={modalVisible}
         onRequestClose={closeModal}
         onDismissed={() => setSelectedNotification(null)}
+        dragFromContent={false}
         header={
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <View style={styles.headerContent}>

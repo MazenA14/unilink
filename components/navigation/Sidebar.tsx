@@ -41,6 +41,9 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 const PANEL_WIDTH = Math.min(320, SCREEN_WIDTH * 0.84);
 const EDGE_ZONE_WIDTH = 50;
 
+/** Routes whose content needs the left edge (e.g. a WebView), so swipe-to-open is disabled there. */
+const NO_EDGE_SWIPE_ROUTES = ['/email'];
+
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 export function Sidebar() {
@@ -279,7 +282,9 @@ export function Sidebar() {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       {/* Edge zone: swipe right from the left screen edge to open (starts below the header so the menu button stays pressable) */}
-      <View style={[styles.edgeZone, { top: insets.top + 60 }]} {...edgeResponder.panHandlers} />
+      {!NO_EDGE_SWIPE_ROUTES.includes(pathname) && (
+        <View style={[styles.edgeZone, { top: insets.top + 60 }]} {...edgeResponder.panHandlers} />
+      )}
 
       {mounted && (
         <>

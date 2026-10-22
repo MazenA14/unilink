@@ -42,6 +42,12 @@ interface BottomSheetProps {
   header?: ReactNode;
   /** Fired once per content height when the content is scrolled near its end. */
   onEndReached?: () => void;
+  /**
+   * When false only the handle/header drags the sheet and the content is a plain native
+   * scroll view, untouched by the gesture system. Use for selectable text, which the
+   * content gesture otherwise interferes with on Android.
+   */
+  dragFromContent?: boolean;
   children: ReactNode;
 }
 
@@ -61,6 +67,7 @@ export default function BottomSheet({
   footer,
   header,
   onEndReached,
+  dragFromContent = true,
   children,
 }: BottomSheetProps) {
   const colorScheme = useColorScheme();
@@ -135,7 +142,6 @@ export default function BottomSheet({
     .enabled(dismissible)
     .activeOffsetY(8) // a downward drag activates; upward drags stay with the scroll view
     .failOffsetX([-24, 24])
-    .simultaneousWithExternalGesture(contentGesture)
     .onBegin((e) => {
       pinContent.value = e.y > headerHeight.value;
     })
@@ -169,6 +175,7 @@ export default function BottomSheet({
     .onFinalize(() => {
       dragOrigin.value = -1;
     });
+  if (dragFromContent) sheetGesture.simultaneousWithExternalGesture(contentGesture);
 
   const sheetStyle = useAnimatedStyle(() => {
     // Sit on top of the keyboard, shrinking if needed so the sheet never runs under the status bar.
@@ -184,6 +191,56 @@ export default function BottomSheet({
     opacity: interpolate(translateY.value, [0, sheetHeight], [1, 0], 'clamp'),
   }));
 
+  const headerBlock = (
+    <View
+      collapsable={false}
+      onLayout={(e) => {
+        headerHeight.value = e.nativeEvent.layout.height;
+        setHeaderH(e.nativeEvent.layout.height);
+      }}
+    >
+      <View style={styles.handleArea}>
+        <View style={[styles.handle, { backgroundColor: colors.borderStrong }]} />
+      </View>
+      {header}
+    </View>
+  );
+
+  const scrollView = (
+    <Animated.ScrollView
+      ref={scrollRef}
+      onScroll={scrollHandler}
+      scrollEventThrottle={16}
+      bounces={false}
+      overScrollMode="never"
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{ paddingBottom: footer ? 16 : insets.bottom + 24 }}
+      onContentSizeChange={(_, h) => setContentH(h)}
+    >
+      {children}
+    </Animated.ScrollView>
+  );
+
+  const sheet = (
+    <Animated.View
+      style={[styles.sheet, { backgroundColor: colors.surfaceElevated, shadowColor: colors.shadow }, sheetStyle]}
+    >
+      {dragFromContent ? headerBlock : <GestureDetector gesture={sheetGesture}>{headerBlock}</GestureDetector>}
+
+      {dragFromContent ? <GestureDetector gesture={contentGesture}>{scrollView}</GestureDetector> : scrollView}
+
+      {footer ? (
+        <View
+          style={[styles.footer, { borderTopColor: colors.divider, paddingBottom: insets.bottom + 12 }]}
+          onLayout={(e) => setFooterH(e.nativeEvent.layout.height)}
+        >
+          {footer}
+        </View>
+      ) : null}
+    </Animated.View>
+  );
+
   return (
     <Modal visible={mounted} transparent animationType="none" statusBarTranslucent onRequestClose={requestClose}>
       {/* Modals render outside the app root, so gestures need their own root here */}
@@ -198,52 +255,7 @@ export default function BottomSheet({
           <Pressable style={StyleSheet.absoluteFill} onPress={requestClose} accessibilityLabel="Close" />
         </Animated.View>
 
-        <GestureDetector gesture={sheetGesture}>
-          <Animated.View
-            style={[
-              styles.sheet,
-              { backgroundColor: colors.surfaceElevated, shadowColor: colors.shadow },
-              sheetStyle,
-            ]}
-          >
-            <View
-              onLayout={(e) => {
-                headerHeight.value = e.nativeEvent.layout.height;
-                setHeaderH(e.nativeEvent.layout.height);
-              }}
-            >
-              <View style={styles.handleArea}>
-                <View style={[styles.handle, { backgroundColor: colors.borderStrong }]} />
-              </View>
-              {header}
-            </View>
-
-            <GestureDetector gesture={contentGesture}>
-              <Animated.ScrollView
-                ref={scrollRef}
-                onScroll={scrollHandler}
-                scrollEventThrottle={16}
-                bounces={false}
-                overScrollMode="never"
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ paddingBottom: footer ? 16 : insets.bottom + 24 }}
-                onContentSizeChange={(_, h) => setContentH(h)}
-              >
-                {children}
-              </Animated.ScrollView>
-            </GestureDetector>
-
-            {footer ? (
-              <View
-                style={[styles.footer, { borderTopColor: colors.divider, paddingBottom: insets.bottom + 12 }]}
-                onLayout={(e) => setFooterH(e.nativeEvent.layout.height)}
-              >
-                {footer}
-              </View>
-            ) : null}
-          </Animated.View>
-        </GestureDetector>
+        {dragFromContent ? <GestureDetector gesture={sheetGesture}>{sheet}</GestureDetector> : sheet}
       </GestureHandlerRootView>
     </Modal>
   );
